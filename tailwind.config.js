@@ -1,0 +1,66 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        // Design System Colors
+        tpo: {
+          bg: '#0B0F17',
+          surface: '#101726',
+          card: '#162032',
+          cardHover: '#1C293F',
+          cardGlass: 'rgba(22, 32, 50, 0.75)',
+          border: '#202D42',
+          borderLight: '#2A3B57',
+          borderFocus: '#A3E635',
+          neon: '#A3E635',
+          neonHover: '#BEF264',
+          neonDark: '#84CC16',
+          neonGlow: 'rgba(163, 230, 53, 0.35)',
+          textPrimary: '#FFFFFF',
+          textSecondary: '#94A3B8',
+          textMuted: '#64748B',
+          accentBlue: '#38BDF8',
+          accentPurple: '#A855F7',
+          accentAmber: '#F59E0B',
+          accentRose: '#F43F5E',
+          accentEmerald: '#10B981',
+          accentCyan: '#06B6D4',
+        },
+      },
+      fontSize: {
+        '2xs': ['0.65rem', { lineHeight: '0.85rem' }],
+        xs: ['0.75rem', { lineHeight: '1rem' }],
+        sm: ['0.875rem', { lineHeight: '1.25rem' }],
+        base: ['1rem', { lineHeight: '1.5rem' }],
+        lg: ['1.125rem', { lineHeight: '1.75rem' }],
+        xl: ['1.25rem', { lineHeight: '1.75rem' }],
+        '2xl': ['1.5rem', { lineHeight: '2rem' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
+      },
+      borderRadius: {
+        sm: '0.375rem',
+        md: '0.5rem',
+        lg: '0.75rem',
+        xl: '1rem',
+        '2xl': '1.25rem',
+        '3xl': '1.5rem',
+        full: '9999px',
+      },
+      boxShadow: {
+        'neon-sm': '0 0 10px rgba(163, 230, 53, 0.25)',
+        'neon-md': '0 0 20px rgba(163, 230, 53, 0.35)',
+        'neon-lg': '0 0 35px rgba(163, 230, 53, 0.5)',
+        'card-dark': '0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(32, 45, 66, 0.4)',
+        'glass-glow': '0 8px 32px 0 rgba(0, 0, 0, 0.4)',
+      },
+      fontFamily: {
+        sans: ['Inter', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+};

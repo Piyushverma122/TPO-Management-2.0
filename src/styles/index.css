@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  
+  body {
+    background-color: #0B0F17;
+    color: #FFFFFF;
+    font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@utility glass-card {
+  background: rgba(22, 32, 50, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(42, 59, 87, 0.45);
+}
+
+@utility glass-input {
+  background: rgba(16, 23, 38, 0.7);
+  border: 1px solid rgba(42, 59, 87, 0.6);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  transition: all 0.2s ease-in-out;
+}
+
+@utility neon-button {
+  background-color: #A3E635;
+  color: #0B0F17;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 15px rgba(163, 230, 53, 0.3);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0F17;
+}
+::-webkit-scrollbar-thumb {
+  background: #202D42;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A3E635;
+}
