@@ -6,6 +6,10 @@ export interface LoginResponse {
   message: string;
   data: {
     accessToken: string;
+    session?: {
+      access_token: string;
+      refresh_token: string | null;
+    };
     user: User;
   };
 }

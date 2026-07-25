@@ -20,8 +20,7 @@ const getStudentReport = async (filters = {}) => {
       users!inner (
         full_name,
         email,
-        phone,
-        department
+        phone
       ),
       branches (
         name,

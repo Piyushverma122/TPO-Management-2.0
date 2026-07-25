@@ -61,14 +61,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<UserRole> => {
     const res = await loginApi({ email, password });
-    const { accessToken, user: apiUser } = res.data;
+    const payload = res.data;
+    const token = payload?.accessToken || payload?.session?.access_token;
+    const apiUser = payload?.user || payload;
 
     const formattedUser: User = {
       ...apiUser,
-      name: apiUser.full_name || apiUser.name || 'User',
+      name: apiUser?.full_name || apiUser?.name || 'User',
     };
 
-    localStorage.setItem('tpo_token', accessToken);
+    if (token) {
+      localStorage.setItem('tpo_token', token);
+    }
     localStorage.setItem('tpo_user', JSON.stringify(formattedUser));
     setUser(formattedUser);
 

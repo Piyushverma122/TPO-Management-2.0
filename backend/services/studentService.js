@@ -36,8 +36,7 @@ const listStudents = async (queryParams) => {
         full_name,
         email,
         phone,
-        avatar_url,
-        department
+        avatar_url
       ),
       branches (
         id,
@@ -51,7 +50,7 @@ const listStudents = async (queryParams) => {
 
   // Apply filters
   if (branch) {
-    query = query.ilike('branch', `%${branch}%`);
+    query = query.eq('branch_id', branch);
   }
 
   if (batch || queryParams.passing_year) {
@@ -109,8 +108,7 @@ const getStudentById = async (studentId) => {
         full_name,
         email,
         phone,
-        avatar_url,
-        department
+        avatar_url
       ),
       branches (
         id,
@@ -148,52 +146,77 @@ const createStudent = async (payload) => {
     phone,
   } = payload;
 
-  // 1. Check if user email or roll number exists
+  // 1. Check if user email exists in public.users
   const { data: existingUser } = await supabase
     .from('users')
     .select('id')
     .eq('email', email)
     .maybeSingle();
 
+  let userId;
+
   if (existingUser) {
-    const err = new Error('User with this email already exists.');
-    err.statusCode = 409;
-    throw err;
-  }
+    userId = existingUser.id;
+    // Check if student profile already exists in public.students for this user
+    const { data: existingStudent } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  // 2. Register user in Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name, role: 'student' } },
-  });
-
-  if (authError) {
-    const err = new Error(authError.message);
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const userId = authData.user.id;
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  // 3. Create user record in public.users
-  const { error: userError } = await supabase.from('users').insert([
-    {
-      id: userId,
+    if (existingStudent) {
+      const err = new Error('Student candidate record with this email already exists.');
+      err.statusCode = 409;
+      throw err;
+    }
+  } else {
+    // 2. Register user in Supabase Auth if new
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      password_hash: passwordHash,
-      full_name,
-      role: 'student',
-      phone: phone || null,
-      is_active: true,
-    },
-  ]);
+      password,
+      options: { data: { full_name, role: 'student' } },
+    });
 
-  if (userError) {
-    const err = new Error(userError.message);
-    err.statusCode = 500;
-    throw err;
+    if (authError && !authError.message.includes('already registered')) {
+      const err = new Error(authError.message);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    userId = authData?.user?.id;
+
+    if (!userId) {
+      const { data: fetchUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+      userId = fetchUser?.id;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // 3. Create/update user record in public.users
+    const { error: userError } = await supabase.from('users').upsert(
+      [
+        {
+          id: userId,
+          email,
+          password_hash: passwordHash,
+          full_name,
+          role: 'student',
+          phone: phone || null,
+          is_active: true,
+        },
+      ],
+      { onConflict: 'id' }
+    );
+
+    if (userError) {
+      const err = new Error(userError.message);
+      err.statusCode = 500;
+      throw err;
+    }
   }
 
   // 4. Create student profile in public.students
@@ -202,11 +225,11 @@ const createStudent = async (payload) => {
     .insert([
       {
         user_id: userId,
-        roll_number,
+        roll_number: roll_number || `RN${Date.now().toString().slice(-6)}`,
         branch_id: branch_id || null,
-        cgpa,
-        passing_year,
-        current_semester,
+        cgpa: parseFloat(cgpa) || 8.0,
+        passing_year: parseInt(passing_year) || new Date().getFullYear() + 2,
+        current_semester: parseInt(current_semester) || 1,
         placement_status: 'Unplaced',
       },
     ])
