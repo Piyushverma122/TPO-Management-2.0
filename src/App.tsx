@@ -14,6 +14,7 @@ import { Eligibility } from './pages/Eligibility';
 import { Resumes } from './pages/Resumes';
 import { Interviews } from './pages/Interviews';
 import { MessagesPage } from './pages/Messages';
+import { Training } from './pages/Training';
 import { Reports } from './pages/Reports';
 import { Notifications } from './pages/Notifications';
 import { ProfilePage } from './pages/Profile';
@@ -23,33 +24,54 @@ import { MainLayout } from './components/layout/MainLayout';
 
 const queryClient = new QueryClient();
 
-// Protected Route Wrapper
+// Protected Route Wrapper for Authenticated Users
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
 };
 
-// Placeholder view for secondary routes until requested
-const PagePlaceholder: React.FC<{ title: string }> = ({ title }) => (
-  <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-10 text-center space-y-4">
-    <div className="w-14 h-14 rounded-2xl bg-[#A3E635]/10 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center mx-auto font-bold text-xl">
-      S
-    </div>
-    <h2 className="text-2xl font-extrabold text-white">{title}</h2>
-    <p className="text-sm text-[#94A3B8] max-w-md mx-auto">
-      This page module is ready for interaction.
-    </p>
-  </div>
-);
+// Public Only Route Wrapper (Redirects logged-in users away from /login)
+const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
 
 export const AppContent: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/login"
+        element={
+          <PublicOnlyRoute>
+            <Login />
+          </PublicOnlyRoute>
+        }
+      />
 
       <Route
         element={
@@ -68,7 +90,7 @@ export const AppContent: React.FC = () => {
         <Route path="/resumes" element={<Resumes />} />
         <Route path="/interviews" element={<Interviews />} />
         <Route path="/messages" element={<MessagesPage />} />
-        <Route path="/training" element={<PagePlaceholder title="Training Module" />} />
+        <Route path="/training" element={<Training />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<ProfilePage />} />

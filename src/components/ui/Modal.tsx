@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -23,17 +23,45 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = 'md',
 }) => {
-  // Prevent body scroll when modal is open
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Body scroll lock & ESC listener & focus trap
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElements.length === 0) return;
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = 'unset';
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   const maxWidthMap = {
     sm: 'max-w-sm',
@@ -58,6 +86,10 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* Modal Container */}
           <motion.div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -70,12 +102,14 @@ export const Modal: React.FC<ModalProps> = ({
             {/* Modal Header */}
             <div className="p-6 pb-4 border-b border-[#202D42] flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-extrabold text-white">{title}</h3>
+                <h3 id="modal-title" className="text-lg font-extrabold text-white">{title}</h3>
                 {subtitle && <p className="text-xs text-[#94A3B8] mt-0.5">{subtitle}</p>}
               </div>
               <button
+                type="button"
                 onClick={onClose}
-                className="p-2 text-[#94A3B8] hover:text-white rounded-xl hover:bg-[#202D42] transition-colors"
+                aria-label="Close dialog"
+                className="p-2 text-[#94A3B8] hover:text-white rounded-xl hover:bg-[#202D42] transition-colors focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:outline-none"
               >
                 <X className="w-5 h-5" />
               </button>

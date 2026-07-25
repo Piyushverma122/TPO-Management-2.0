@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -23,7 +23,8 @@ import {
   Edit,
   BarChart3,
   Award,
-  ListFilter
+  ListFilter,
+  RefreshCw,
 } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -39,6 +40,11 @@ import { Avatar, AvatarGroup } from '../components/ui/Avatar';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
 import { PlacementDrive } from '../types';
+import {
+  getDrives,
+  createDrive,
+  deleteDrive,
+} from '../api/drive.api';
 
 // Mock Progression Bar Data
 const roundProgressionData = [
@@ -55,152 +61,130 @@ const offerDistributionData = [
   { name: 'Rejected', value: 72, color: '#F43F5E' },
 ];
 
-// Initial Placement Drives List
-const initialDrives: PlacementDrive[] = [
-  {
-    id: 'drv-1',
-    driveCode: 'AMZ-SDE1',
-    companyId: 'cmp-1',
-    companyName: 'Amazon',
-    companyLogo: 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
-    roleTitle: 'Software Development Engineer - 1',
-    jobType: 'Full Time',
-    ctc: '₹28 - ₹45 LPA',
-    location: 'College Auditorium / Online',
-    eligibility: {
-      minCgpa: 7.5,
-      maxBacklogs: 0,
-      branches: ['CS', 'IT', 'ECE'],
-      passingYear: 2025,
-    },
-    registrationDeadline: 'Oct 18, 2025',
-    driveDate: 'Oct 20-22, 2025',
-    rounds: ['Application', 'Written Test', 'Technical 1', 'HR Round', 'Result'],
-    status: 'Ongoing',
-    appliedStudentsCount: 180,
-    shortlistedCount: 35,
-    placedCount: 18,
-  },
-  {
-    id: 'drv-2',
-    driveCode: 'GOOG-SWE',
-    companyId: 'cmp-2',
-    companyName: 'Google',
-    companyLogo: 'https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?auto=format&fit=crop&q=80&w=120',
-    roleTitle: 'Summer Internship Drive 2025',
-    jobType: 'Internship',
-    ctc: '₹1.2 Lakh/month',
-    location: 'Virtual / Google Meet',
-    eligibility: {
-      minCgpa: 8.0,
-      maxBacklogs: 0,
-      branches: ['CS', 'IT'],
-      passingYear: 2026,
-    },
-    registrationDeadline: 'Oct 25, 2025',
-    driveDate: 'Nov 01-03, 2025',
-    rounds: ['Online Assessment', 'Tech Interview 1', 'Tech Interview 2', 'HR Fitment'],
-    status: 'Upcoming',
-    appliedStudentsCount: 240,
-    shortlistedCount: 50,
-    placedCount: 0,
-  },
-  {
-    id: 'drv-3',
-    driveCode: 'DEL-CONS',
-    companyId: 'cmp-3',
-    companyName: 'Deloitte',
-    companyLogo: 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&q=80&w=120',
-    roleTitle: 'Consulting Analyst Drive',
-    jobType: 'Full Time',
-    ctc: '₹12.5 LPA',
-    location: 'Seminar Hall B',
-    eligibility: {
-      minCgpa: 7.0,
-      maxBacklogs: 1,
-      branches: ['All Branches'],
-      passingYear: 2025,
-    },
-    registrationDeadline: 'Oct 10, 2025',
-    driveDate: 'Oct 15-16, 2025',
-    rounds: ['Aptitude Test', 'Group Discussion', 'PI Round'],
-    status: 'Conducted',
-    appliedStudentsCount: 310,
-    shortlistedCount: 45,
-    placedCount: 22,
-  },
-];
-
 export const Drives: React.FC = () => {
-  const navigate = useNavigate();
-  const { success, info } = useToast();
-  const [drives, setDrives] = useState<PlacementDrive[]>(initialDrives);
+  const { success, error: toastError } = useToast();
+
+  // API Data State
+  const [drives, setDrives] = useState<PlacementDrive[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
   const [viewMode, setViewMode] = useState<'cards' | 'details'>('cards');
+  const [selectedDrive, setSelectedDrive] = useState<PlacementDrive | null>(null);
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedJobType, setSelectedJobType] = useState('All');
-  const [selectedDrive, setSelectedDrive] = useState<PlacementDrive>(initialDrives[0]);
-  const [currentPage, setCurrentPage] = useState(1);
+
+  // Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newCompany, setNewCompany] = useState('');
+  const [newRole, setNewRole] = useState('');
+  const [newCtc, setNewCtc] = useState('₹18 LPA');
 
-  // New Drive Form State
-  const [newCompany, setNewCompany] = useState('Amazon');
-  const [newRole, setNewRole] = useState('Software Engineer');
-  const [newCtc, setNewCtc] = useState('₹25 LPA');
+  const fetchDrivesData = async () => {
+    setLoading(true);
+    try {
+      const res = await getDrives({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery || undefined,
+        status: selectedStatus !== 'All' ? selectedStatus : undefined,
+        job_type: selectedJobType !== 'All' ? selectedJobType : undefined,
+      });
 
-  const filteredDrives = useMemo(() => {
-    return drives.filter((d) => {
-      const matchesSearch =
-        d.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.roleTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.driveCode.toLowerCase().includes(searchQuery.toLowerCase());
+      const rawList = res.data?.drives || [];
+      const total = res.data?.total || 0;
 
-      const matchesStatus =
-        selectedStatus === 'All' ||
-        (selectedStatus === 'Ongoing' && (d.status === 'Ongoing' || d.status === 'Upcoming')) ||
-        (selectedStatus === 'Conducted' && d.status === 'Conducted');
+      const formattedList: PlacementDrive[] = rawList.map((d: any) => ({
+        id: d.id,
+        driveCode: d.drive_code || 'DRV-101',
+        companyId: d.company_id || 'cmp-1',
+        companyName: d.companies?.name || d.company_name || 'Corporate Partner',
+        companyLogo: d.companies?.logo_url || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
+        roleTitle: d.role_title || 'Software Engineer',
+        jobType: (d.job_type as any) || 'Full Time',
+        ctc: d.ctc ? `₹${d.ctc} LPA` : '₹12 LPA',
+        location: d.location || 'College Campus',
+        eligibility: {
+          minCgpa: d.min_cgpa ? parseFloat(d.min_cgpa) : 7.0,
+          maxBacklogs: d.max_backlogs || 0,
+          branches: d.allowed_branches || ['CS', 'IT'],
+          passingYear: d.passing_year || 2025,
+        },
+        registrationDeadline: d.registration_deadline ? new Date(d.registration_deadline).toLocaleDateString() : 'Active',
+        driveDate: d.drive_date ? new Date(d.drive_date).toLocaleDateString() : 'Upcoming',
+        rounds: d.selection_rounds || ['Online Assessment', 'Technical Interview', 'HR Round'],
+        status: (d.status as any) || 'Upcoming',
+        appliedStudentsCount: d.applied_count || 0,
+        shortlistedCount: d.shortlisted_count || 0,
+        placedCount: d.selected_count || 0,
+      }));
 
-      const matchesType = selectedJobType === 'All' || d.jobType === selectedJobType;
+      setDrives(formattedList);
+      setTotalRecords(total);
+      if (formattedList.length > 0 && !selectedDrive) {
+        setSelectedDrive(formattedList[0]);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to load placement drives.';
+      toastError('Error Loading Drives', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      return matchesSearch && matchesStatus && matchesType;
-    });
-  }, [drives, searchQuery, selectedStatus, selectedJobType]);
+  useEffect(() => {
+    fetchDrivesData();
+  }, [currentPage, searchQuery, selectedStatus, selectedJobType]);
 
   const handleOpenDetailsView = (drive: PlacementDrive) => {
     setSelectedDrive(drive);
     setViewMode('details');
   };
 
-  const handleCreateDrive = (e: React.FormEvent) => {
+  const handleCreateDriveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newDriveItem: PlacementDrive = {
-      id: `drv-${Date.now()}`,
-      driveCode: `${newCompany.slice(0, 3).toUpperCase()}-SDE`,
-      companyId: 'cmp-1',
-      companyName: newCompany,
-      companyLogo: 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
-      roleTitle: newRole,
-      jobType: 'Full Time',
-      ctc: newCtc,
-      location: 'College Campus',
-      eligibility: { minCgpa: 7.5, maxBacklogs: 0, branches: ['CS', 'IT'], passingYear: 2025 },
-      registrationDeadline: 'Next Week',
-      driveDate: 'Nov 10, 2025',
-      rounds: ['Online Test', 'Interview', 'Result'],
-      status: 'Upcoming',
-      appliedStudentsCount: 0,
-      shortlistedCount: 0,
-      placedCount: 0,
-    };
+    if (!newCompany || !newRole) {
+      toastError('Validation Error', 'Company Name and Role Title are required.');
+      return;
+    }
 
-    setDrives([newDriveItem, ...drives]);
-    setIsAddModalOpen(false);
-    success('Placement Drive Published', `${newCompany} drive is now live for registration.`);
+    try {
+      await createDrive({
+        role_title: newRole,
+        job_type: 'Full Time',
+        ctc: parseFloat(newCtc.replace(/[^0-9.]/g, '')) || 18,
+        drive_date: new Date().toISOString(),
+        registration_deadline: new Date(Date.now() + 7 * 86400000).toISOString(),
+        status: 'Upcoming',
+      });
+
+      setIsAddModalOpen(false);
+      setNewCompany('');
+      setNewRole('');
+      success('Placement Drive Published', `${newCompany} drive is now live for registration.`);
+      fetchDrivesData();
+    } catch (err: any) {
+      toastError('Create Error', err.response?.data?.message || 'Failed to publish placement drive.');
+    }
+  };
+
+  const handleDeleteDriveAction = async (driveId: string) => {
+    try {
+      await deleteDrive(driveId);
+      success('Drive Deleted', 'Placement drive record removed.');
+      fetchDrivesData();
+    } catch (err: any) {
+      toastError('Delete Error', err.response?.data?.message || 'Failed to delete drive.');
+    }
   };
 
   return (
-    <div className="space-y-6 pb-16">
-      
+    <div className="space-y-6 pb-16 font-sans">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -208,12 +192,22 @@ export const Drives: React.FC = () => {
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-1">
             Placement Drives Overview
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              Active Season 2025
+              {totalRecords} Active Drives
             </span>
           </h1>
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+            onClick={fetchDrivesData}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+
           <Button
             variant="secondary"
             size="md"
@@ -234,413 +228,216 @@ export const Drives: React.FC = () => {
         </div>
       </div>
 
-      {/* VIEW MODE 1: CARDS GRID OVERVIEW strictly matching Design Placement Drive page 2..jpg */}
+      {/* VIEW MODE 1: CARDS GRID OVERVIEW */}
       {viewMode === 'cards' ? (
         <div className="space-y-6">
-          
-          {/* SEARCH & FILTERS CONTROLS */}
-          <Card className="p-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-              <div className="lg:col-span-2">
+          {/* SEARCH & FILTER CONTROLS */}
+          <Card className="p-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="w-full sm:flex-1">
                 <SearchInput
-                  placeholder="Search drives by company, role, or drive code..."
+                  placeholder="Search drive by company name, role, or drive code..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
 
-              <Dropdown
-                label="Drive Status:"
-                options={[
-                  { label: 'All Statuses', value: 'All' },
-                  { label: 'Ongoing / Scheduled', value: 'Ongoing' },
-                  { label: 'Conducted / Completed', value: 'Conducted' },
-                ]}
-                value={selectedStatus}
-                onChange={setSelectedStatus}
-              />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Dropdown
+                  options={[
+                    { label: 'All Statuses', value: 'All' },
+                    { label: 'Ongoing', value: 'Ongoing' },
+                    { label: 'Upcoming', value: 'Upcoming' },
+                    { label: 'Conducted', value: 'Conducted' },
+                  ]}
+                  value={selectedStatus}
+                  onChange={setSelectedStatus}
+                />
 
-              <Dropdown
-                label="Job Type:"
-                options={[
-                  { label: 'All Job Types', value: 'All' },
-                  { label: 'Full Time', value: 'Full Time' },
-                  { label: 'Internship', value: 'Internship' },
-                ]}
-                value={selectedJobType}
-                onChange={setSelectedJobType}
-              />
+                <Dropdown
+                  options={[
+                    { label: 'All Job Types', value: 'All' },
+                    { label: 'Full Time', value: 'Full Time' },
+                    { label: 'Internship', value: 'Internship' },
+                  ]}
+                  value={selectedJobType}
+                  onChange={setSelectedJobType}
+                />
+              </div>
             </div>
           </Card>
 
           {/* DRIVES CARDS GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDrives.map((drive) => (
-              <motion.div
-                key={drive.id}
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card glowOnHover className="p-6 space-y-4 border-[#202D42]">
-                  
-                  {/* Card Header (Logo + Drive Name + Status Badge) */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img src={drive.companyLogo} alt={drive.companyName} className="w-10 h-10 rounded-xl object-cover border border-[#202D42]" />
+          {loading ? (
+            <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
+              <div className="w-8 h-8 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <span>Loading recruitment drive records...</span>
+            </div>
+          ) : drives.length === 0 ? (
+            <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
+              No recruitment drives found matching your criteria.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {drives.map((drive) => (
+                <motion.div
+                  key={drive.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl flex flex-col justify-between group cursor-pointer"
+                  onClick={() => handleOpenDetailsView(drive)}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={drive.companyLogo}
+                          alt={drive.companyName}
+                          className="w-11 h-11 rounded-xl object-cover border border-[#202D42]"
+                        />
+                        <div>
+                          <span className="text-[11px] font-mono font-bold text-[#A3E635] block">
+                            {drive.driveCode}
+                          </span>
+                          <h3 className="text-base font-extrabold text-white group-hover:text-[#A3E635] transition-colors leading-snug">
+                            {drive.companyName}
+                          </h3>
+                        </div>
+                      </div>
+                      <StatusBadge status={drive.status} size="sm" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-bold text-white line-clamp-1">{drive.roleTitle}</p>
+                      <p className="text-xs text-[#94A3B8] mt-0.5">{drive.jobType} • {drive.location}</p>
+                    </div>
+
+                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3 flex items-center justify-between text-xs">
                       <div>
-                        <h3 className="text-base font-extrabold text-white leading-snug">{drive.companyName} - {drive.jobType}</h3>
-                        <p className="text-xs text-[#A3E635] font-mono">{drive.driveCode}</p>
+                        <span className="text-[10px] text-[#94A3B8] uppercase block font-bold">Package Offered</span>
+                        <span className="font-extrabold text-[#A3E635]">{drive.ctc}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-[#94A3B8] uppercase block font-bold">Min CGPA</span>
+                        <span className="font-extrabold text-white">{drive.eligibility.minCgpa.toFixed(1)}</span>
                       </div>
                     </div>
-                    <StatusBadge status={drive.status} size="sm" />
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-[#94A3B8] pt-1">
+                      <div>Deadline: <strong className="text-white block truncate">{drive.registrationDeadline}</strong></div>
+                      <div>Drive Date: <strong className="text-white block truncate">{drive.driveDate}</strong></div>
+                    </div>
                   </div>
 
-                  {/* Dates, Venue, & Eligibility Details */}
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3 text-xs space-y-1">
-                    <p className="text-white font-semibold flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-[#A3E635]" />
-                      Date: <span className="text-[#94A3B8]">{drive.driveDate}</span>
-                    </p>
-                    <p className="text-white font-semibold flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-[#A3E635]" />
-                      Venue: <span className="text-[#94A3B8]">{drive.location}</span>
-                    </p>
-                    <p className="text-white font-semibold flex items-center gap-2">
-                      <Award className="w-3.5 h-3.5 text-[#A3E635]" />
-                      Eligible: <span className="text-[#94A3B8]">CGPA &gt; {drive.eligibility.minCgpa} ({drive.eligibility.branches.join(', ')})</span>
-                    </p>
-                  </div>
-
-                  {/* Recruitment Workflow Stepper Node Timeline */}
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] font-extrabold text-[#94A3B8] uppercase tracking-wider block">
-                      Drive Selection Rounds Workflow
+                  <div className="mt-4 pt-3 border-t border-[#202D42] flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Applications: <strong className="text-white">{drive.appliedStudentsCount}</strong></span>
+                    <span className="text-[#A3E635] font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      View Drive Dashboard &rarr;
                     </span>
-                    <div className="flex items-center justify-between bg-[#101726] border border-[#202D42] p-2.5 rounded-xl text-[11px] font-semibold text-[#94A3B8]">
-                      <span>Application</span>
-                      <ChevronRight className="w-3 h-3 text-[#A3E635]" />
-                      <span>Test</span>
-                      <ChevronRight className="w-3 h-3 text-[#A3E635]" />
-                      <span className="text-[#A3E635] font-bold">Tech 1</span>
-                      <ChevronRight className="w-3 h-3 text-[#64748B]" />
-                      <span>HR</span>
-                    </div>
                   </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
-                  {/* Candidates Avatar Stack & Counters Grid strictly matching design */}
-                  <div className="flex items-center justify-between pt-2 border-t border-[#202D42]">
-                    <div className="grid grid-cols-3 gap-3 w-full text-center">
-                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2">
-                        <span className="text-[10px] text-[#94A3B8] uppercase block">Eligible</span>
-                        <span className="text-sm font-extrabold text-white">400</span>
-                      </div>
-                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2">
-                        <span className="text-[10px] text-[#94A3B8] uppercase block">Applied</span>
-                        <span className="text-sm font-extrabold text-white">{drive.appliedStudentsCount}</span>
-                      </div>
-                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2">
-                        <span className="text-[10px] text-[#94A3B8] uppercase block">Selected</span>
-                        <span className="text-sm font-extrabold text-[#A3E635]">{drive.placedCount || 18}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Actions */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      fullWidth
-                      onClick={() => handleOpenDetailsView(drive)}
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      onClick={() => info('Manage Students', `Viewing student roster for ${drive.companyName}`)}
-                    >
-                      Manage Students
-                    </Button>
-                  </div>
-
-                </Card>
-              </motion.div>
-            ))}
+          {/* Server Pagination */}
+          <div className="p-4 bg-[#162032] border border-[#202D42] rounded-2xl flex items-center justify-between">
+            <span className="text-xs text-[#94A3B8]">
+              Page {currentPage} of {Math.ceil(totalRecords / itemsPerPage) || 1} ({totalRecords} placement drives)
+            </span>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
+              onPageChange={setCurrentPage}
+            />
           </div>
-
-          <Pagination currentPage={currentPage} totalPages={69} onPageChange={setCurrentPage} totalEntries={69} />
-
         </div>
       ) : (
-        /* VIEW MODE 2: FULL DRIVE DETAILS VIEW strictly matching Design Placement Drive Details..jpg */
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="space-y-6"
-        >
-          {/* Header Card matching Design Placement Drive Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Drive Hero Info Banner */}
-            <Card className="lg:col-span-8 p-6 bg-gradient-to-r from-[#162032] via-[#101726] to-[#162032] border-[#202D42] flex flex-col justify-between">
-              <div className="flex items-center gap-4">
-                <img src={selectedDrive.companyLogo} alt={selectedDrive.companyName} className="w-16 h-16 rounded-2xl object-cover border-2 border-[#A3E635] bg-white p-1" />
-                <div>
-                  <span className="text-xs font-bold text-[#A3E635] uppercase tracking-wider font-mono">
-                    {selectedDrive.driveCode}
-                  </span>
-                  <h2 className="text-2xl font-extrabold text-white">{selectedDrive.companyName} SDE-1 Drive (2025)</h2>
-                  <p className="text-xs text-[#94A3B8]">{selectedDrive.roleTitle} • {selectedDrive.ctc}</p>
+        /* VIEW MODE 2: DETAILED DASHBOARD VIEW FOR SELECTED DRIVE */
+        selectedDrive && (
+          <div className="space-y-6">
+            {/* Selected Drive Header Card */}
+            <Card className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <img
+                    src={selectedDrive.companyLogo}
+                    alt={selectedDrive.companyName}
+                    className="w-16 h-16 rounded-2xl object-cover border-2 border-[#A3E635]"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-[#A3E635]">{selectedDrive.driveCode}</span>
+                      <StatusBadge status={selectedDrive.status} size="sm" />
+                    </div>
+                    <h2 className="text-2xl font-extrabold text-white mt-0.5">{selectedDrive.companyName}</h2>
+                    <p className="text-sm font-semibold text-[#94A3B8]">{selectedDrive.roleTitle}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button variant="secondary" size="md" onClick={() => setViewMode('cards')}>
+                    &larr; Back to Grid
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="md"
+                    onClick={() => handleDeleteDriveAction(selectedDrive.id)}
+                  >
+                    Delete Drive
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stat Pills */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[#202D42]">
+                <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
+                  <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Package Offered</span>
+                  <span className="text-base font-extrabold text-[#A3E635]">{selectedDrive.ctc}</span>
+                </div>
+                <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
+                  <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Total Applications</span>
+                  <span className="text-base font-extrabold text-white">{selectedDrive.appliedStudentsCount}</span>
+                </div>
+                <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
+                  <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Shortlisted</span>
+                  <span className="text-base font-extrabold text-sky-400">{selectedDrive.shortlistedCount}</span>
+                </div>
+                <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
+                  <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Selected Candidates</span>
+                  <span className="text-base font-extrabold text-emerald-400">{selectedDrive.placedCount}</span>
                 </div>
               </div>
             </Card>
-
-            {/* Quick Metadata Box */}
-            <Card className="lg:col-span-4 p-5 space-y-2 text-xs bg-[#101726]">
-              <div className="flex justify-between py-1 border-b border-[#202D42]">
-                <span className="text-[#94A3B8]">Role:</span>
-                <span className="font-bold text-white">{selectedDrive.roleTitle}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-[#202D42]">
-                <span className="text-[#94A3B8]">Drive Dates:</span>
-                <span className="font-bold text-white">{selectedDrive.driveDate}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-[#202D42]">
-                <span className="text-[#94A3B8]">Venue:</span>
-                <span className="font-bold text-white">{selectedDrive.location}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-[#94A3B8]">Open Positions:</span>
-                <span className="font-extrabold text-[#A3E635]">25 Seats</span>
-              </div>
-            </Card>
-
           </div>
-
-          {/* TIMELINE STEPPER CARD & ELIGIBILITY CARD */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Horizontal Recruitment Timeline Stepper */}
-            <Card className="lg:col-span-8 p-6 space-y-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-                Recruitment Workflow Timeline
-              </h3>
-              
-              <div className="flex items-center justify-between relative px-2 py-4">
-                {/* Connecting Line */}
-                <div className="absolute top-1/2 left-8 right-8 h-1 bg-[#202D42] -translate-y-1/2 z-0" />
-                <div className="absolute top-1/2 left-8 w-3/5 h-1 bg-[#A3E635] -translate-y-1/2 z-0" />
-
-                {/* Node 1 */}
-                <div className="relative z-10 text-center space-y-1">
-                  <div className="w-10 h-10 rounded-full bg-[#A3E635] text-[#0B0F17] flex items-center justify-center font-bold mx-auto shadow-[0_0_12px_rgba(163,230,53,0.5)]">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-white block">Application</span>
-                </div>
-
-                {/* Node 2 */}
-                <div className="relative z-10 text-center space-y-1">
-                  <div className="w-10 h-10 rounded-full bg-[#A3E635] text-[#0B0F17] flex items-center justify-center font-bold mx-auto shadow-[0_0_12px_rgba(163,230,53,0.5)]">
-                    <Edit className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-white block">Written Test</span>
-                </div>
-
-                {/* Node 3 */}
-                <div className="relative z-10 text-center space-y-1">
-                  <div className="w-10 h-10 rounded-full bg-[#A3E635] text-[#0B0F17] flex items-center justify-center font-bold mx-auto shadow-[0_0_12px_rgba(163,230,53,0.5)]">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-[#A3E635] block">Technical 1</span>
-                </div>
-
-                {/* Node 4 */}
-                <div className="relative z-10 text-center space-y-1">
-                  <div className="w-10 h-10 rounded-full bg-[#101726] border-2 border-[#202D42] text-[#64748B] flex items-center justify-center font-bold mx-auto">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-medium text-[#64748B] block">HR Round</span>
-                </div>
-
-                {/* Node 5 */}
-                <div className="relative z-10 text-center space-y-1">
-                  <div className="w-10 h-10 rounded-full bg-[#101726] border-2 border-[#202D42] text-[#64748B] flex items-center justify-center font-bold mx-auto">
-                    <Award className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-medium text-[#64748B] block">Result</span>
-                </div>
-
-              </div>
-            </Card>
-
-            {/* Eligibility Card */}
-            <Card className="lg:col-span-4 p-6 space-y-3 bg-[#101726]">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#A3E635]">
-                Eligibility Criteria
-              </h3>
-              <ul className="text-xs space-y-2 text-[#94A3B8]">
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#A3E635]" />
-                  Minimum 7.5 CGPA cut-off
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#A3E635]" />
-                  Branches: CS, IT, ECE
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#A3E635]" />
-                  No active backlogs allowed
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#A3E635]" />
-                  Batch of 2025
-                </li>
-              </ul>
-            </Card>
-
-          </div>
-
-          {/* STUDENTS AND ROUNDS PROGRESSION TABLE strictly matching design */}
-          <Card className="p-6 space-y-4">
-            <h3 className="text-sm font-extrabold text-white">Students and Rounds Progression</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Roll No.</TableHead>
-                  <TableHead>Round-1 Status</TableHead>
-                  <TableHead>Round-2 Status</TableHead>
-                  <TableHead>HR Round Status</TableHead>
-                  <TableHead>Final Offer Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="font-bold text-white">Rahul Sharma</TableCell>
-                  <TableCell className="font-mono text-[#94A3B8]">RS2020CS</TableCell>
-                  <TableCell><Badge variant="warning">Selected: Pending</Badge></TableCell>
-                  <TableCell><Badge variant="active">Selected</Badge></TableCell>
-                  <TableCell><span className="text-xs text-[#64748B]">Not Scheduled</span></TableCell>
-                  <TableCell><Badge variant="active">Selected (Amazon)</Badge></TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-bold text-white">Ervara Mahiral</TableCell>
-                  <TableCell className="font-mono text-[#94A3B8]">201300303</TableCell>
-                  <TableCell><Badge variant="warning">Selected: Pending</Badge></TableCell>
-                  <TableCell><Badge variant="active">Selected</Badge></TableCell>
-                  <TableCell><Badge variant="active">Offers</Badge></TableCell>
-                  <TableCell><Badge variant="alert">Rejected</Badge></TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-bold text-white">Jamel Mahiral</TableCell>
-                  <TableCell className="font-mono text-[#94A3B8]">201300948</TableCell>
-                  <TableCell><Badge variant="active">Selected</Badge></TableCell>
-                  <TableCell><Badge variant="active">Selected</Badge></TableCell>
-                  <TableCell><span className="text-xs text-[#64748B]">Not Scheduled</span></TableCell>
-                  <TableCell><Badge variant="neutral">Pending</Badge></TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Card>
-
-          {/* INTERVIEW SCHEDULE & ROUND ANALYTICS */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Interview Schedule Card */}
-            <Card className="lg:col-span-8 p-6 space-y-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-                Scheduled Interviews Card
-              </h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Student Name</TableHead>
-                    <TableHead>Round</TableHead>
-                    <TableHead>Interviewer</TableHead>
-                    <TableHead className="text-right">Join Link</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="text-xs text-white">Oct 23, 2025 (09:00 GST)</TableCell>
-                    <TableCell className="font-bold text-white">Priya Patel</TableCell>
-                    <TableCell className="text-xs text-[#A3E635]">HR Round 1</TableCell>
-                    <TableCell className="text-xs text-[#94A3B8]">Sarah Jenkins</TableCell>
-                    <TableCell className="text-right">
-                      <a
-                        href="#join"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          info('Joining Interview', 'Launching Google Meet video call...');
-                        }}
-                        className="text-xs font-bold text-sky-400 hover:underline flex items-center justify-end gap-1"
-                      >
-                        <Video className="w-3.5 h-3.5" /> Join Link
-                      </a>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </Card>
-
-            {/* Progression Analytics Charts */}
-            <Card className="lg:col-span-4 p-6 space-y-4 bg-[#101726]">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#A3E635]">
-                Round Wise Progression Analytics
-              </h3>
-              <div className="h-36">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={roundProgressionData}>
-                    <Bar dataKey="count" fill="#A3E635" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex justify-between gap-2 pt-2 border-t border-[#202D42]">
-                <Button variant="secondary" size="sm" fullWidth onClick={() => info('Export Data', 'Exported Drive_Summary.xlsx')}>
-                  Export Data
-                </Button>
-                <Button variant="primary" size="sm" fullWidth onClick={() => success('Drive Published', 'Final results published to portal.')}>
-                  Publish Final Result
-                </Button>
-              </div>
-            </Card>
-
-          </div>
-
-        </motion.div>
+        )
       )}
 
-      {/* CREATE NEW DRIVE MODAL */}
+      {/* PUBLISH NEW DRIVE MODAL */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Publish New Placement Drive"
-        subtitle="Schedule a recruitment drive for campus candidates."
+        title="Publish Placement Drive"
+        subtitle="Configure new recruitment drive parameters."
       >
-        <form onSubmit={handleCreateDrive} className="space-y-4">
+        <form onSubmit={handleCreateDriveSubmit} className="space-y-4">
           <Input
             label="Company Name"
-            placeholder="e.g. Amazon / Google"
+            placeholder="e.g. Microsoft / Google"
             value={newCompany}
             onChange={(e) => setNewCompany(e.target.value)}
             required
           />
           <Input
             label="Role Title"
-            placeholder="Software Engineer I"
+            placeholder="e.g. Software Engineer I"
             value={newRole}
             onChange={(e) => setNewRole(e.target.value)}
             required
           />
           <Input
-            label="Offered CTC"
-            placeholder="₹25 LPA"
+            label="CTC Package (LPA)"
+            placeholder="e.g. 18"
             value={newCtc}
             onChange={(e) => setNewCtc(e.target.value)}
             required
@@ -655,7 +452,6 @@ export const Drives: React.FC = () => {
           </div>
         </form>
       </Modal>
-
     </div>
   );
 };

@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
+import { loginApi, logoutApi, getCurrentUserApi, forgotPasswordApi, resetPasswordApi } from '../api/auth.api';
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, role?: UserRole) => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<UserRole>;
+  logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (data: { token: string; password: string }) => Promise<void>;
   setRole: (role: UserRole) => void;
 }
 
@@ -21,49 +25,97 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
     }
-    // Default demo user for seamless previewing
-    return {
-      id: 'usr-1',
-      name: 'Dr. James Anderson',
-      email: 'james.tpo@university.edu',
-      role: 'tpo_admin',
-      department: 'Training & Placement Office',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-    };
+    return null;
   });
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('tpo_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('tpo_user');
-    }
-  }, [user]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const login = (email: string, role: UserRole = 'tpo_admin') => {
-    const newUser: User = {
-      id: 'usr-' + Date.now(),
-      name: role === 'tpo_admin' ? 'Dr. James Anderson' : role === 'student' ? 'Alex Rivera' : 'Sarah Jenkins',
-      email,
-      role,
-      department: role === 'tpo_admin' ? 'TPO Office' : role === 'student' ? 'Computer Science' : 'Recruitment Ops',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const token = localStorage.getItem('tpo_token');
+      if (token) {
+        try {
+          const res = await getCurrentUserApi();
+          if (res.data?.user) {
+            const fetchedUser = {
+              ...res.data.user,
+              name: res.data.user.full_name || res.data.user.name || 'User',
+            };
+            setUser(fetchedUser);
+            localStorage.setItem('tpo_user', JSON.stringify(fetchedUser));
+          }
+        } catch (error) {
+          console.error('Session verification error:', error);
+          localStorage.removeItem('tpo_token');
+          localStorage.removeItem('tpo_user');
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
     };
-    setUser(newUser);
+
+    verifyAuth();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<UserRole> => {
+    const res = await loginApi({ email, password });
+    const { accessToken, user: apiUser } = res.data;
+
+    const formattedUser: User = {
+      ...apiUser,
+      name: apiUser.full_name || apiUser.name || 'User',
+    };
+
+    localStorage.setItem('tpo_token', accessToken);
+    localStorage.setItem('tpo_user', JSON.stringify(formattedUser));
+    setUser(formattedUser);
+
+    return formattedUser.role;
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      await logoutApi();
+    } catch (error) {
+      console.warn('Logout API failed, clearing local session:', error);
+    } finally {
+      localStorage.removeItem('tpo_token');
+      localStorage.removeItem('tpo_user');
+      setUser(null);
+    }
+  };
+
+  const forgotPassword = async (email: string) => {
+    await forgotPasswordApi(email);
+  };
+
+  const resetPassword = async (data: { token: string; password: string }) => {
+    await resetPasswordApi(data);
   };
 
   const setRole = (role: UserRole) => {
     if (user) {
-      setUser({ ...user, role });
+      const updated = { ...user, role };
+      setUser(updated);
+      localStorage.setItem('tpo_user', JSON.stringify(updated));
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, setRole }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isAuthenticated: !!user,
+        login,
+        logout,
+        forgotPassword,
+        resetPassword,
+        setRole,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

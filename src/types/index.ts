@@ -1,11 +1,13 @@
-export type UserRole = 'tpo_admin' | 'student' | 'recruiter';
+export type UserRole = 'admin' | 'tpo' | 'student' | 'recruiter' | 'faculty' | 'tpo_admin';
 
 export interface User {
   id: string;
   name: string;
+  full_name?: string;
   email: string;
   role: UserRole;
   avatar?: string;
+  avatar_url?: string;
   department?: string;
   phone?: string;
 }

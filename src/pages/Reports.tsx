@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3,
@@ -11,20 +11,22 @@ import {
   Building2,
   CheckCircle2,
   PieChart as PieIcon,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from 'recharts';
 
 import { Card } from '../components/ui/Card';
@@ -35,8 +37,15 @@ import { Avatar } from '../components/ui/Avatar';
 import { RadialProgress } from '../components/ui/ProgressBar';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
+import { getPlacementStatistics, getPlacements } from '../api/placement.api';
+import {
+  getDashboardReport,
+  exportPDF,
+  exportExcel,
+  exportCSV,
+} from '../api/report.api';
 
-// Mock Data for Top Company Wise Placements
+// Default Company Wise Placements Fallback
 const companyPlacementData = [
   { name: 'Amazon', count: 35 },
   { name: 'Google', count: 30 },
@@ -69,24 +78,98 @@ const monthlyTrendData = [
   { month: 'Dec', val: 600 },
 ];
 
-// Top Quiz Achievers Data
-const topPerformers = [
-  { name: 'Rahul Sharma', quiz1: 95, quiz2: 90, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120' },
-  { name: 'Priya Patel', quiz1: 98, quiz2: 92, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120' },
-  { name: 'Vikram Singh', quiz1: 92, quiz2: 88, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120' },
-  { name: 'Anjali Gupta', quiz1: 96, quiz2: 94, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=120' },
-];
-
 export const Reports: React.FC = () => {
-  const { success } = useToast();
+  const { success, error: toastError, info } = useToast();
+
+  const [loading, setLoading] = useState<boolean>(true);
+  const [exportingType, setExportingType] = useState<string | null>(null);
+
+  const [stats, setStats] = useState<{
+    totalPlacements: number;
+    highestPackage: string;
+    averagePackage: string;
+    placementPercentage: number;
+  }>({
+    totalPlacements: 4100,
+    highestPackage: '₹45 LPA',
+    averagePackage: '₹12.5 LPA',
+    placementPercentage: 94,
+  });
+
+  const [placementsList, setPlacementsList] = useState<any[]>([]);
+
+  const fetchPlacementReports = async () => {
+    setLoading(true);
+    try {
+      const reportRes = await getDashboardReport();
+      if (reportRes.data?.stats) {
+        setStats(reportRes.data.stats);
+      } else {
+        const statsRes = await getPlacementStatistics();
+        if (statsRes.data?.statistics) {
+          const s = statsRes.data.statistics;
+          setStats({
+            totalPlacements: s.totalPlacements || 4100,
+            highestPackage: s.highestPackage ? `₹${s.highestPackage} LPA` : '₹45 LPA',
+            averagePackage: s.averagePackage ? `₹${s.averagePackage} LPA` : '₹12.5 LPA',
+            placementPercentage: s.placementPercentage || 94,
+          });
+        }
+      }
+
+      const placementsRes = await getPlacements({ limit: 10 });
+      if (placementsRes.data?.placements) {
+        setPlacementsList(placementsRes.data.placements);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to fetch placement report metrics.';
+      toastError('Report Loading Error', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlacementReports();
+  }, []);
+
+  const handleExportFile = async (type: 'pdf' | 'excel' | 'csv') => {
+    setExportingType(type);
+    try {
+      let blobData: Blob;
+      let filename = `Placement_Report_2025.${type === 'excel' ? 'xlsx' : type}`;
+
+      if (type === 'pdf') {
+        blobData = await exportPDF();
+      } else if (type === 'excel') {
+        blobData = await exportExcel();
+      } else {
+        blobData = await exportCSV();
+      }
+
+      const url = window.URL.createObjectURL(new Blob([blobData]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      success('Export Completed', `Downloaded ${filename} successfully.`);
+    } catch (err: any) {
+      toastError('Export Error', err.response?.data?.message || `Failed to export ${type.toUpperCase()} report file.`);
+    } finally {
+      setExportingType(null);
+    }
+  };
 
   return (
-    <div className="space-y-6 pb-16">
-      
+    <div className="space-y-6 pb-16 font-sans">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <Breadcrumb items={[{ label: 'Reports' }]} />
+          <Breadcrumb items={[{ label: 'Reports & Export' }]} />
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-1">
             Placement Reports Dashboard
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
@@ -94,14 +177,57 @@ export const Reports: React.FC = () => {
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Comprehensive placement performance, department distributions, salary packages, and training completion metrics.
+            Comprehensive placement performance, department distributions, salary packages, and exported file downloads.
           </p>
+        </div>
+
+        {/* Action Export Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+            onClick={fetchPlacementReports}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<FileSpreadsheet className="w-4 h-4 text-[#A3E635]" />}
+            isLoading={exportingType === 'csv'}
+            onClick={() => handleExportFile('csv')}
+          >
+            CSV
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+            isLoading={exportingType === 'excel'}
+            onClick={() => handleExportFile('excel')}
+          >
+            Excel
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Download className="w-4 h-4" />}
+            isLoading={exportingType === 'pdf'}
+            onClick={() => handleExportFile('pdf')}
+            className="font-extrabold text-xs"
+          >
+            Export PDF Report
+          </Button>
         </div>
       </div>
 
-      {/* TOP 3 METRIC CARDS ROW strictly matching Design Reports Dashboard.jpg */}
+      {/* TOP 3 METRIC CARDS ROW */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
         {/* Card 1: Placement Rate */}
         <Card glowOnHover className="p-6 space-y-2 border-[#202D42]">
           <div className="flex items-center justify-between">
@@ -109,9 +235,11 @@ export const Reports: React.FC = () => {
               Placement Rate 🎓
             </span>
           </div>
-          <div className="text-4xl font-extrabold text-[#A3E635]">94%</div>
+          <div className="text-4xl font-extrabold text-[#A3E635]">
+            {loading ? '...' : `${stats.placementPercentage}%`}
+          </div>
           <p className="text-xs text-[#94A3B8] font-medium">Overall Placement Rate (CTC)</p>
-          
+
           <div className="h-12 pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyTrendData.slice(0, 6)}>
@@ -128,9 +256,11 @@ export const Reports: React.FC = () => {
               Highest Package 🤝
             </span>
           </div>
-          <div className="text-4xl font-extrabold text-white">₹1.05 Cr PA</div>
+          <div className="text-4xl font-extrabold text-white">
+            {loading ? '...' : stats.highestPackage}
+          </div>
           <div className="flex items-center gap-2 pt-1">
-            <Avatar src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" name="Ervara" size="sm" border />
+            <Avatar src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" name="Rahul" size="sm" border />
             <div>
               <p className="text-xs font-extrabold text-white leading-tight">Rahul Sharma</p>
               <p className="text-[10px] text-[#A3E635]">Amazon (SDE-1)</p>
@@ -145,7 +275,9 @@ export const Reports: React.FC = () => {
               Average Package 💰
             </span>
           </div>
-          <div className="text-4xl font-extrabold text-[#38BDF8]">₹12.5 LPA</div>
+          <div className="text-4xl font-extrabold text-[#38BDF8]">
+            {loading ? '...' : stats.averagePackage}
+          </div>
           <p className="text-xs text-[#94A3B8] font-medium">Average Package (CTC)</p>
 
           <div className="h-12 pt-2">
@@ -156,18 +288,13 @@ export const Reports: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </Card>
-
       </div>
 
-      {/* MAIN CHARTS SECTION strictly matching design */}
+      {/* MAIN CHARTS SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
         {/* LEFT COLUMN (8 cols): Bar Chart + Donut Chart + Monthly Trend */}
         <div className="lg:col-span-8 space-y-6">
-          
-          {/* Top Row: Company Bar Chart + Department Donut Chart */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
             {/* Top Company Wise Placements Horizontal Bar Chart */}
             <Card className="p-5 space-y-3">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
@@ -184,7 +311,7 @@ export const Reports: React.FC = () => {
               </div>
             </Card>
 
-            {/* Placement Distribution by Department (%) Donut Chart */}
+            {/* Placement Distribution by Department Donut Chart */}
             <Card className="p-5 space-y-3">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
                 Placement Distribution by Department (%)
@@ -200,25 +327,25 @@ export const Reports: React.FC = () => {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-4 gap-1 text-center text-[11px] font-extrabold text-[#94A3B8]">
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#94A3B8]">
                 {deptPlacementData.map((d) => (
-                  <div key={d.name} className="flex flex-col items-center">
-                    <span className="w-2.5 h-2.5 rounded-full mb-1" style={{ backgroundColor: d.color }} />
-                    <span className="text-white">{d.name}</span>
-                    <span className="text-[#A3E635] text-[10px]">{d.value}%</span>
+                  <div key={d.name} className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                    <span>{d.name}: {d.value}%</span>
                   </div>
                 ))}
               </div>
             </Card>
-
           </div>
 
-          {/* Monthly Placement Progress Trend Area Graph */}
-          <Card className="p-6 space-y-4">
+          {/* Monthly Placement Progress Curve */}
+          <Card className="p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-white">Monthly Placement progress Trend</h3>
-              <span className="text-xs font-bold text-[#A3E635] flex items-center gap-1">
-                <TrendingUp className="w-4 h-4" /> Season 2025 On Track
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
+                Monthly Placement Trend & Growth Curve
+              </h3>
+              <span className="text-xs text-[#A3E635] font-semibold flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5" /> +18.4% YoY
               </span>
             </div>
 
@@ -226,123 +353,77 @@ export const Reports: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="reportsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#A3E635" stopOpacity={0.6} />
+                    <linearGradient id="colorPlacements" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#A3E635" stopOpacity={0.5} />
                       <stop offset="95%" stopColor="#A3E635" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} />
                   <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
                   <RechartsTooltip
-                    contentStyle={{ backgroundColor: '#101726', borderColor: '#202D42', borderRadius: '12px', color: '#FFF' }}
+                    contentStyle={{
+                      backgroundColor: '#101726',
+                      borderColor: '#202D42',
+                      borderRadius: '12px',
+                      color: '#FFFFFF',
+                      fontSize: '12px',
+                    }}
                   />
-                  <Area type="monotone" dataKey="val" stroke="#A3E635" strokeWidth={3} fill="url(#reportsGrad)" />
+                  <Area
+                    type="monotone"
+                    dataKey="val"
+                    stroke="#A3E635"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorPlacements)"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </Card>
-
         </div>
 
-        {/* RIGHT COLUMN (4 cols): Training Gauges + Quiz Performers + Leaderboard */}
+        {/* RIGHT COLUMN (4 cols): Radial Training Progress & Recent Placements Feed */}
         <div className="lg:col-span-4 space-y-6">
-          
-          {/* Training Attendance & Participation Gauges */}
-          <Card className="p-5 space-y-4 bg-[#101726] border-[#202D42]">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-              Training Attendance & Participation
+          <Card className="p-5 space-y-4">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
+              Training Completion Progress
             </h3>
-            
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <RadialProgress value={92} size={64} strokeWidth={6} label="92%" />
-              <RadialProgress value={90} size={64} strokeWidth={6} label="90%" />
-              <RadialProgress value={78} size={64} strokeWidth={6} label="78%" />
-              <RadialProgress value={92} size={64} strokeWidth={6} label="92%" />
+
+            <div className="py-2 flex justify-center">
+              <RadialProgress value={88} size={140} strokeWidth={12} label="Complete" />
             </div>
-            <div className="text-center text-xs font-extrabold text-[#A3E635] pt-1">
-              Average Attendance 92%
+
+            <div className="text-center space-y-1">
+              <p className="text-sm font-extrabold text-white">88% Students Completed</p>
+              <p className="text-xs text-[#94A3B8]">Full Stack & System Design Modules</p>
             </div>
           </Card>
 
-          {/* Top Quiz Performers Card */}
-          <Card className="p-5 space-y-3 bg-[#101726] border-[#202D42]">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-              Top Quiz Performers & Results
+          {/* Recent Placements Table */}
+          <Card className="p-5 space-y-3">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
+              Live Placements Feed
             </h3>
-            
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {topPerformers.map((tp, idx) => (
-                <div key={idx} className="bg-[#162032] border border-[#202D42] rounded-xl p-2.5 flex items-center gap-2">
-                  <Avatar src={tp.avatar} name={tp.name} size="xs" />
-                  <div className="truncate">
-                    <p className="font-bold text-white truncate text-[11px]">{tp.name}</p>
-                    <p className="text-[9px] text-[#A3E635]">Quiz 1: {tp.quiz1} | Q2: {tp.quiz2}</p>
+
+            <div className="space-y-3">
+              {placementsList.length === 0 ? (
+                <p className="text-xs text-[#94A3B8] italic">No recent placement records available.</p>
+              ) : (
+                placementsList.slice(0, 4).map((p: any, idx: number) => (
+                  <div key={p.id || idx} className="flex items-center justify-between text-xs bg-[#101726] border border-[#202D42] p-2.5 rounded-xl">
+                    <div>
+                      <p className="font-bold text-white leading-tight">{p.students?.users?.full_name || p.students?.name || 'Placed Student'}</p>
+                      <p className="text-[11px] text-[#94A3B8]">{p.companies?.name || 'Corporate Partner'}</p>
+                    </div>
+                    <span className="font-extrabold text-[#A3E635]">₹{p.ctc || 12} LPA</span>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
-
-          {/* Completion Cards & Top Achievers Leaderboard */}
-          <Card className="p-5 space-y-3 bg-[#101726] border-[#202D42]">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-              Completion Cards & Top Achievers
-            </h3>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-[#162032] border border-[#202D42]">
-                <div className="flex items-center gap-2">
-                  <Avatar src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" name="Rahul" size="xs" />
-                  <span className="font-bold text-white text-xs">Rahul Sharma</span>
-                </div>
-                <Badge variant="active">43 Badges</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-xl bg-[#162032] border border-[#202D42]">
-                <div className="flex items-center gap-2">
-                  <Avatar src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120" name="Priya" size="xs" />
-                  <span className="font-bold text-white text-xs">Priya Patel</span>
-                </div>
-                <Badge variant="success">26 Certificates</Badge>
-              </div>
-            </div>
-          </Card>
-
         </div>
-
       </div>
-
-      {/* FOOTER ACTIONS strictly matching Design Reports Dashboard.jpg */}
-      <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#202D42]">
-        <Button
-          variant="secondary"
-          size="md"
-          leftIcon={<Download className="w-4 h-4" />}
-          onClick={() => success('Export Analytics', 'Exported Analytics_Summary.csv')}
-        >
-          Export Analytics Report
-        </Button>
-
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<FileText className="w-4 h-4 text-[#0B0F17]" />}
-          onClick={() => success('PDF Exported', 'Exported Placement_Report_2025.pdf')}
-          className="font-extrabold"
-        >
-          Export PDF Report
-        </Button>
-
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<FileText className="w-4 h-4 text-[#0B0F17]" />}
-          onClick={() => success('Excel Exported', 'Exported Placement_Data_Sheet.xlsx')}
-          className="font-extrabold shadow-[0_0_15px_rgba(163,230,53,0.3)]"
-        >
-          Export Excel Report
-        </Button>
-      </div>
-
     </div>
   );
 };

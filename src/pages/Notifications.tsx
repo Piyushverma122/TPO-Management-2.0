@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Bell,
@@ -14,22 +14,33 @@ import {
   ExternalLink,
   Check,
   Sparkles,
-  Settings
+  Settings,
+  RefreshCw,
+  Trash2,
+  Send,
 } from 'lucide-react';
 
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input, SearchInput } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { Avatar } from '../components/ui/Avatar';
 import { RadialProgress } from '../components/ui/ProgressBar';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
+  broadcastNotification,
+} from '../api/notification.api';
 
 export interface NotificationItem {
   id: string;
-  category: 'Drive Update' | 'Results' | 'Interview' | 'Training' | 'System Alert';
-  badgeTag: 'New' | 'Important' | 'Immediate Action' | 'Required';
+  category: string;
+  badgeTag: string;
   title: string;
   description: string;
   timestamp: string;
@@ -38,83 +49,127 @@ export interface NotificationItem {
   avatar?: string;
 }
 
-const initialNotifications: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    category: 'Drive Update',
-    badgeTag: 'New',
-    title: 'Amazon SDE-1 Shortlist',
-    description: 'Amazon SDE-1 Shortlisted candidate list is now available.',
-    timestamp: '1h ago',
-    isRead: false,
-    actionText: 'View List',
-  },
-  {
-    id: 'notif-[#2]',
-    category: 'Results',
-    badgeTag: 'Important',
-    title: 'Candidate Placement Confirmed',
-    description: 'Jamel Mahiral (EE) has been placed at Microsoft with ₹1.0 Cr PA.',
-    timestamp: '1h ago',
-    isRead: false,
-    actionText: 'Congratulate Jamel',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120',
-  },
-  {
-    id: 'notif-[#3]',
-    category: 'Interview',
-    badgeTag: 'Immediate Action',
-    title: 'Technical Interview Scheduled',
-    description: 'Google (technical round) scheduled for tomorrow at 10 AM GST.',
-    timestamp: '1h ago',
-    isRead: false,
-    actionText: 'Join Meeting / Add to Calendar',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120',
-  },
-  {
-    id: 'notif-4',
-    category: 'Training',
-    badgeTag: 'Required',
-    title: 'Training Module Badge Earned',
-    description: 'Core Java completion badge earned by 45 candidates.',
-    timestamp: '1h ago',
-    isRead: false,
-  },
-  {
-    id: 'notif-5',
-    category: 'System Alert',
-    badgeTag: 'Required',
-    title: 'Profile Incomplete Alert',
-    description: 'Profile skill section is incomplete. Please update system record.',
-    timestamp: '1h ago',
-    isRead: false,
-  },
-];
-
 export const Notifications: React.FC = () => {
-  const { success, info } = useToast();
-  const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
+  const { success, error: toastError, info } = useToast();
+
+  // API State
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
+  // Filters & Modals
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  // Broadcast Form State
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastTarget, setBroadcastTarget] = useState('all_students');
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
 
-  const filteredNotifs = notifications.filter((n) => {
-    const matchesCat = selectedCategory === 'All' || n.category === selectedCategory;
-    const matchesSearch =
-      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesSearch;
-  });
+  const fetchNotificationsData = async () => {
+    setLoading(true);
+    try {
+      const res = await getNotifications({
+        page: currentPage,
+        limit: itemsPerPage,
+        category: selectedCategory !== 'All' ? selectedCategory : undefined,
+      });
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    success('Notifications Updated', 'Marked all notifications as read.');
+      const rawList = res.data?.notifications || [];
+      const total = res.data?.total || 0;
+      const unread = res.data?.unreadCount || 0;
+
+      const formattedList: NotificationItem[] = rawList.map((n: any) => ({
+        id: n.id,
+        category: n.category || 'System Alert',
+        badgeTag: n.priority === 'HIGH' ? 'Immediate Action' : 'New',
+        title: n.title || 'Notification Alert',
+        description: n.message || n.description || '',
+        timestamp: n.created_at ? new Date(n.created_at).toLocaleTimeString() : 'Just now',
+        isRead: !!n.is_read,
+        actionText: n.action_url ? 'View Action' : undefined,
+      }));
+
+      setNotifications(formattedList);
+      setTotalRecords(total);
+      setUnreadCount(unread);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to load notifications queue.';
+      toastError('Error Loading Notifications', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotificationsData();
+  }, [currentPage, selectedCategory]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+      success('Notifications Updated', 'Marked all notifications as read.');
+    } catch (err: any) {
+      toastError('Error', err.response?.data?.message || 'Failed to mark all as read.');
+    }
+  };
+
+  const handleMarkSingleRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications(notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+      setUnreadCount(Math.max(0, unreadCount - 1));
+    } catch (err: any) {
+      toastError('Error', 'Failed to update notification status.');
+    }
+  };
+
+  const handleDeleteNotificationAction = async (id: string) => {
+    try {
+      await deleteNotification(id);
+      success('Notification Removed', 'Alert record deleted.');
+      fetchNotificationsData();
+    } catch (err: any) {
+      toastError('Delete Error', err.response?.data?.message || 'Failed to delete notification.');
+    }
+  };
+
+  const handleBroadcastSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTitle || !broadcastMessage) {
+      toastError('Validation Error', 'Title and Message are required.');
+      return;
+    }
+
+    setBroadcastLoading(true);
+    try {
+      await broadcastNotification({
+        title: broadcastTitle,
+        message: broadcastMessage,
+        target_group: broadcastTarget,
+      });
+
+      setBroadcastLoading(false);
+      setIsBroadcastModalOpen(false);
+      setBroadcastTitle('');
+      setBroadcastMessage('');
+      success('Broadcast Sent', 'Notification broadcasted to selected target audience.');
+      fetchNotificationsData();
+    } catch (err: any) {
+      setBroadcastLoading(false);
+      toastError('Broadcast Error', err.response?.data?.message || 'Failed to send broadcast notification.');
+    }
   };
 
   return (
-    <div className="space-y-6 pb-16">
-      
+    <div className="space-y-6 pb-16 font-sans">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -126,17 +181,38 @@ export const Notifications: React.FC = () => {
             </span>
           </h1>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+            onClick={fetchNotificationsData}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Send className="w-4 h-4" />}
+            onClick={() => setIsBroadcastModalOpen(true)}
+            className="font-extrabold text-xs"
+          >
+            Broadcast Announcement
+          </Button>
+        </div>
       </div>
 
-      {/* THREE COLUMN LAYOUT strictly matching Design Notification Center.jpg */}
+      {/* THREE COLUMN LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
         {/* LEFT COLUMN (3 cols): Notification Filters */}
         <Card className="lg:col-span-3 p-5 space-y-3 bg-[#101726] border-[#202D42]">
           <h2 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
             Notification Filters
           </h2>
-          
+
           <div className="space-y-1.5 text-xs font-bold">
             <button
               onClick={() => setSelectedCategory('All')}
@@ -161,7 +237,6 @@ export const Notifications: React.FC = () => {
               }`}
             >
               <span>Drive Updates</span>
-              <span className="text-[#64748B]">10</span>
             </button>
 
             <button
@@ -173,7 +248,6 @@ export const Notifications: React.FC = () => {
               }`}
             >
               <span>Results</span>
-              <span className="text-[#64748B]">5</span>
             </button>
 
             <button
@@ -185,19 +259,6 @@ export const Notifications: React.FC = () => {
               }`}
             >
               <span>Interviews</span>
-              <span className="text-[#64748B]">3</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory('Training')}
-              className={`w-full px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-all ${
-                selectedCategory === 'Training'
-                  ? 'bg-[#162032] text-[#A3E635] border border-[#A3E635]/40'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]/60'
-              }`}
-            >
-              <span>Training</span>
-              <span className="text-[#64748B]">2</span>
             </button>
 
             <button
@@ -209,130 +270,128 @@ export const Notifications: React.FC = () => {
               }`}
             >
               <span>System Alerts</span>
-              <span className="text-[#64748B]">5</span>
             </button>
           </div>
         </Card>
 
-        {/* MIDDLE COLUMN (5 cols): Recent Notifications List */}
-        <div className="lg:col-span-5 space-y-4">
+        {/* MIDDLE COLUMN (6 cols): Notifications Activity Feed */}
+        <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-white">Recent Notifications</h2>
-            <SearchInput
-              placeholder="Search alerts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-44 py-1 text-xs"
-            />
+            <span className="text-xs font-bold text-[#94A3B8]">
+              Showing {notifications.length} notifications
+            </span>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Check className="w-3.5 h-3.5 text-[#A3E635]" />}
+              onClick={handleMarkAllRead}
+            >
+              Mark All as Read
+            </Button>
           </div>
 
-          <div className="space-y-4">
-            {filteredNotifs.map((item) => (
-              <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card glowOnHover className="p-5 space-y-3 border-[#202D42]">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-sm text-white">{item.category}</span>
-                      <Badge variant={item.badgeTag === 'Important' ? 'warning' : 'active'} size="sm">
-                        {item.badgeTag}
-                      </Badge>
+          {loading ? (
+            <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
+              <div className="w-8 h-8 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <span>Loading notification stream...</span>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
+              No notifications in queue.
+            </div>
+          ) : (
+            notifications.map((notif) => (
+              <motion.div
+                key={notif.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => handleMarkSingleRead(notif.id)}
+                className={`p-4 rounded-2xl border transition-all duration-300 shadow-xl cursor-pointer ${
+                  notif.isRead
+                    ? 'bg-[#162032]/60 border-[#202D42]'
+                    : 'bg-[#162032] border-[#A3E635]/40 shadow-[0_0_15px_rgba(163,230,53,0.1)]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#A3E635]/15 text-[#A3E635] flex items-center justify-center font-bold shrink-0 mt-0.5">
+                      <Bell className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] text-[#64748B] font-bold">{item.timestamp}</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={notif.badgeTag === 'Immediate Action' ? 'alert' : 'accent'} size="sm">
+                          {notif.badgeTag}
+                        </Badge>
+                        <span className="text-[10px] text-[#64748B] font-semibold">{notif.timestamp}</span>
+                      </div>
+                      <h4 className="text-sm font-extrabold text-white mt-1">{notif.title}</h4>
+                      <p className="text-xs text-[#94A3B8] mt-0.5 leading-relaxed">{notif.description}</p>
+                    </div>
                   </div>
 
-                  <p className="text-xs text-slate-200 leading-relaxed">{item.description}</p>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-[#202D42]">
-                    <div className="flex items-center gap-2">
-                      {item.avatar && <Avatar src={item.avatar} name={item.title} size="xs" />}
-                      <span className="text-[10px] text-[#A3E635] font-bold uppercase">Unread</span>
-                    </div>
-
-                    {item.actionText && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => info('Action Clicked', `Triggered ${item.actionText}`)}
-                        className="text-xs font-bold py-1 px-3"
-                      >
-                        {item.actionText}
-                      </Button>
-                    )}
-                  </div>
-                </Card>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteNotificationAction(notif.id);
+                    }}
+                    className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
+                    title="Delete Notification"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </motion.div>
-            ))}
+            ))
+          )}
+        </div>
+
+        {/* RIGHT COLUMN (3 cols): System Status & Unread Counter */}
+        <Card className="lg:col-span-3 p-5 space-y-4 bg-[#101726] border-[#202D42]">
+          <h2 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
+            Alert Center Status
+          </h2>
+
+          <div className="bg-[#162032] border border-[#202D42] rounded-xl p-4 text-center space-y-2">
+            <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Unread Notifications</span>
+            <span className="text-3xl font-extrabold text-[#A3E635]">{unreadCount}</span>
+            <span className="text-[11px] text-[#94A3B8] block">Out of {totalRecords} total alerts</span>
           </div>
-        </div>
-
-        {/* RIGHT COLUMN (4 cols): Unread Notifications by Category Gauges strictly matching design */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Radial Gauges Card */}
-          <Card className="p-5 space-y-4 bg-[#101726] border-[#202D42]">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-              Unread Notifications by Category
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <RadialProgress value={80} size={70} strokeWidth={6} label="10 Drive Updates" />
-              <RadialProgress value={60} size={70} strokeWidth={6} label="5 Results" />
-              <RadialProgress value={40} size={70} strokeWidth={6} label="3 Interviews" />
-              <RadialProgress value={30} size={70} strokeWidth={6} label="2 Training" />
-            </div>
-          </Card>
-
-          {/* Notifications for Key Profiles Card */}
-          <Card className="p-5 space-y-3 bg-[#101726] border-[#202D42]">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-              Notifications for Key Profiles
-            </h3>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#162032] border border-[#202D42]">
-                <div className="flex items-center gap-2">
-                  <Avatar src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" name="Rahul" size="xs" online />
-                  <div>
-                    <span className="font-bold text-white text-xs block">Rahul Sharma</span>
-                    <span className="text-[10px] text-[#A3E635]">Amazon Offer Letter</span>
-                  </div>
-                </div>
-                <Badge variant="active" size="sm">43</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#162032] border border-[#202D42]">
-                <div className="flex items-center gap-2">
-                  <Avatar src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120" name="Jamel" size="xs" online />
-                  <div>
-                    <span className="font-bold text-white text-xs block">Jamel Mahiral</span>
-                    <span className="text-[10px] text-sky-400">Google Result Out</span>
-                  </div>
-                </div>
-                <Badge variant="info" size="sm">12</Badge>
-              </div>
-            </div>
-          </Card>
-
-        </div>
-
+        </Card>
       </div>
 
-      {/* FOOTER ACTIONS BAR strictly matching Design Notification Center.jpg */}
-      <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#202D42]">
-        <Button variant="secondary" size="md" onClick={() => info('Notification Config', 'Opening notification settings...')}>
-          Notification Settings
-        </Button>
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<Check className="w-4 h-4 text-[#0B0F17]" />}
-          onClick={handleMarkAllRead}
-          className="px-6 font-extrabold shadow-[0_0_15px_rgba(163,230,53,0.3)]"
-        >
-          Mark All As Read
-        </Button>
-      </div>
-
+      {/* BROADCAST ANNOUNCEMENT MODAL */}
+      <Modal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => setIsBroadcastModalOpen(false)}
+        title="Broadcast System Announcement"
+        subtitle="Send high-priority notifications to students or recruiters."
+      >
+        <form onSubmit={handleBroadcastSubmit} className="space-y-4">
+          <Input
+            label="Announcement Title"
+            placeholder="e.g. Schedule Update / Campus Visit"
+            value={broadcastTitle}
+            onChange={(e) => setBroadcastTitle(e.target.value)}
+            required
+          />
+          <Input
+            label="Notification Message"
+            placeholder="Enter announcement details..."
+            value={broadcastMessage}
+            onChange={(e) => setBroadcastMessage(e.target.value)}
+            required
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" size="md" onClick={() => setIsBroadcastModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="md" isLoading={broadcastLoading}>
+              Send Broadcast
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

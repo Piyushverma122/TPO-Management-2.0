@@ -28,6 +28,7 @@ import { Input, Textarea } from '../components/ui/Input';
 import { Dropdown, MultiSelect } from '../components/ui/Dropdown';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
+import { createCompany } from '../api/company.api';
 
 export interface AddCompanyFormValues {
   companyName: string;
@@ -46,7 +47,7 @@ export interface AddCompanyFormValues {
 
 export const AddCompany: React.FC = () => {
   const navigate = useNavigate();
-  const { success, info } = useToast();
+  const { success, error: toastError, info } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -87,17 +88,27 @@ export const AddCompany: React.FC = () => {
     }
   };
 
-  const onSubmit = (data: AddCompanyFormValues) => {
+  const onSubmit = async (data: AddCompanyFormValues) => {
     setIsLoading(true);
-
-    setTimeout(() => {
+    try {
+      await createCompany({
+        name: data.companyName,
+        industry: 'Technology & Services',
+        website: data.website,
+        tier: parseFloat(data.ctcMax) >= 25 ? 'Super Dream' : 'Dream',
+        status: 'Active',
+      });
       setIsLoading(false);
       success(
         'Company Published Successfully!',
         `${data.companyName} (${data.jobRole}) has been listed for placement drive.`
       );
       navigate('/companies');
-    }, 1000);
+    } catch (err: any) {
+      setIsLoading(false);
+      const errMsg = err.response?.data?.message || 'Failed to create company record.';
+      toastError('Creation Error', errMsg);
+    }
   };
 
   return (

@@ -30,12 +30,14 @@ export interface LoginFormValues {
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { success, info } = useToast();
+  const { login, forgotPassword } = useAuth();
+  const { success, error: toastError, info } = useToast();
   const [selectedRole, setSelectedRole] = useState<UserRole>('tpo_admin');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const {
     register,
@@ -52,14 +54,46 @@ export const Login: React.FC = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-
-    // Simulate API network request latency
-    setTimeout(() => {
-      login(data.email, selectedRole);
+    try {
+      const userRole = await login(data.email, data.password);
       setIsLoading(false);
       success('Logged In Successfully', `Welcome back to Smart Placement & TPO System.`);
-      navigate('/dashboard');
-    }, 1000);
+
+      // Role-based redirection
+      if (userRole === 'admin' || userRole === 'tpo' || userRole === 'tpo_admin') {
+        navigate('/dashboard');
+      } else if (userRole === 'student') {
+        navigate('/dashboard');
+      } else if (userRole === 'recruiter') {
+        navigate('/dashboard');
+      } else if (userRole === 'faculty') {
+        navigate('/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      const errMsg = err.response?.data?.message || err.message || 'Authentication failed. Please check your credentials.';
+      toastError('Login Failed', errMsg);
+    }
+  };
+
+  const handleForgotSubmit = async () => {
+    if (!forgotEmail) {
+      toastError('Validation Error', 'Please enter a valid email address.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      await forgotPassword(forgotEmail);
+      setForgotLoading(false);
+      setForgotModalOpen(false);
+      success('Reset Link Sent', 'Check your email inbox for password reset instructions.');
+    } catch (err: any) {
+      setForgotLoading(false);
+      const errMsg = err.response?.data?.message || 'Failed to send password reset link.';
+      toastError('Error', errMsg);
+    }
   };
 
   const handleRoleChange = (role: UserRole) => {
@@ -466,7 +500,14 @@ export const Login: React.FC = () => {
                 Enter your institutional email to receive password reset instructions.
               </p>
             </div>
-            <Input label="Email Address" type="email" placeholder="you@university.edu" leftIcon={<Mail className="w-4 h-4" />} />
+            <Input
+              label="Email Address"
+              type="email"
+              placeholder="you@university.edu"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              leftIcon={<Mail className="w-4 h-4" />}
+            />
             <div className="flex gap-2">
               <Button variant="secondary" size="md" fullWidth onClick={() => setForgotModalOpen(false)}>
                 Cancel
@@ -475,10 +516,8 @@ export const Login: React.FC = () => {
                 variant="primary"
                 size="md"
                 fullWidth
-                onClick={() => {
-                  setForgotModalOpen(false);
-                  success('Reset Link Sent', 'Check your email inbox for instructions.');
-                }}
+                isLoading={forgotLoading}
+                onClick={handleForgotSubmit}
               >
                 Send Link
               </Button>

@@ -28,6 +28,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -38,9 +39,30 @@ export const Dropdown: React.FC<DropdownProps> = ({
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isOpen) return;
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : 0));
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : options.length - 1));
+      } else if (event.key === 'Enter' && highlightedIndex >= 0 && highlightedIndex < options.length) {
+        event.preventDefault();
+        onChange(options[highlightedIndex].value);
+        setIsOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, highlightedIndex, options, onChange]);
 
   return (
     <div className={clsx('w-full space-y-1.5 relative select-none', className)} ref={dropdownRef}>
@@ -52,8 +74,10 @@ export const Dropdown: React.FC<DropdownProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={clsx(
-          'w-full bg-[#101726]/80 border rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between transition-all duration-200',
+          'w-full bg-[#101726]/80 border rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:outline-none',
           isOpen
             ? 'border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]'
             : 'border-[#202D42] hover:border-[#2A3B57]',
@@ -68,13 +92,19 @@ export const Dropdown: React.FC<DropdownProps> = ({
 
       {/* Options Panel */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-40 max-h-60 overflow-y-auto p-1.5 backdrop-blur-xl">
-          {options.map((option) => {
+        <div
+          role="listbox"
+          className="absolute top-full left-0 right-0 mt-1.5 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto p-1.5 backdrop-blur-xl"
+        >
+          {options.map((option, idx) => {
             const isSelected = option.value === value;
+            const isHighlighted = idx === highlightedIndex;
             return (
               <button
                 key={option.value}
                 type="button"
+                role="option"
+                aria-selected={isSelected}
                 onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);
@@ -83,6 +113,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
                   'w-full px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition-all',
                   isSelected
                     ? 'bg-[#A3E635]/15 text-[#A3E635]'
+                    : isHighlighted
+                    ? 'bg-[#162032] text-white'
                     : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]'
                 )}
               >
@@ -126,9 +158,19 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isOpen && event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const toggleOption = (val: string) => {
     if (value.includes(val)) {
@@ -150,8 +192,10 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={clsx(
-          'w-full bg-[#101726]/80 border rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between transition-all duration-200',
+          'w-full bg-[#101726]/80 border rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:outline-none',
           isOpen
             ? 'border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]'
             : 'border-[#202D42] hover:border-[#2A3B57]'
@@ -186,7 +230,10 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 
       {/* Multi-Select Panel */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-40 max-h-64 flex flex-col p-2 backdrop-blur-xl">
+        <div
+          role="listbox"
+          className="absolute top-full left-0 right-0 mt-1.5 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-50 max-h-64 flex flex-col p-2 backdrop-blur-xl"
+        >
           <div className="relative mb-2">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />
             <input
@@ -194,6 +241,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
+              aria-label="Search dropdown options"
               className="w-full bg-[#162032] border border-[#202D42] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-[#64748B] focus:outline-none focus:border-[#A3E635]"
             />
           </div>
@@ -205,6 +253,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 <button
                   key={option.value}
                   type="button"
+                  role="option"
+                  aria-selected={isChecked}
                   onClick={() => toggleOption(option.value)}
                   className={clsx(
                     'w-full px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition-all',

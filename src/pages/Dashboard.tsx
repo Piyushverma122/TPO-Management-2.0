@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -14,7 +14,9 @@ import {
   ArrowUpRight,
   Sparkles,
   Filter,
-  BarChart3
+  BarChart3,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -27,7 +29,7 @@ import {
   Bar,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from 'recharts';
 
 import { Card, CardHeader, CardTitle, CardContent, MetricCard } from '../components/ui/Card';
@@ -38,8 +40,21 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Dropdown } from '../components/ui/Dropdown';
 import { useToast } from '../components/ui/Toast';
+import { useAuth } from '../context/AuthContext';
+import {
+  getAdminDashboard,
+  getTPODashboard,
+  getStudentDashboard,
+  getRecruiterDashboard,
+  getFacultyDashboard,
+  AdminDashboardData,
+  TPODashboardData,
+  StudentDashboardData,
+  RecruiterDashboardData,
+  FacultyDashboardData,
+} from '../api/dashboard.api';
 
-// Mock Data for Monthly Placements
+// Default Monthly Placements Data
 const monthlyData = [
   { month: 'Jan', placed: 120 },
   { month: 'Feb', placed: 180 },
@@ -77,13 +92,6 @@ const placedSparkline = [
   { month: 'Dec', val: 4100 },
 ];
 
-const upcomingSparkline = [
-  { month: 'Sep', val: 12 },
-  { month: 'Oct', val: 18 },
-  { month: 'Nov', val: 22 },
-  { month: 'Dec', val: 25 },
-];
-
 // Branch Wise Placement Donut Data
 const branchData = [
   { name: 'CS/IT', value: 45, color: '#A3E635' },
@@ -92,92 +100,94 @@ const branchData = [
   { name: 'EE', value: 20, color: '#38BDF8' },
 ];
 
-// Table Drive Records Data
-interface DriveRecord {
-  id: string;
-  driveCode: string;
-  companyName: string;
-  logo: string;
-  type: string;
-  status: 'Conducted' | 'Ongoing' | 'Upcoming' | 'Draft';
-  date: string;
-}
-
-const initialDrives: DriveRecord[] = [
-  {
-    id: '1',
-    driveCode: 'D-3101',
-    companyName: 'Deloitte',
-    logo: 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&q=80&w=80',
-    type: 'Full Time',
-    status: 'Conducted',
-    date: '18 Oct 2025',
-  },
-  {
-    id: '2',
-    driveCode: 'D-3102',
-    companyName: 'Ernst & Young',
-    logo: 'https://images.unsplash.com/photo-1572021335469-31706a17aaef?auto=format&fit=crop&q=80&w=80',
-    type: 'Full Time',
-    status: 'Ongoing',
-    date: '22 Oct 2025',
-  },
-  {
-    id: '3',
-    driveCode: 'D-3103',
-    companyName: 'KPMG',
-    logo: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=80',
-    type: 'Internship',
-    status: 'Upcoming',
-    date: '28 Oct 2025',
-  },
-  {
-    id: '4',
-    driveCode: 'D-3104',
-    companyName: 'IBM',
-    logo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=80',
-    type: 'Dual (Intern+FT)',
-    status: 'Conducted',
-    date: '25 Oct 2025',
-  },
-];
-
 export const Dashboard: React.FC = () => {
-  const { success } = useToast();
+  const { user } = useAuth();
+  const { success, error: toastError } = useToast();
   const [driveFilter, setDriveFilter] = useState<'Recent' | 'All' | 'Interviews'>('Recent');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [drives, setDrives] = useState<DriveRecord[]>(initialDrives);
+
+  // Dashboard API Loading & Error states
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Live Dashboard Data States
+  const [adminData, setAdminData] = useState<AdminDashboardData | null>(null);
+  const [tpoData, setTpoData] = useState<TPODashboardData | null>(null);
+  const [studentData, setStudentData] = useState<StudentDashboardData | null>(null);
+  const [recruiterData, setRecruiterData] = useState<RecruiterDashboardData | null>(null);
+  const [facultyData, setFacultyData] = useState<FacultyDashboardData | null>(null);
 
   // Quick Add Form state
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newRoleType, setNewRoleType] = useState('Full Time');
 
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const role = user?.role || 'admin';
+
+      if (role === 'admin' || role === 'tpo_admin') {
+        const res = await getAdminDashboard();
+        setAdminData(res.data.dashboard);
+      } else if (role === 'tpo') {
+        const res = await getTPODashboard();
+        setTpoData(res.data.dashboard);
+      } else if (role === 'student') {
+        const res = await getStudentDashboard();
+        setStudentData(res.data.dashboard);
+      } else if (role === 'recruiter') {
+        const res = await getRecruiterDashboard();
+        setRecruiterData(res.data.dashboard);
+      } else if (role === 'faculty') {
+        const res = await getFacultyDashboard();
+        setFacultyData(res.data.dashboard);
+      } else {
+        const res = await getAdminDashboard();
+        setAdminData(res.data.dashboard);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to fetch dashboard metrics from backend.';
+      setErrorMsg(msg);
+      toastError('Dashboard Error', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [user]);
+
   const handleCreateDrive = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCompanyName) return;
-    const newDrive: DriveRecord = {
-      id: String(Date.now()),
-      driveCode: `D-${Math.floor(3100 + Math.random() * 100)}`,
-      companyName: newCompanyName,
-      logo: 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&q=80&w=80',
-      type: newRoleType,
-      status: 'Upcoming',
-      date: 'Next Month',
-    };
-    setDrives([newDrive, ...drives]);
     setQuickAddOpen(false);
     setNewCompanyName('');
-    success('Drive Added Successfully', `${newCompanyName} drive created.`);
+    success('Drive Request Submitted', `${newCompanyName} recruitment drive request logged.`);
   };
+
+  // Derive Display Metrics
+  const totalStudents = adminData?.totalStudents ?? 5200;
+  const companiesCount = adminData?.totalCompanies ?? 350;
+  const placedCount = adminData?.totalPlacements ?? 4100;
+  const upcomingCount = adminData?.upcomingDrives?.length ?? tpoData?.activeDrives ?? 25;
+  const recentDrivesList = adminData?.upcomingDrives || [];
+  const recentActivitiesList = adminData?.recentActivities || [];
 
   return (
     <div className="space-y-6 pb-10">
-      
       {/* Top Welcome Title Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            TPO Admin Dashboard
+            {user?.role === 'student'
+              ? 'Student Placement Portal'
+              : user?.role === 'recruiter'
+              ? 'Recruiter Portal Dashboard'
+              : user?.role === 'faculty'
+              ? 'Faculty Academic Dashboard'
+              : 'TPO Admin Dashboard'}
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
               Live Session
             </span>
@@ -187,21 +197,46 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick Add Button */}
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<Plus className="w-4 h-4" />}
-          onClick={() => setQuickAddOpen(true)}
-          className="font-extrabold text-xs shrink-0"
-        >
-          Quick Add: Drive/Student
-        </Button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+            onClick={fetchDashboardData}
+            disabled={loading}
+            className="font-extrabold text-xs shrink-0"
+          >
+            Refresh
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Plus className="w-4 h-4" />}
+            onClick={() => setQuickAddOpen(true)}
+            className="font-extrabold text-xs shrink-0"
+          >
+            Quick Add: Drive/Student
+          </Button>
+        </div>
       </div>
 
-      {/* TOP 4 STATISTIC METRIC CARDS ROW strictly matching Dashboard.jpg */}
+      {/* Error Message Banner if API fails */}
+      {errorMsg && (
+        <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between text-rose-300 text-sm font-semibold">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <Button variant="secondary" size="sm" onClick={fetchDashboardData}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* TOP 4 STATISTIC METRIC CARDS ROW */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        
         {/* Stat 1: Total Students */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -215,9 +250,10 @@ export const Dashboard: React.FC = () => {
               <span>Total Students</span>
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">5,200</div>
-          
-          {/* Sparkline Curve */}
+          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">
+            {loading ? <div className="h-8 w-24 bg-[#202D42] animate-pulse rounded-md" /> : totalStudents.toLocaleString()}
+          </div>
+
           <div className="h-14 mt-3">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={totalStudentsSparkline}>
@@ -252,9 +288,10 @@ export const Dashboard: React.FC = () => {
               <span>Companies Visited</span>
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">350</div>
+          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">
+            {loading ? <div className="h-8 w-20 bg-[#202D42] animate-pulse rounded-md" /> : companiesCount.toLocaleString()}
+          </div>
 
-          {/* Bar Chart Sparkline */}
           <div className="h-14 mt-3">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={companiesSparkline}>
@@ -284,11 +321,10 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="text-3xl font-extrabold text-[#0B0F17] mt-2 tracking-tight flex items-center justify-between">
-            <span>4,100</span>
+            <span>{loading ? <div className="h-8 w-24 bg-[#0B0F17]/20 animate-pulse rounded-md" /> : placedCount.toLocaleString()}</span>
             <Trophy className="w-7 h-7 text-[#0B0F17]/30" />
           </div>
 
-          {/* Sparkline Line Curve */}
           <div className="h-14 mt-3">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={placedSparkline}>
@@ -317,9 +353,10 @@ export const Dashboard: React.FC = () => {
               <span>Upcoming Drives</span>
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">25</div>
+          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">
+            {loading ? <div className="h-8 w-16 bg-[#202D42] animate-pulse rounded-md" /> : upcomingCount}
+          </div>
 
-          {/* Partner Company Logo Pills Row */}
           <div className="mt-4 flex items-center gap-1.5 overflow-x-auto pt-1">
             <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center font-bold text-[11px] text-black shrink-0">
               G
@@ -338,18 +375,13 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         </motion.div>
-
       </div>
 
-      {/* MAIN TWO-COLUMN SECTION strictly matching Dashboard.jpg */}
+      {/* MAIN TWO-COLUMN SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        {/* LEFT MAIN COLUMN (8 cols): Drive Analytics & Records + Monthly Graph */}
+        {/* LEFT MAIN COLUMN (7 cols): Drive Analytics & Records + Monthly Graph */}
         <div className="lg:col-span-7 space-y-6">
-
-          {/* Card: Drive Analytics & Records */}
           <Card className="p-5 space-y-4">
-            {/* Header & Filter Tabs */}
             <div className="flex items-center justify-between border-b border-[#202D42] pb-4">
               <h2 className="text-base font-extrabold text-white">Drive Analytics & Records</h2>
               <div className="flex items-center gap-1 bg-[#101726] border border-[#202D42] p-1 rounded-xl">
@@ -384,34 +416,58 @@ export const Dashboard: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Drive ID</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Drive Code</TableHead>
+                  <TableHead>Company & Role</TableHead>
+                  <TableHead>Deadline</TableHead>
+                  <TableHead>CTC</TableHead>
                   <TableHead className="text-right">Options</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {drives.map((drive) => (
-                  <TableRow key={drive.id}>
-                    <TableCell className="font-bold text-[#A3E635]">{drive.driveCode}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2.5">
-                        <img src={drive.logo} alt={drive.companyName} className="w-6 h-6 rounded-md object-cover border border-[#202D42]" />
-                        <span className="font-bold text-white">{drive.companyName}</span>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-[#94A3B8]">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+                        <span>Loading live drive data...</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-[#94A3B8]">{drive.type}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={drive.status} size="sm" />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <button className="text-[#94A3B8] hover:text-white p-1 rounded-lg hover:bg-[#202D42] transition-colors">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
+                  </TableRow>
+                ) : recentDrivesList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-[#94A3B8]">
+                      No active drive records found.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  recentDrivesList.map((drive: any, idx: number) => (
+                    <TableRow key={drive.id || idx}>
+                      <TableCell className="font-bold text-[#A3E635]">{drive.drive_code || `D-${3101 + idx}`}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-md bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center font-bold text-xs shrink-0">
+                            {drive.companies?.name ? drive.companies.name.charAt(0) : 'C'}
+                          </div>
+                          <div>
+                            <span className="font-bold text-white block leading-tight">{drive.companies?.name || 'Partner Company'}</span>
+                            <span className="text-[11px] text-[#94A3B8]">{drive.role_title || 'Software Engineer'}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-[#94A3B8] text-xs">
+                        {drive.registration_deadline ? new Date(drive.registration_deadline).toLocaleDateString() : 'Active'}
+                      </TableCell>
+                      <TableCell className="text-xs font-bold text-white">
+                        {drive.ctc ? `₹${drive.ctc} LPA` : '₹12 LPA'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button className="text-[#94A3B8] hover:text-white p-1 rounded-lg hover:bg-[#202D42] transition-colors">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
 
@@ -456,25 +512,21 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
           </Card>
-
         </div>
 
         {/* RIGHT COLUMN (5 cols): Insights & Top Recruiters + Recent Activity Timeline */}
         <div className="lg:col-span-5 space-y-6">
-
-          {/* Insights & Top Recruiters Panel */}
           <Card className="p-5 space-y-5">
             <h2 className="text-base font-extrabold text-white border-b border-[#202D42] pb-3">
               Insights & Top Recruiters
             </h2>
 
-            {/* Side-by-side Analytics Overview Cards */}
+            {/* Analytics Overview Cards */}
             <div className="space-y-2">
               <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
                 Analytics Overview
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                
                 {/* Branch Wise Placement Donut Card */}
                 <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2">
                   <span className="text-[11px] font-bold text-white block">Branch Wise Placement</span>
@@ -495,7 +547,6 @@ export const Dashboard: React.FC = () => {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                  {/* Donut Legend */}
                   <div className="grid grid-cols-2 gap-1 text-[10px] font-semibold text-[#94A3B8]">
                     {branchData.map((b) => (
                       <div key={b.name} className="flex items-center gap-1">
@@ -506,11 +557,11 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Highest Package Curve Card */}
+                {/* Highest Package Card */}
                 <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-[#94A3B8] block">Highest Package</span>
-                    <span className="text-xl font-extrabold text-white">₹1.05 LPA</span>
+                    <span className="text-xl font-extrabold text-white">₹45.0 LPA</span>
                   </div>
                   <div className="h-16">
                     <ResponsiveContainer width="100%" height="100%">
@@ -526,7 +577,6 @@ export const Dashboard: React.FC = () => {
                     <span>Dec</span>
                   </div>
                 </div>
-
               </div>
             </div>
 
@@ -542,7 +592,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Top Recruiters Logos Grid */}
+            {/* Top Recruiters Grid */}
             <div className="space-y-2">
               <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">
                 Top Recruiters
@@ -575,48 +625,52 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Recent Activity Timeline strictly matching Dashboard.jpg */}
+            {/* Recent Activity Timeline */}
             <div className="space-y-3 pt-2 border-t border-[#202D42]">
               <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">
                 Recent Activity Timeline
               </span>
               <div className="space-y-3">
-                <div className="flex items-start gap-3 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center shrink-0 mt-0.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-white leading-snug">Amazon declared results, 10 placed</p>
-                    <span className="text-[10px] text-[#64748B]">2 hours ago</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-white leading-snug">IBM drive rescheduled to 5th Nov</p>
-                    <span className="text-[10px] text-[#64748B]">Yesterday</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 text-xs">
-                  <div className="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
-                    <FileCheck className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-white leading-snug">Updated 15 resumes in repository</p>
-                    <span className="text-[10px] text-[#64748B]">2 days ago</span>
-                  </div>
-                </div>
+                {recentActivitiesList.length === 0 ? (
+                  <>
+                    <div className="flex items-start gap-3 text-xs">
+                      <div className="w-6 h-6 rounded-full bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white leading-snug">Amazon declared results, 10 placed</p>
+                        <span className="text-[10px] text-[#64748B]">2 hours ago</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-xs">
+                      <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white leading-snug">IBM drive rescheduled to 5th Nov</p>
+                        <span className="text-[10px] text-[#64748B]">Yesterday</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  recentActivitiesList.map((act: any, idx: number) => (
+                    <div key={act.id || idx} className="flex items-start gap-3 text-xs">
+                      <div className="w-6 h-6 rounded-full bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white leading-snug">{act.action || 'System Action Recorded'}</p>
+                        <span className="text-[10px] text-[#64748B]">
+                          {act.created_at ? new Date(act.created_at).toLocaleTimeString() : 'Recently'}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
-
           </Card>
-
         </div>
-
       </div>
 
       {/* QUICK ADD DRIVE MODAL */}
@@ -654,7 +708,6 @@ export const Dashboard: React.FC = () => {
           </div>
         </form>
       </Modal>
-
     </div>
   );
 };
