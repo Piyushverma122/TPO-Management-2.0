@@ -23,6 +23,13 @@ import {
   FileCheck,
   RefreshCw,
   Upload,
+  Eye,
+  EyeOff,
+  Copy,
+  Key,
+  ShieldCheck,
+  Lock,
+  Check,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer } from 'recharts';
 
@@ -79,11 +86,26 @@ export const Students: React.FC = () => {
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
 
   // Form Tab State & All Student Fields
-  const [formTab, setFormTab] = useState<'basic' | 'academic' | 'address' | 'social'>('basic');
+  const [formTab, setFormTab] = useState<'basic' | 'account' | 'academic' | 'address' | 'social'>('basic');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Success Modal State after Student Enrollment
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [createdStudentInfo, setCreatedStudentInfo] = useState<{
+    full_name: string;
+    email: string;
+    roll_number: string;
+    tempPassword: string;
+  } | null>(null);
+
   const [enrollForm, setEnrollForm] = useState({
     full_name: '',
     email: '',
     phone: '',
+    password: '',
+    confirm_password: '',
     alternate_phone: '',
     gender: 'Male',
     date_of_birth: '',
@@ -112,6 +134,29 @@ export const Students: React.FC = () => {
     leetcode_url: '',
     hackerrank_url: '',
   });
+
+  // Password strength logic
+  const passwordCriteria = useMemo(() => {
+    const p = enrollForm.password;
+    return {
+      minLength: p.length >= 8,
+      hasUpper: /[A-Z]/.test(p),
+      hasLower: /[a-z]/.test(p),
+      hasNumber: /[0-9]/.test(p),
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(p),
+    };
+  }, [enrollForm.password]);
+
+  const passwordScore = useMemo(() => {
+    const { minLength, hasUpper, hasLower, hasNumber, hasSpecial } = passwordCriteria;
+    let score = 0;
+    if (minLength) score++;
+    if (hasUpper) score++;
+    if (hasLower) score++;
+    if (hasNumber) score++;
+    if (hasSpecial) score++;
+    return score;
+  }, [passwordCriteria]);
 
   // Resume Upload State
   const [resumesList, setResumesList] = useState<any[]>([]);
@@ -247,10 +292,24 @@ export const Students: React.FC = () => {
       return;
     }
 
+    if (enrollForm.password) {
+      if (enrollForm.password !== enrollForm.confirm_password) {
+        toastError('Password Error', 'Passwords do not match.');
+        setFormTab('account');
+        return;
+      }
+      if (enrollForm.password.length < 8) {
+        toastError('Password Error', 'Password must be at least 8 characters long.');
+        setFormTab('account');
+        return;
+      }
+    }
+
     try {
-      await createStudent({
+      const createdRes = await createStudent({
         full_name: enrollForm.full_name,
         email: enrollForm.email,
+        password: enrollForm.password || undefined,
         phone: enrollForm.phone || undefined,
         alternate_phone: enrollForm.alternate_phone || undefined,
         gender: enrollForm.gender || undefined,
@@ -281,12 +340,25 @@ export const Students: React.FC = () => {
         hackerrank_url: enrollForm.hackerrank_url || undefined,
       });
 
+      const tempPass = createdRes.data?._tempPassword || enrollForm.password || 'Student@Pass2026';
+
+      setCreatedStudentInfo({
+        full_name: enrollForm.full_name,
+        email: enrollForm.email,
+        roll_number: enrollForm.roll_number,
+        tempPassword: tempPass,
+      });
+
       setIsAddModalOpen(false);
+      setIsSuccessModalOpen(true);
+
       // Reset form
       setEnrollForm({
         full_name: '',
         email: '',
         phone: '',
+        password: '',
+        confirm_password: '',
         alternate_phone: '',
         gender: 'Male',
         date_of_birth: '',
@@ -315,7 +387,7 @@ export const Students: React.FC = () => {
         leetcode_url: '',
         hackerrank_url: '',
       });
-      success('Student Enrolled Successfully', `${enrollForm.full_name} added to TPO database.`);
+      success('Student Account Created', `${enrollForm.full_name} enrolled and login credentials generated.`);
       fetchStudentsData();
     } catch (err: any) {
       toastError('Enrollment Error', err.response?.data?.message || 'Failed to create student record.');
@@ -869,34 +941,55 @@ export const Students: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         title="Enroll New Candidate"
         subtitle="Add a comprehensive student profile into the official TPO database."
+        maxWidth="3xl"
       >
-        <form onSubmit={handleAddStudentSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleAddStudentSubmit} className="space-y-6 text-sm">
           
           {/* Navigation Tabs Header */}
-          <div className="flex border-b border-[#202D42] gap-2 pb-2">
+          <div className="flex border-b border-[#202D42] gap-2 pb-3 overflow-x-auto">
             <button
               type="button"
               onClick={() => setFormTab('basic')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
-                formTab === 'basic' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
+                formTab === 'basic'
+                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
+                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
               }`}
             >
+              <Users className="w-4 h-4" />
               Basic Info
             </button>
             <button
               type="button"
-              onClick={() => setFormTab('academic')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
-                formTab === 'academic' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              onClick={() => setFormTab('account')}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
+                formTab === 'account'
+                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
+                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
               }`}
             >
+              <Key className="w-4 h-4" />
+              Account Credentials
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormTab('academic')}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
+                formTab === 'academic'
+                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
+                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4" />
               Academic Info
             </button>
             <button
               type="button"
               onClick={() => setFormTab('address')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
-                formTab === 'address' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
+                formTab === 'address'
+                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
+                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
               }`}
             >
               Address
@@ -904,17 +997,19 @@ export const Students: React.FC = () => {
             <button
               type="button"
               onClick={() => setFormTab('social')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
-                formTab === 'social' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
+                formTab === 'social'
+                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
+                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
               }`}
             >
-              Links & Bio
+              Links &amp; Bio
             </button>
           </div>
 
           {/* TAB 1: BASIC INFO */}
           {formTab === 'basic' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <Input
                 label="Full Candidate Name *"
                 placeholder="e.g. Rahul Sharma"
@@ -923,7 +1018,7 @@ export const Students: React.FC = () => {
                 required
               />
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="Email Address *"
                   type="email"
@@ -940,7 +1035,7 @@ export const Students: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="Alternate Phone"
                   placeholder="+91 98765 00000"
@@ -948,9 +1043,11 @@ export const Students: React.FC = () => {
                   onChange={(e) => setEnrollForm({ ...enrollForm, alternate_phone: e.target.value })}
                 />
                 <div>
-                  <label className="block font-bold text-white mb-1">Gender</label>
+                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                    Gender
+                  </label>
                   <select
-                    className="w-full bg-[#101726] border border-[#202D42] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#A3E635]"
+                    className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
                     value={enrollForm.gender}
                     onChange={(e) => setEnrollForm({ ...enrollForm, gender: e.target.value })}
                   >
@@ -969,10 +1066,114 @@ export const Students: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 2: ACADEMIC INFO */}
+          {/* TAB 2: ACCOUNT CREDENTIALS */}
+          {formTab === 'account' && (
+            <div className="space-y-5">
+              <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 flex items-start gap-3.5">
+                <ShieldCheck className="w-6 h-6 text-[#A3E635] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white font-bold text-sm">Initial Account Security &amp; Credentials</h4>
+                  <p className="text-[#94A3B8] text-xs leading-relaxed mt-1">
+                    Set an initial temporary password for the candidate account. An automated welcome email containing these login details will be dispatched to <strong className="text-white font-bold">{enrollForm.email || 'the student email address'}</strong> upon registration.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                    Initial Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="e.g. Student@Pass2026"
+                      className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
+                      value={enrollForm.password}
+                      onChange={(e) => setEnrollForm({ ...enrollForm, password: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-[#94A3B8] hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                    Confirm Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Re-enter password"
+                      className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
+                      value={enrollForm.confirm_password}
+                      onChange={(e) => setEnrollForm({ ...enrollForm, confirm_password: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-3 text-[#94A3B8] hover:text-white transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Password Strength Indicator */}
+              {enrollForm.password && (
+                <div className="bg-[#101726]/60 border border-[#202D42] rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#94A3B8] font-semibold">Password Security Level:</span>
+                    <span className={`font-bold ${
+                      passwordScore <= 2 ? 'text-rose-400' : passwordScore <= 4 ? 'text-amber-400' : 'text-[#A3E635]'
+                    }`}>
+                      {passwordScore <= 2 ? 'Weak' : passwordScore <= 4 ? 'Moderate' : 'Strong'}
+                    </span>
+                  </div>
+
+                  {/* Visual Bar */}
+                  <div className="w-full h-2 bg-[#1E293B] rounded-full overflow-hidden flex gap-1.5">
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 1 ? (passwordScore <= 2 ? 'bg-rose-500' : passwordScore <= 4 ? 'bg-amber-500' : 'bg-[#A3E635]') : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 2 ? (passwordScore <= 2 ? 'bg-rose-500' : passwordScore <= 4 ? 'bg-amber-500' : 'bg-[#A3E635]') : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 3 ? (passwordScore <= 4 ? 'bg-amber-500' : 'bg-[#A3E635]') : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 4 ? 'bg-[#A3E635]' : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 5 ? 'bg-[#A3E635]' : 'bg-transparent'}`} />
+                  </div>
+
+                  {/* Checklist */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                    <div className={`flex items-center gap-2 ${passwordCriteria.minLength ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
+                      {passwordCriteria.minLength ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                      At least 8 characters
+                    </div>
+                    <div className={`flex items-center gap-2 ${passwordCriteria.hasUpper ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
+                      {passwordCriteria.hasUpper ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                      Uppercase letter (A-Z)
+                    </div>
+                    <div className={`flex items-center gap-2 ${passwordCriteria.hasLower ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
+                      {passwordCriteria.hasLower ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                      Lowercase letter (a-z)
+                    </div>
+                    <div className={`flex items-center gap-2 ${passwordCriteria.hasNumber ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
+                      {passwordCriteria.hasNumber ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                      Number (0-9)
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: ACADEMIC INFO */}
           {formTab === 'academic' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="Roll Number *"
                   placeholder="e.g. RS2020CS"
@@ -988,7 +1189,7 @@ export const Students: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="CGPA *"
                   type="number"
@@ -1014,7 +1215,7 @@ export const Students: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="10th Percentage (%)"
                   type="number"
@@ -1041,7 +1242,7 @@ export const Students: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="Active Backlogs"
                   type="number"
@@ -1057,9 +1258,11 @@ export const Students: React.FC = () => {
                   onChange={(e) => setEnrollForm({ ...enrollForm, history_backlogs: e.target.value })}
                 />
                 <div>
-                  <label className="block font-bold text-white mb-1">Placement Status</label>
+                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                    Placement Status
+                  </label>
                   <select
-                    className="w-full bg-[#101726] border border-[#202D42] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#A3E635]"
+                    className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
                     value={enrollForm.placement_status}
                     onChange={(e) => setEnrollForm({ ...enrollForm, placement_status: e.target.value })}
                   >
@@ -1073,16 +1276,16 @@ export const Students: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3: ADDRESS */}
+          {/* TAB 4: ADDRESS */}
           {formTab === 'address' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <Input
                 label="Street Address"
                 placeholder="House No, Street, Area"
                 value={enrollForm.address}
                 onChange={(e) => setEnrollForm({ ...enrollForm, address: e.target.value })}
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="City"
                   placeholder="e.g. Mumbai"
@@ -1096,7 +1299,7 @@ export const Students: React.FC = () => {
                   onChange={(e) => setEnrollForm({ ...enrollForm, state: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="Country"
                   placeholder="India"
@@ -1113,9 +1316,9 @@ export const Students: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: LINKS & BIO */}
+          {/* TAB 5: LINKS & BIO */}
           {formTab === 'social' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <Input
                 label="Resume Headline"
                 placeholder="e.g. Aspiring Full Stack Developer & Cloud Engineer"
@@ -1123,15 +1326,17 @@ export const Students: React.FC = () => {
                 onChange={(e) => setEnrollForm({ ...enrollForm, resume_headline: e.target.value })}
               />
               <div>
-                <label className="block font-bold text-white mb-1">Candidate Bio / Summary</label>
+                <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                  Candidate Bio / Summary
+                </label>
                 <textarea
-                  className="w-full h-20 bg-[#101726] border border-[#202D42] rounded-xl p-3 text-white focus:outline-none focus:border-[#A3E635]"
-                  placeholder="Brief overview of technical background and aspirations..."
+                  className="w-full h-24 bg-[#101726]/80 border border-[#202D42] rounded-xl p-3.5 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all resize-none"
+                  placeholder="Brief overview of technical background, project experience, and career aspirations..."
                   value={enrollForm.bio}
                   onChange={(e) => setEnrollForm({ ...enrollForm, bio: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="LinkedIn URL"
                   placeholder="https://linkedin.com/in/username"
@@ -1145,7 +1350,7 @@ export const Students: React.FC = () => {
                   onChange={(e) => setEnrollForm({ ...enrollForm, github_url: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input
                   label="Portfolio URL"
                   placeholder="https://myportfolio.com"
@@ -1168,21 +1373,114 @@ export const Students: React.FC = () => {
             </div>
           )}
 
-          <div className="flex justify-between items-center pt-3 border-t border-[#202D42]">
-            <div className="text-[11px] text-[#94A3B8]">
-              Tab {formTab === 'basic' ? '1' : formTab === 'academic' ? '2' : formTab === 'address' ? '3' : '4'} of 4
+          {/* Form Action Footer */}
+          <div className="flex justify-between items-center pt-4 border-t border-[#202D42]">
+            <div className="text-xs font-semibold text-[#94A3B8]">
+              Step {formTab === 'basic' ? '1' : formTab === 'account' ? '2' : formTab === 'academic' ? '3' : formTab === 'address' ? '4' : '5'} of 5
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button type="button" variant="secondary" size="md" onClick={() => setIsAddModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="md">
+              <Button type="submit" variant="primary" size="md" className="px-6">
                 Enroll Candidate
               </Button>
             </div>
           </div>
         </form>
+      </Modal>
+
+      {/* STUDENT ENROLLMENT SUCCESS & CREDENTIALS MODAL */}
+      <Modal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title="Student Account Enrolled 🚀"
+        subtitle="New candidate account and student profile have been created in the database."
+        maxWidth="2xl"
+      >
+        <div className="space-y-5 text-sm">
+          <div className="bg-[#A3E635]/10 border border-[#A3E635]/30 rounded-2xl p-4 flex items-start gap-3.5">
+            <CheckCircle2 className="w-6 h-6 text-[#A3E635] shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-[#A3E635] font-bold text-sm">Account Provisioned &amp; Welcome Email Dispatched</h4>
+              <p className="text-[#94A3B8] text-xs mt-1 leading-relaxed">
+                The student account was created with role <strong className="text-white font-bold">STUDENT</strong>. An automated welcome email containing login credentials has been sent to candidate email.
+              </p>
+            </div>
+          </div>
+
+          {createdStudentInfo && (
+            <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-5 space-y-4">
+              <h4 className="text-[#A3E635] font-extrabold text-xs uppercase tracking-wider">
+                Candidate Account Summary
+              </h4>
+
+              <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
+                <div>
+                  <span className="text-[#94A3B8] text-xs font-medium block">Candidate Name</span>
+                  <p className="font-bold text-white mt-0.5 text-base">{createdStudentInfo.full_name}</p>
+                </div>
+                <div>
+                  <span className="text-[#94A3B8] text-xs font-medium block">Roll Number</span>
+                  <p className="font-bold text-white mt-0.5 text-base">{createdStudentInfo.roll_number}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[#94A3B8] text-xs font-medium block">Email Address</span>
+                  <p className="font-bold text-white mt-0.5 text-base">{createdStudentInfo.email}</p>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[#202D42]">
+                <span className="text-[#94A3B8] text-xs font-bold block mb-1.5">Temporary Initial Password</span>
+                <div className="bg-[#0B0F17] border border-[#A3E635]/40 rounded-xl p-3 flex items-center justify-between">
+                  <code className="text-[#A3E635] font-mono text-base font-extrabold tracking-wider">
+                    {createdStudentInfo.tempPassword}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `Email: ${createdStudentInfo.email}\nPassword: ${createdStudentInfo.tempPassword}\nRoll No: ${createdStudentInfo.roll_number}`
+                      );
+                      setCopiedPassword(true);
+                      setTimeout(() => setCopiedPassword(false), 2500);
+                    }}
+                    className="bg-[#A3E635]/15 hover:bg-[#A3E635]/25 border border-[#A3E635]/30 text-[#A3E635] px-4 py-1.5 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors"
+                  >
+                    {copiedPassword ? (
+                      <>
+                        <Check className="w-4 h-4" /> Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" /> Copy Credentials
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-3 text-amber-400 text-xs">
+            <Lock className="w-5 h-5 shrink-0" />
+            <span>Candidate will be prompted to change password upon initial portal login.</span>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#202D42]">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => {
+                setIsSuccessModalOpen(false);
+                setCreatedStudentInfo(null);
+              }}
+            >
+              Done &amp; View Student List
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

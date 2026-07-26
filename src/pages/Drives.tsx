@@ -96,7 +96,7 @@ export const Drives: React.FC = () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const [drivesRes, appsRes, studentsRes] = await Promise.all([
+      const [drivesRes, appsRes] = await Promise.all([
         getDrives({
           page: currentPage,
           limit: itemsPerPage,
@@ -107,17 +107,21 @@ export const Drives: React.FC = () => {
           passing_year: selectedYear !== 'All' ? selectedYear : undefined,
         }),
         getApplications(),
-        getStudents({ limit: 100 }),
       ]);
 
       const rawDrives = drivesRes.data?.drives || [];
       const total = drivesRes.data?.total || rawDrives.length;
       setApplications(appsRes.data?.applications || []);
 
-      // Find logged in student profile
-      const studentList = studentsRes.data?.students || [];
-      const student = studentList.find((s: any) => s.user_id === user?.id || s.users?.email === user?.email);
-      setCurrentStudent(student || null);
+      let student = null;
+      try {
+        const studentsRes = await getStudents({ limit: 100 });
+        const studentList = studentsRes.data?.students || [];
+        student = studentList.find((s: any) => s.user_id === user?.id || s.users?.email === user?.email) || studentList[0] || null;
+      } catch (e) {
+        console.warn('Student profile fetch warning:', e);
+      }
+      setCurrentStudent(student);
 
       const formattedList: PlacementDrive[] = rawDrives.map((d: any) => ({
         id: d.id,

@@ -28,6 +28,7 @@ const verifyToken = (req, res, next) => {
     const userId = decoded.id || decoded.sub || decoded.userId;
     const userRole = (decoded.role || decoded.user_metadata?.role || 'student').toString().toLowerCase();
 
+    req.token = token;
     req.user = {
       id: userId,
       userId: userId,

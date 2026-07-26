@@ -68,7 +68,7 @@ const getStudentById = async (req, res, next) => {
  */
 const createStudent = async (req, res, next) => {
   try {
-    const student = await studentService.createStudent(req.body);
+    const student = await studentService.createStudent(req.body, req.token || req.headers?.authorization);
     return sendSuccess(res, 'Student candidate created successfully', { student }, 201);
   } catch (error) {
     next(error);

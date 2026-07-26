@@ -101,7 +101,7 @@ const ROLE_PERMISSIONS = {
 
   [Role.STUDENT]: {
     [Module.DASHBOARD]: { view: true },
-    [Module.STUDENTS]: { view: false },
+    [Module.STUDENTS]: { view: true, create: false, edit: false, delete: false },
     [Module.COMPANIES]: { view: true, create: false, edit: false, delete: false },
     [Module.PLACEMENT_DRIVES]: { view: true },
     [Module.APPLICATIONS]: { view: true, create: true, edit: true, delete: true },

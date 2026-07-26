@@ -11,6 +11,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (data: { token: string; password: string }) => Promise<void>;
   setRole: (role: UserRole) => void;
+  updateUser: (partialUser: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,6 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const formattedUser: User = {
       ...apiUser,
       name: apiUser?.full_name || apiUser?.name || 'User',
+      must_change_password: (payload as any)?.must_change_password ?? apiUser?.must_change_password ?? false,
     };
 
     if (token) {
@@ -113,6 +115,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUser = (partialUser: Partial<User>) => {
+    if (user) {
+      const updated = { ...user, ...partialUser };
+      setUser(updated);
+      localStorage.setItem('tpo_user', JSON.stringify(updated));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -124,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         forgotPassword,
         resetPassword,
         setRole,
+        updateUser,
       }}
     >
       {children}

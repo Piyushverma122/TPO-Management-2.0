@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
@@ -56,8 +57,9 @@ interface AuditLogItem {
 }
 
 export const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { success, error: toastError, info } = useToast();
+  const location = useLocation();
 
   // API State
   const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
@@ -168,10 +170,11 @@ export const SettingsPage: React.FC = () => {
           currentPassword,
           newPassword,
         });
+        updateUser({ must_change_password: false });
       }
 
       setIsEditProfileOpen(false);
-      success('Profile Updated', 'Master profile settings saved.');
+      success('Profile Updated', newPassword ? 'Password updated successfully. Account fully secured!' : 'Master profile settings saved.');
     } catch (err: any) {
       toastError('Update Error', err.response?.data?.message || 'Failed to update profile.');
     } finally {
@@ -216,6 +219,31 @@ export const SettingsPage: React.FC = () => {
           Refresh
         </Button>
       </div>
+
+      {/* Mandatory Password Change Warning Banner */}
+      {(user?.must_change_password || (location.state as any)?.forcePasswordChange) && (
+        <div className="bg-amber-500/15 border-2 border-amber-500/40 rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-white font-extrabold text-sm">Action Required: Change Initial Password</h3>
+              <p className="text-amber-300 text-xs mt-0.5">
+                This is your first login with an administrative temporary password. Please click <strong>Edit Profile</strong> below and update your password to secure your account.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsEditProfileOpen(true)}
+            className="shrink-0"
+          >
+            Change Password Now
+          </Button>
+        </div>
+      )}
 
       {/* ROW 1: PROFILE CARD, THEME CARD, NOTIFICATIONS CARD */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

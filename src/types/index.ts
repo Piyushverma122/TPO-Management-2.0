@@ -10,6 +10,7 @@ export interface User {
   avatar_url?: string;
   department?: string;
   phone?: string;
+  must_change_password?: boolean;
 }
 
 export interface Student {
