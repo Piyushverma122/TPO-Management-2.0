@@ -51,9 +51,6 @@ const validateEventId = validate([
 const validateQueryFilter = validate([
   query('start_date').optional().isISO8601().withMessage('Valid start_date required'),
   query('end_date').optional().isISO8601().withMessage('Valid end_date required'),
-  query('event_type')
-    .optional()
-    .isIn(['placement_drive', 'mock_interview', 'training', 'meeting', 'deadline', 'reminder']),
 ]);
 
 module.exports = {

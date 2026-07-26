@@ -65,7 +65,32 @@ export const forgotPasswordApi = async (email: string) => {
 /**
  * Reset user password with token
  */
-export const resetPasswordApi = async (data: { token: string; password: string }) => {
-  const response = await apiClient.post('/auth/reset-password', data);
+export const resetPasswordApi = async (data: { token?: string; password?: string; new_password?: string }) => {
+  const newPasswordValue = data.new_password || data.password;
+  const response = await apiClient.post('/auth/reset-password', {
+    new_password: newPasswordValue,
+    password: newPasswordValue,
+    token: data.token,
+  });
+  return response.data;
+};
+
+export interface RefreshTokenResponse {
+  success: boolean;
+  message: string;
+  data: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+  };
+}
+
+/**
+ * Refresh access token using refresh_token
+ */
+export const refreshTokenApi = async (refreshToken: string) => {
+  const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh-token', {
+    refresh_token: refreshToken,
+  });
   return response.data;
 };

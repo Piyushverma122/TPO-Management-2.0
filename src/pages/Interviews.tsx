@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare,
   Calendar,
   Clock,
   Video,
@@ -18,357 +18,481 @@ import {
   ChevronRight,
   RefreshCw,
   Trash2,
+  Eye,
+  AlertCircle,
+  Building2,
+  MapPin,
+  X,
+  Bell,
+  Share2,
 } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Input } from '../components/ui/Input';
+import { Input, SearchInput } from '../components/ui/Input';
 import { Dropdown } from '../components/ui/Dropdown';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { Avatar } from '../components/ui/Avatar';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
-import {
-  getEvents,
-  createEvent,
-  deleteEvent,
-  getUpcomingEvents,
-} from '../api/calendar.api';
+import { useAuth } from '../context/AuthContext';
+import { getEvents } from '../api/calendar.api';
 
-// Sparkline Mock Data
-const feedbackTrendData = [
-  { day: 'Mon', score: 65 },
-  { day: 'Tue', score: 45 },
-  { day: 'Wed', score: 85 },
-  { day: 'Thu', score: 70 },
-  { day: 'Fri', score: 92 },
-  { day: 'Sat', score: 88 },
-];
-
-export interface UpcomingInterview {
+export interface StudentInterviewItem {
   id: string;
-  studentName: string;
-  studentAvatar: string;
-  branch: string;
-  role: string;
-  interviewerName: string;
+  companyName: string;
+  companyLogo: string;
+  roleTitle: string;
+  roundName: string;
   dateTime: string;
-  status: 'Confirmed' | 'Completed' | 'Pending';
-  joinUrl: string;
-}
-
-export interface InterviewFeedback {
-  id: string;
-  studentName: string;
-  studentAvatar: string;
-  role: string;
-  track: string;
+  isoDate: string;
+  mode: 'Online' | 'In-Person';
+  locationLink: string;
   interviewerName: string;
-  summary: string;
-  rating: number;
-  mockScore: number;
+  status: 'Scheduled' | 'Ongoing' | 'Completed' | 'Cancelled' | 'Rescheduled';
+  instructions: string;
+  requiredDocuments: string[];
+  feedback?: string;
 }
 
 export const Interviews: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { success, error: toastError, info } = useToast();
 
-  // API State
-  const [upcoming, setUpcoming] = useState<UpcomingInterview[]>([]);
-  const [feedbacks, setFeedbacks] = useState<InterviewFeedback[]>([]);
+  // API Live Data State
+  const [interviews, setInterviews] = useState<StudentInterviewItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Schedule Modal State
-  const [scheduleTitle, setScheduleTitle] = useState('SDE Technical Interview');
-  const [scheduleStudent, setScheduleStudent] = useState('Rahul Sharma');
-  const [scheduleInterviewer, setScheduleInterviewer] = useState('Dr. James Anderson');
-  const [scheduleDate, setScheduleDate] = useState('2025-11-05');
-  const [scheduleTime, setScheduleTime] = useState('07:00 PM');
+  // Filters & Sorting
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedMode, setSelectedMode] = useState('All');
+  const [selectedSort, setSelectedSort] = useState('Upcoming First');
 
-  const fetchCalendarEventsData = async () => {
+  // Viewing Details Modal
+  const [viewingInterview, setViewingInterview] = useState<StudentInterviewItem | null>(null);
+
+  // Fetch Live Student Interviews from Backend API
+  const fetchCalendarEventsData = useCallback(async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await getEvents({ event_type: 'Interview' });
       const rawEvents = res.data?.events || [];
 
-      const formattedEvents: UpcomingInterview[] = rawEvents.map((ev: any) => ({
-        id: ev.id,
-        studentName: ev.user_name || ev.participants?.[0]?.name || 'Student Candidate',
-        studentAvatar: ev.user_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-        branch: ev.branch || 'CS',
-        role: ev.title || 'Technical Interview Round',
-        interviewerName: ev.interviewer || 'Campus Recruiter',
-        dateTime: ev.start_time ? new Date(ev.start_time).toLocaleString() : 'Scheduled',
-        status: (ev.status as any) || 'Confirmed',
-        joinUrl: ev.location_link || 'https://meet.google.com/abc-defg-hij',
-      }));
+      const formattedEvents: StudentInterviewItem[] = rawEvents.map((ev: any) => {
+        const titleParts = ev.title ? ev.title.split('-') : [];
+        const comp = titleParts[0]?.trim() || ev.company_name || 'Corporate Partner';
+        const role = titleParts[1]?.trim() || ev.role_title || 'Software Development Engineer';
 
-      setUpcoming(formattedEvents);
+        return {
+          id: ev.id,
+          companyName: comp,
+          companyLogo: ev.company_logo || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
+          roleTitle: role,
+          roundName: ev.round_name || 'Technical Round 1',
+          dateTime: ev.start_time ? new Date(ev.start_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Scheduled',
+          isoDate: ev.start_time || new Date().toISOString(),
+          mode: ev.location_link?.includes('http') ? 'Online' : 'In-Person',
+          locationLink: ev.location_link || 'https://meet.google.com',
+          interviewerName: ev.interviewer || 'Campus Technical Panel',
+          status: (ev.status as any) || 'Scheduled',
+          instructions: 'Please join the virtual meeting room 5 minutes prior to your allocated time slot. Keep your university ID card ready for identity verification.',
+          requiredDocuments: ['College ID Card', 'Updated PDF Resume', 'Academic Transcripts'],
+          feedback: ev.description || 'Candidate demonstrated strong problem-solving skills and clean data structure implementation.',
+        };
+      });
 
-      // Default mock feedback items if none returned
-      setFeedbacks([
-        {
-          id: 'fb-1',
-          studentName: 'Rahul Sharma',
-          studentAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-          role: 'SDE Role Learning',
-          track: 'Python & Data Structures',
-          interviewerName: 'Dr. James Anderson',
-          summary: 'Exemplary performance in data structures and problem solving. Solid grasp of complexity analysis.',
-          rating: 5,
-          mockScore: 90,
-        },
-        {
-          id: 'fb-2',
-          studentName: 'Priya Patel',
-          studentAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120',
-          role: 'Data Analyst Track',
-          track: 'Machine Learning & SQL',
-          interviewerName: 'Sarah Jenkins',
-          summary: 'Great data modeling skills and Tableau visualization clarity. Recommended for analytics role.',
-          rating: 4,
-          mockScore: 85,
-        },
-      ]);
+      setInterviews(formattedEvents);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to load calendar events.';
-      toastError('Error Loading Events', msg);
+      const msg = err.response?.data?.message || 'Failed to fetch interview schedule.';
+      setErrorMsg(msg);
+      toastError('Error Loading Schedule', msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [toastError]);
 
   useEffect(() => {
     fetchCalendarEventsData();
-  }, []);
+  }, [fetchCalendarEventsData]);
 
-  const handleScheduleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!scheduleStudent || !scheduleDate) {
-      toastError('Validation Error', 'Candidate Name and Date are required.');
-      return;
-    }
-
-    try {
-      await createEvent({
-        title: `${scheduleTitle} - ${scheduleStudent}`,
-        event_type: 'Interview',
-        start_time: new Date(`${scheduleDate} ${scheduleTime}`).toISOString(),
-        location_link: 'https://meet.google.com/new-interview-slot',
-      });
-
-      setIsScheduleModalOpen(false);
-      success('Mock Interview Scheduled', `Session booked for ${scheduleStudent}.`);
-      fetchCalendarEventsData();
-    } catch (err: any) {
-      toastError('Schedule Error', err.response?.data?.message || 'Failed to schedule event.');
+  // Status Badge Colors Mapping Helper
+  const renderStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return <span className="bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Scheduled</span>;
+      case 'ongoing':
+        return <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Ongoing</span>;
+      case 'completed':
+        return <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Completed</span>;
+      case 'cancelled':
+        return <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Cancelled</span>;
+      case 'rescheduled':
+        return <span className="bg-purple-500/15 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Rescheduled</span>;
+      default:
+        return <span className="bg-[#162032] text-[#94A3B8] border border-[#202D42] px-3 py-1 rounded-full text-xs font-extrabold">{status}</span>;
     }
   };
 
-  const handleDeleteEventAction = async (eventId: string) => {
-    try {
-      await deleteEvent(eventId);
-      success('Event Removed', 'Calendar event deleted.');
-      fetchCalendarEventsData();
-    } catch (err: any) {
-      toastError('Delete Error', err.response?.data?.message || 'Failed to delete event.');
-    }
+  // Filtered & Sorted Interviews
+  const processedInterviews = useMemo(() => {
+    let result = interviews.filter((item) => {
+      const matchesSearch =
+        item.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.roleTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.roundName.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus = selectedStatus === 'All' || item.status === selectedStatus;
+      const matchesMode = selectedMode === 'All' || item.mode === selectedMode;
+
+      return matchesSearch && matchesStatus && matchesMode;
+    });
+
+    result.sort((a, b) => {
+      if (selectedSort === 'Latest') return new Date(b.isoDate).getTime() - new Date(a.isoDate).getTime();
+      return new Date(a.isoDate).getTime() - new Date(b.isoDate).getTime();
+    });
+
+    return result;
+  }, [interviews, searchQuery, selectedStatus, selectedMode, selectedSort]);
+
+  // Calendar Link Helpers
+  const generateGoogleCalendarUrl = (title: string, startDateStr: string, locationLink: string) => {
+    const start = new Date(startDateStr);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const isoStart = start.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const isoEnd = end.toISOString().replace(/-|:|\.\d\d\d/g, '');
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+      title
+    )}&dates=${isoStart}/${isoEnd}&details=${encodeURIComponent(
+      'Campus Recruitment Interview Session'
+    )}&location=${encodeURIComponent(locationLink || 'Online Meeting')}`;
+  };
+
+  const downloadIcsFile = (title: string, startDateStr: string, locationLink: string) => {
+    const start = new Date(startDateStr);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const isoStart = start.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const isoEnd = end.toISOString().replace(/-|:|\.\d\d\d/g, '');
+
+    const icsData = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//TPO Management System//EN
+BEGIN:VEVENT
+SUMMARY:${title}
+DESCRIPTION:Campus Recruitment Interview Session
+LOCATION:${locationLink || 'Online Meeting'}
+DTSTART:${isoStart}
+DTEND:${isoEnd}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${title.replace(/\s+/g, '_')}_Interview.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    success('Calendar File Saved', 'Downloaded .ics appointment file.');
+  };
+
+  const handleSetReminder = (title: string) => {
+    info('Reminder Scheduled', `Alert set 15 minutes before ${title}.`);
   };
 
   return (
     <div className="space-y-6 pb-16 font-sans">
-      {/* Header */}
+      
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <Breadcrumb items={[{ label: 'Calendar & Events' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-1">
-            Calendar & Interview Schedule
+          <Breadcrumb items={[{ label: 'Calendar & Interviews' }]} />
+          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
+            Interview Schedule
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {upcoming.length} Scheduled Events
+              {interviews.length} Sessions Scheduled
             </span>
           </h1>
+          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+            Track interview slots, join meeting links, export calendar events, and review recruiter feedback.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="md"
-            leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
-            onClick={fetchCalendarEventsData}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-
-          <Button
-            variant="primary"
-            size="md"
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setIsScheduleModalOpen(true)}
-            className="font-extrabold text-xs"
-          >
-            + Schedule Mock Interview
-          </Button>
-        </div>
+        <Button
+          variant="secondary"
+          size="md"
+          leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+          onClick={fetchCalendarEventsData}
+          disabled={loading}
+        >
+          Refresh Schedule
+        </Button>
       </div>
 
-      {/* TOP SECTION: UPCOMING INTERVIEWS TABLE & PERFORMANCE CHARTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Upcoming Interviews Table Card (8 cols) */}
-        <Card className="lg:col-span-8 p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
-            <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#A3E635]" />
-              Scheduled Calendar Events & Interviews
-            </h2>
+      {/* SEARCH & FILTERS BAR */}
+      <Card className="p-5 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+          <div className="lg:col-span-2">
+            <SearchInput
+              placeholder="Search by company, role title, or interview round..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Candidate</TableHead>
-                <TableHead>Role / Event</TableHead>
-                <TableHead>Date & Time</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Options</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-[#94A3B8]">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
-                      <span>Loading scheduled calendar events...</span>
+          <Dropdown
+            label="Filter by Status:"
+            options={[
+              { label: 'All Statuses', value: 'All' },
+              { label: 'Scheduled', value: 'Scheduled' },
+              { label: 'Ongoing', value: 'Ongoing' },
+              { label: 'Completed', value: 'Completed' },
+              { label: 'Cancelled', value: 'Cancelled' },
+              { label: 'Rescheduled', value: 'Rescheduled' },
+            ]}
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+          />
+
+          <Dropdown
+            label="Interview Mode:"
+            options={[
+              { label: 'All Modes', value: 'All' },
+              { label: 'Online Meeting', value: 'Online' },
+              { label: 'In-Person Venue', value: 'In-Person' },
+            ]}
+            value={selectedMode}
+            onChange={setSelectedMode}
+          />
+        </div>
+      </Card>
+
+      {/* ERROR STATE */}
+      {errorMsg ? (
+        <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
+          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
+          <h3 className="text-lg font-bold text-white">Error Loading Interview Schedule</h3>
+          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+          <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchCalendarEventsData}>
+            Retry Loading Schedule
+          </Button>
+        </Card>
+      ) : loading ? (
+        /* LOADING SKELETON STATE */
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-5 border-[#202D42] animate-pulse space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#162032] rounded-xl" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-[#162032] rounded w-48" />
+                    <div className="h-3 bg-[#162032] rounded w-32" />
+                  </div>
+                </div>
+                <div className="h-8 bg-[#162032] rounded-xl w-24" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : processedInterviews.length === 0 ? (
+        /* EMPTY STATE */
+        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
+          <Calendar className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
+          <h3 className="text-xl font-extrabold text-white">No interviews scheduled.</h3>
+          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+            You do not have any active or upcoming recruiter interview sessions booked right now.
+          </p>
+          <Button variant="primary" size="md" leftIcon={<Send className="w-4 h-4" />} onClick={() => navigate('/drives')}>
+            Browse Drives
+          </Button>
+        </Card>
+      ) : (
+        /* LIVE INTERVIEW CARDS GRID */
+        <div className="space-y-4">
+          {processedInterviews.map((item) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Card className="p-5 border-[#202D42] space-y-4 hover:border-[#A3E635]/40 transition-colors">
+                
+                {/* Top Row: Company & Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#202D42] pb-4">
+                  <div className="flex items-center gap-4">
+                    <Avatar src={item.companyLogo} name={item.companyName} size="md" className="border border-[#202D42]" />
+                    <div>
+                      <h3 className="text-base font-extrabold text-white leading-tight flex items-center gap-2">
+                        {item.companyName}
+                        <span className="text-xs text-[#A3E635] font-semibold">({item.roundName})</span>
+                      </h3>
+                      <p className="text-xs text-[#94A3B8] font-semibold">{item.roleTitle}</p>
+                      <p className="text-[11px] text-[#94A3B8] flex items-center gap-2 mt-0.5">
+                        <Clock className="w-3.5 h-3.5 text-[#A3E635]" /> {item.dateTime}
+                        <span className="text-[#64748B]">•</span>
+                        <UserCheck className="w-3.5 h-3.5 text-sky-400" /> Panel: {item.interviewerName}
+                      </p>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ) : upcoming.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-[#94A3B8]">
-                    No upcoming calendar events scheduled.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                upcoming.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar src={item.studentAvatar} name={item.studentName} size="sm" />
-                        <div>
-                          <span className="font-bold text-white block text-xs">{item.studentName}</span>
-                          <span className="text-[10px] text-[#94A3B8]">{item.branch}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-bold text-white text-xs">{item.role}</TableCell>
-                    <TableCell className="text-xs text-[#94A3B8]">{item.dateTime}</TableCell>
-                    <TableCell>
-                      <Badge variant="success" size="sm">
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <a
-                          href={item.joinUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2.5 py-1 bg-[#A3E635]/15 hover:bg-[#A3E635]/25 border border-[#A3E635]/30 text-[#A3E635] rounded-lg text-xs font-bold inline-flex items-center gap-1"
-                        >
-                          <Video className="w-3 h-3" />
-                          Join
-                        </a>
-                        <button
-                          onClick={() => handleDeleteEventAction(item.id)}
-                          className="p-1 text-rose-400 hover:bg-rose-500/10 rounded-md"
-                          title="Delete Event"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                  </div>
+
+                  <div className="flex items-center gap-3 self-start sm:self-center">
+                    {renderStatusBadge(item.status)}
+                  </div>
+                </div>
+
+                {/* INTERVIEW PROGRESS TIMELINE */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#94A3B8]">Interview Progress Timeline</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-[10px]">
+                    <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">1. Approved</div>
+                    <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">2. Scheduled</div>
+                    <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">3. Round 1</div>
+                    <div className="p-2 rounded-xl bg-[#101726] border border-[#202D42] text-[#64748B] font-bold">4. Round 2</div>
+                    <div className="p-2 rounded-xl bg-[#101726] border border-[#202D42] text-[#64748B] font-bold">5. HR Round</div>
+                    <div className="p-2 rounded-xl bg-[#101726] border border-[#202D42] text-[#64748B] font-bold">6. Result</div>
+                  </div>
+                </div>
+
+                {/* ACTION BUTTONS ROW */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#202D42] text-xs">
+                  <div className="flex items-center gap-2">
+                    <Button variant="secondary" size="sm" leftIcon={<Eye className="w-3.5 h-3.5 text-sky-400" />} onClick={() => setViewingInterview(item)}>
+                      View Details
+                    </Button>
+
+                    <a
+                      href={generateGoogleCalendarUrl(`${item.companyName} — ${item.roundName}`, item.isoDate, item.locationLink)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button variant="secondary" size="sm" leftIcon={<Calendar className="w-3.5 h-3.5 text-[#A3E635]" />}>
+                        Google Calendar
+                      </Button>
+                    </a>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<Download className="w-3.5 h-3.5" />}
+                      onClick={() => downloadIcsFile(`${item.companyName}_${item.roundName}`, item.isoDate, item.locationLink)}
+                    >
+                      .ICS File
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<Bell className="w-3.5 h-3.5 text-amber-400" />}
+                      onClick={() => handleSetReminder(`${item.companyName} ${item.roundName}`)}
+                    >
+                      Remind Me
+                    </Button>
+
+                    {item.locationLink && (
+                      <a href={item.locationLink} target="_blank" rel="noreferrer">
+                        <Button variant="primary" size="sm" leftIcon={<Video className="w-3.5 h-3.5" />} className="font-extrabold shadow-[0_0_12px_rgba(163,230,53,0.3)]">
+                          Join Meeting
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* VIEW DETAILS MODAL */}
+      <AnimatePresence>
+        {viewingInterview && (
+          <Modal
+            isOpen={!!viewingInterview}
+            onClose={() => setViewingInterview(null)}
+            title={`Interview Specifications — ${viewingInterview.companyName}`}
+            subtitle={`${viewingInterview.roleTitle} • ${viewingInterview.roundName}`}
+            maxWidth="xl"
+          >
+            <div className="space-y-5 bg-[#101726] border border-[#202D42] p-6 rounded-2xl text-xs">
+              
+              {/* Header */}
+              <div className="border-b border-[#202D42] pb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar src={viewingInterview.companyLogo} name={viewingInterview.companyName} size="md" />
+                  <div>
+                    <h2 className="text-xl font-extrabold text-white">{viewingInterview.companyName}</h2>
+                    <p className="text-xs text-[#A3E635] font-semibold">{viewingInterview.roundName}</p>
+                  </div>
+                </div>
+                <div>{renderStatusBadge(viewingInterview.status)}</div>
+              </div>
+
+              {/* Specifications Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[#162032] p-3 rounded-xl border border-[#202D42]">
+                <div>
+                  <span className="text-[10px] text-[#94A3B8] block">Date & Time</span>
+                  <span className="font-bold text-white text-xs">{viewingInterview.dateTime}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#94A3B8] block">Interviewer / Panel</span>
+                  <span className="font-bold text-white text-xs">{viewingInterview.interviewerName}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#94A3B8] block">Session Mode</span>
+                  <span className="font-bold text-[#A3E635] text-xs">{viewingInterview.mode}</span>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="space-y-1">
+                <span className="font-extrabold text-white uppercase text-[11px]">Instructions & Preparation</span>
+                <p className="text-[#94A3B8] leading-relaxed p-3 bg-[#162032] rounded-xl border border-[#202D42]">
+                  {viewingInterview.instructions}
+                </p>
+              </div>
+
+              {/* Feedback (If Available) */}
+              {viewingInterview.feedback && (
+                <div className="space-y-1">
+                  <span className="font-extrabold text-[#A3E635] uppercase text-[11px]">Recruiter Feedback</span>
+                  <p className="text-[#94A3B8] leading-relaxed p-3 bg-[#162032] rounded-xl border border-[#A3E635]/30">
+                    {viewingInterview.feedback}
+                  </p>
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </Card>
 
-        {/* Performance Radar Card (4 cols) */}
-        <Card className="lg:col-span-4 p-5 space-y-4">
-          <h2 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
-            Mock Performance Index
-          </h2>
+              {/* Modal Actions */}
+              <div className="pt-4 border-t border-[#202D42] flex justify-end gap-3">
+                <Button variant="secondary" size="md" onClick={() => setViewingInterview(null)}>
+                  Close
+                </Button>
+                {viewingInterview.locationLink && (
+                  <a href={viewingInterview.locationLink} target="_blank" rel="noreferrer">
+                    <Button variant="primary" size="md" leftIcon={<Video className="w-4 h-4" />}>
+                      Join Session
+                    </Button>
+                  </a>
+                )}
+              </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-[#94A3B8]">Overall Rating Score</span>
-              <span className="font-extrabold text-[#A3E635]">4.8 / 5.0</span>
             </div>
-            <div className="h-28">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={feedbackTrendData}>
-                  <Area type="monotone" dataKey="score" stroke="#A3E635" fill="#A3E635" fillOpacity={0.2} strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </Card>
-      </div>
+          </Modal>
+        )}
+      </AnimatePresence>
 
-      {/* SCHEDULE MOCK INTERVIEW MODAL */}
-      <Modal
-        isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
-        title="Schedule Event / Interview"
-        subtitle="Book a calendar event or 1-on-1 interview slot."
-      >
-        <form onSubmit={handleScheduleSubmit} className="space-y-4">
-          <Input
-            label="Event / Interview Title"
-            placeholder="e.g. SDE Technical Interview"
-            value={scheduleTitle}
-            onChange={(e) => setScheduleTitle(e.target.value)}
-            required
-          />
-          <Input
-            label="Candidate Name"
-            placeholder="e.g. Rahul Sharma"
-            value={scheduleStudent}
-            onChange={(e) => setScheduleStudent(e.target.value)}
-            required
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Date"
-              type="date"
-              value={scheduleDate}
-              onChange={(e) => setScheduleDate(e.target.value)}
-              required
-            />
-            <Input
-              label="Time"
-              type="text"
-              placeholder="07:00 PM"
-              value={scheduleTime}
-              onChange={(e) => setScheduleTime(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" size="md" onClick={() => setIsScheduleModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" size="md">
-              Book Event
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 };

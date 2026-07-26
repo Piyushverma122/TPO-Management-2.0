@@ -71,8 +71,6 @@ const validateUpdateRecruiter = validate([
 const validateQueryFilter = validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-  query('tier').optional().isIn(['Dream', 'Super Dream', 'Standard', 'Mass Recruiter']),
-  query('status').optional().isIn(['Active', 'Upcoming', 'Completed']),
 ]);
 
 module.exports = {

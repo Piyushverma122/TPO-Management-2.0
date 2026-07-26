@@ -15,15 +15,37 @@ export interface User {
 export interface Student {
   id: string;
   rollNumber: string;
+  enrollmentNumber?: string;
   name: string;
   email: string;
+  phone?: string;
+  alternatePhone?: string;
+  gender?: string;
+  dateOfBirth?: string;
   branch: string;
+  currentSemester?: number;
   cgpa: number;
   passingYear: number;
   backlogs: number;
+  historyBacklogs?: number;
+  tenthPercentage?: number;
+  twelfthPercentage?: number;
+  diplomaPercentage?: number;
   placementStatus: 'Placed' | 'Unplaced' | 'In Process' | 'Opted Out';
   companyPlaced?: string;
   packageOffered?: string; // e.g. "12 LPA"
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+  resumeHeadline?: string;
+  bio?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  leetcodeUrl?: string;
+  hackerrankUrl?: string;
   resumeUrl?: string;
   skills: string[];
   avatar?: string;
@@ -49,6 +71,11 @@ export interface Company {
   avgPackage: string;
   highestPackage: string;
   status: 'Active' | 'Upcoming' | 'Completed';
+  location?: string;
+  description?: string;
+  jobRole?: string;
+  bond?: string;
+  deadline?: string;
 }
 
 export interface PlacementDrive {

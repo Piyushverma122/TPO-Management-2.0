@@ -9,7 +9,7 @@ const { sendSuccess, sendError } = require('../utils/responseHandler');
 const getAdminDashboard = async (req, res, next) => {
   try {
     const data = await dashboardService.getAdminDashboard();
-    return sendSuccess(res, 'Admin dashboard metrics retrieved', { dashboard: data }, 200);
+    return sendSuccess(res, 'Admin dashboard metrics retrieved', { dashboard: data, overview: data }, 200);
   } catch (error) {
     next(error);
   }
@@ -23,7 +23,7 @@ const getAdminDashboard = async (req, res, next) => {
 const getTPODashboard = async (req, res, next) => {
   try {
     const data = await dashboardService.getTPODashboard();
-    return sendSuccess(res, 'TPO dashboard metrics retrieved', { dashboard: data }, 200);
+    return sendSuccess(res, 'TPO dashboard metrics retrieved', { dashboard: data, overview: data }, 200);
   } catch (error) {
     next(error);
   }
@@ -37,7 +37,7 @@ const getTPODashboard = async (req, res, next) => {
 const getStudentDashboard = async (req, res, next) => {
   try {
     const data = await dashboardService.getStudentDashboard(req.user.id);
-    return sendSuccess(res, 'Student dashboard metrics retrieved', { dashboard: data }, 200);
+    return sendSuccess(res, 'Student dashboard metrics retrieved', { dashboard: data, overview: data }, 200);
   } catch (error) {
     next(error);
   }
@@ -51,7 +51,7 @@ const getStudentDashboard = async (req, res, next) => {
 const getRecruiterDashboard = async (req, res, next) => {
   try {
     const data = await dashboardService.getRecruiterDashboard(req.user.id);
-    return sendSuccess(res, 'Recruiter dashboard metrics retrieved', { dashboard: data }, 200);
+    return sendSuccess(res, 'Recruiter dashboard metrics retrieved', { dashboard: data, overview: data }, 200);
   } catch (error) {
     next(error);
   }
@@ -65,7 +65,7 @@ const getRecruiterDashboard = async (req, res, next) => {
 const getFacultyDashboard = async (req, res, next) => {
   try {
     const data = await dashboardService.getFacultyDashboard(req.user.id);
-    return sendSuccess(res, 'Faculty dashboard metrics retrieved', { dashboard: data }, 200);
+    return sendSuccess(res, 'Faculty dashboard metrics retrieved', { dashboard: data, overview: data }, 200);
   } catch (error) {
     next(error);
   }

@@ -28,10 +28,20 @@ export const Dropdown: React.FC<DropdownProps> = ({
   className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  const handleToggle = () => {
+    if (!isOpen && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpwards(spaceBelow < 220 && rect.top > 200);
+    }
+    setIsOpen(!isOpen);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -73,7 +83,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
       )}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={clsx(
@@ -94,7 +104,10 @@ export const Dropdown: React.FC<DropdownProps> = ({
       {isOpen && (
         <div
           role="listbox"
-          className="absolute top-full left-0 right-0 mt-1.5 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto p-1.5 backdrop-blur-xl"
+          className={clsx(
+            'absolute left-0 right-0 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto p-1.5 backdrop-blur-xl',
+            openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          )}
         >
           {options.map((option, idx) => {
             const isSelected = option.value === value;
@@ -149,8 +162,18 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleToggle = () => {
+    if (!isOpen && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpwards(spaceBelow < 220 && rect.top > 200);
+    }
+    setIsOpen(!isOpen);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -191,7 +214,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
       )}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={clsx(
@@ -232,7 +255,10 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
       {isOpen && (
         <div
           role="listbox"
-          className="absolute top-full left-0 right-0 mt-1.5 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-50 max-h-64 flex flex-col p-2 backdrop-blur-xl"
+          className={clsx(
+            'absolute left-0 right-0 bg-[#101726] border border-[#202D42] rounded-xl shadow-2xl z-50 max-h-64 flex flex-col p-2 backdrop-blur-xl',
+            openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          )}
         >
           <div className="relative mb-2">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />

@@ -34,7 +34,7 @@ const checkDriveAccess = async (req, driveId) => {
  */
 const getDrives = async (req, res, next) => {
   try {
-    const result = await driveService.listDrives(req.query);
+    const result = await driveService.listDrives(req.query, req.user);
     return sendPaginated(
       res,
       'Placement drives list retrieved',

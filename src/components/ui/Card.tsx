@@ -19,7 +19,7 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        'rounded-2xl transition-all duration-300 relative overflow-hidden',
+        'rounded-2xl transition-all duration-300 relative',
         variant === 'glass'
           ? 'bg-[#162032]/65 backdrop-blur-xl border border-[#202D42]/80'
           : variant === 'accent'

@@ -1,9 +1,10 @@
 const supabase = require('../config/supabase');
+const dataScopeService = require('./dataScopeService');
 
 /**
  * List placement drives with search, multi-filters and pagination
  */
-const listDrives = async (queryParams) => {
+const listDrives = async (queryParams, reqUser) => {
   const page = parseInt(queryParams.page) || 1;
   const limit = parseInt(queryParams.limit) || 10;
   const offset = (page - 1) * limit;
@@ -29,11 +30,23 @@ const listDrives = async (queryParams) => {
         logo_url,
         industry,
         tier
+      ),
+      drive_eligible_branches (
+        branches (
+          id,
+          name,
+          code
+        )
       )
     `,
       { count: 'exact' }
     )
     .is('deleted_at', null);
+
+  if (reqUser) {
+    const scopeContext = await dataScopeService.resolveScopeContext(reqUser);
+    query = dataScopeService.applyDataScope(query, reqUser, 'drives', scopeContext);
+  }
 
   if (company_id) query = query.eq('company_id', company_id);
   if (status) query = query.eq('status', status);
@@ -56,8 +69,20 @@ const listDrives = async (queryParams) => {
     throw err;
   }
 
+  const normalizedDrives = (drives || []).map((d) => {
+    const branchNames = d.drive_eligible_branches
+      ?.map((b) => b.branches?.name || b.branches?.code)
+      .filter(Boolean);
+
+    return {
+      ...d,
+      allowed_branches: branchNames && branchNames.length ? branchNames : ['All Branches'],
+      selection_rounds: d.rounds || ['Online Assessment', 'Technical Interview', 'HR Round'],
+    };
+  });
+
   return {
-    drives: drives || [],
+    drives: normalizedDrives,
     page,
     limit,
     total: count || 0,
@@ -181,6 +206,44 @@ const createDrive = async (payload, userId) => {
       passing_year: pYear,
     }));
     await supabase.from('drive_eligible_batches').insert(batchInserts);
+  }
+
+  // 5. Broadcast Placement Drive Notification to Candidates
+  try {
+    const { data: studentUsers } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'STUDENT')
+      .is('deleted_at', null);
+
+    if (studentUsers && studentUsers.length > 0) {
+      const notifications = studentUsers.map((u) => ({
+        user_id: u.id,
+        title: `📢 New Recruitment Drive: ${role_title}`,
+        message: `A new placement drive for ${role_title} (CTC: ₹${ctc} LPA) has been published. Check eligibility and apply!`,
+        type: 'Drive Update',
+        is_read: false,
+      }));
+      await supabase.from('notifications').insert(notifications);
+    }
+  } catch (e) {
+    console.warn('Drive publication notification fallback:', e.message);
+  }
+
+  // 6. Log Audit Event
+  try {
+    if (userId) {
+      await supabase.from('audit_logs').insert([
+        {
+          user_id: userId,
+          action: 'DRIVE_PUBLISHED',
+          category: 'Placement Drives',
+          details: `Published placement drive for ${role_title} (${drive.drive_code})`,
+        },
+      ]);
+    }
+  } catch (e) {
+    console.warn('Audit log trigger fallback:', e.message);
   }
 
   return drive;

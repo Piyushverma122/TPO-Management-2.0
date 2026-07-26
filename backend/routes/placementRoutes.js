@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const placementController = require('../controllers/placementController');
-const { verifyToken, authorizeRoles } = require('../middlewares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { authorizeModule } = require('../middleware/authorize');
+const { Module, Action } = require('../config/rbac');
 const {
   validateCreatePlacement,
   validateUpdatePlacement,
@@ -13,17 +15,17 @@ const {
 router.use(verifyToken);
 
 // Placements Listing & Comprehensive Statistics
-router.get('/', validateQueryFilter, placementController.getPlacements);
-router.get('/statistics', placementController.getStatistics);
+router.get('/', authorizeModule(Module.PLACEMENTS, Action.VIEW), validateQueryFilter, placementController.getPlacements);
+router.get('/statistics', authorizeModule(Module.PLACEMENTS, Action.VIEW), placementController.getStatistics);
 
 // Student & Company Placement Histories
-router.get('/student/:studentId', placementController.getStudentHistory);
-router.get('/company/:companyId', placementController.getCompanyHistory);
+router.get('/student/:studentId', authorizeModule(Module.PLACEMENTS, Action.VIEW), placementController.getStudentHistory);
+router.get('/company/:companyId', authorizeModule(Module.PLACEMENTS, Action.VIEW), placementController.getCompanyHistory);
 
 // Placement Record CRUD Routes
-router.get('/:id', validatePlacementId, placementController.getPlacementById);
-router.post('/', authorizeRoles('admin', 'tpo'), validateCreatePlacement, placementController.createPlacement);
-router.put('/:id', authorizeRoles('admin', 'tpo', 'recruiter'), validateUpdatePlacement, placementController.updatePlacement);
-router.delete('/:id', authorizeRoles('admin', 'tpo'), validatePlacementId, placementController.deletePlacement);
+router.get('/:id', authorizeModule(Module.PLACEMENTS, Action.VIEW), validatePlacementId, placementController.getPlacementById);
+router.post('/', authorizeModule(Module.PLACEMENTS, Action.CREATE), validateCreatePlacement, placementController.createPlacement);
+router.put('/:id', authorizeModule(Module.PLACEMENTS, Action.EDIT), validateUpdatePlacement, placementController.updatePlacement);
+router.delete('/:id', authorizeModule(Module.PLACEMENTS, Action.DELETE), validatePlacementId, placementController.deletePlacement);
 
 module.exports = router;

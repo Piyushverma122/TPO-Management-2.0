@@ -24,16 +24,24 @@ const checkOwnershipOrAdmin = async (req, studentId) => {
  */
 const getStudents = async (req, res, next) => {
   try {
-    const result = await studentService.listStudents(req.query);
-    return sendPaginated(
-      res,
-      'Students list retrieved',
-      result.students,
-      result.page,
-      result.limit,
-      result.total,
-      200
-    );
+    const result = await studentService.listStudents(req.query, req.user);
+    return res.status(200).json({
+      success: true,
+      message: 'Students list retrieved',
+      data: {
+        students: result.students,
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+      },
+      students: result.students,
+      pagination: {
+        currentPage: Number(result.page),
+        perPage: Number(result.limit),
+        totalEntries: Number(result.total),
+        totalPages: Math.ceil(result.total / result.limit) || 1,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -46,7 +54,7 @@ const getStudents = async (req, res, next) => {
  */
 const getStudentById = async (req, res, next) => {
   try {
-    const student = await studentService.getStudentById(req.params.id);
+    const student = await studentService.getStudentById(req.params.id, req.user);
     return sendSuccess(res, 'Student record retrieved', { student }, 200);
   } catch (error) {
     next(error);

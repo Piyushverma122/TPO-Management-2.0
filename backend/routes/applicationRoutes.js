@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const applicationController = require('../controllers/applicationController');
-const { verifyToken, authorizeRoles } = require('../middlewares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { authorizeModule } = require('../middleware/authorize');
+const { Module, Action } = require('../config/rbac');
 const { uploadOfferLetter } = require('../config/multer');
 const {
   validateApplyDrive,
@@ -17,18 +19,18 @@ const {
 router.use(verifyToken);
 
 // General Applications Listing & Statistics
-router.get('/', validateQueryFilter, applicationController.getApplications);
-router.get('/statistics', applicationController.getStatistics);
+router.get('/', authorizeModule(Module.APPLICATIONS, Action.VIEW), validateQueryFilter, applicationController.getApplications);
+router.get('/statistics', authorizeModule(Module.APPLICATIONS, Action.VIEW), applicationController.getStatistics);
 
 // Student Apply & Withdraw Routes
-router.post('/', authorizeRoles('student', 'admin', 'tpo'), validateApplyDrive, applicationController.applyForDrive);
-router.delete('/:id', validateApplicationId, applicationController.withdrawApplication);
+router.post('/', authorizeModule(Module.APPLICATIONS, Action.CREATE), validateApplyDrive, applicationController.applyForDrive);
+router.delete('/:id', authorizeModule(Module.APPLICATIONS, Action.DELETE), validateApplicationId, applicationController.withdrawApplication);
 
 // Application Details & Status Workflow
-router.get('/:id', validateApplicationId, applicationController.getApplicationById);
+router.get('/:id', authorizeModule(Module.APPLICATIONS, Action.VIEW), validateApplicationId, applicationController.getApplicationById);
 router.put(
   '/:id/status',
-  authorizeRoles('admin', 'tpo', 'recruiter'),
+  authorizeModule(Module.APPLICATIONS, Action.APPROVE),
   validateUpdateStatus,
   applicationController.updateStatus
 );
@@ -36,13 +38,13 @@ router.put(
 // Bulk Shortlist & Reject Routes
 router.post(
   '/bulk-shortlist',
-  authorizeRoles('admin', 'tpo'),
+  authorizeModule(Module.APPLICATIONS, Action.APPROVE),
   validateBulkShortlist,
   applicationController.bulkShortlist
 );
 router.post(
   '/bulk-reject',
-  authorizeRoles('admin', 'tpo'),
+  authorizeModule(Module.APPLICATIONS, Action.APPROVE),
   validateBulkReject,
   applicationController.bulkReject
 );
@@ -50,7 +52,7 @@ router.post(
 // Interview Scheduling Route
 router.post(
   '/:id/interview',
-  authorizeRoles('admin', 'tpo', 'recruiter'),
+  authorizeModule(Module.INTERVIEWS, Action.CREATE),
   validateScheduleInterview,
   applicationController.scheduleInterview
 );
@@ -58,7 +60,7 @@ router.post(
 // Offer Letter Upload Route
 router.post(
   '/:id/offer-letter',
-  authorizeRoles('admin', 'tpo', 'recruiter'),
+  authorizeModule(Module.OFFER_LETTERS, Action.UPLOAD),
   validateApplicationId,
   uploadOfferLetter.single('offer_letter'),
   applicationController.uploadOfferLetter

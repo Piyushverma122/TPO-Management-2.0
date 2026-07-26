@@ -37,6 +37,8 @@ import { Modal } from '../components/ui/Modal';
 import { Avatar } from '../components/ui/Avatar';
 import { useToast } from '../components/ui/Toast';
 import { Student } from '../types';
+import { PermissionGuard } from '../components/auth/PermissionGuard';
+import { Module, Action } from '../config/rbac';
 import {
   getStudents,
   createStudent,
@@ -76,13 +78,40 @@ export const Students: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
 
-  // New Student Form State
-  const [newStudentName, setNewStudentName] = useState('');
-  const [newStudentRoll, setNewStudentRoll] = useState('');
-  const [newStudentEmail, setNewStudentEmail] = useState('');
-  const [newStudentBranch, setNewStudentBranch] = useState('Computer Science');
-  const [newStudentCgpa, setNewStudentCgpa] = useState('8.5');
-  const [newStudentYear, setNewStudentYear] = useState('2025');
+  // Form Tab State & All Student Fields
+  const [formTab, setFormTab] = useState<'basic' | 'academic' | 'address' | 'social'>('basic');
+  const [enrollForm, setEnrollForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    alternate_phone: '',
+    gender: 'Male',
+    date_of_birth: '',
+    roll_number: '',
+    enrollment_number: '',
+    branch_id: '',
+    current_semester: '1',
+    passing_year: '2025',
+    cgpa: '8.0',
+    tenth_percentage: '',
+    twelfth_percentage: '',
+    diploma_percentage: '',
+    active_backlogs: '0',
+    history_backlogs: '0',
+    placement_status: 'Unplaced',
+    address: '',
+    city: '',
+    state: '',
+    country: 'India',
+    pincode: '',
+    resume_headline: '',
+    bio: '',
+    linkedin_url: '',
+    github_url: '',
+    portfolio_url: '',
+    leetcode_url: '',
+    hackerrank_url: '',
+  });
 
   // Resume Upload State
   const [resumesList, setResumesList] = useState<any[]>([]);
@@ -101,22 +130,43 @@ export const Students: React.FC = () => {
         placement_status: selectedStatus !== 'All' ? selectedStatus : undefined,
       });
 
-      const rawList = res.data?.students || [];
-      const total = res.data?.total || 0;
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.students || (res as any).students || []);
+      const total = (res as any).pagination?.totalEntries || res.data?.total || (res as any).total || rawList.length;
 
-      // Transform backend response into frontend Student type
       const formattedList: Student[] = rawList.map((s: any) => ({
         id: s.id,
         rollNumber: s.roll_number || 'N/A',
+        enrollmentNumber: s.enrollment_number || undefined,
         name: s.users?.full_name || s.name || 'Candidate',
         email: s.users?.email || s.email || '',
+        phone: s.phone || s.users?.phone || undefined,
+        alternatePhone: s.alternate_phone || undefined,
+        gender: s.gender || undefined,
+        dateOfBirth: s.date_of_birth || undefined,
         branch: s.branches?.name || s.users?.department || 'General',
+        currentSemester: s.current_semester || 1,
         cgpa: s.cgpa ? parseFloat(s.cgpa) : 0,
         passingYear: s.passing_year || 2025,
         backlogs: s.active_backlogs || 0,
+        historyBacklogs: s.history_backlogs || 0,
+        tenthPercentage: s.tenth_percentage ? parseFloat(s.tenth_percentage) : undefined,
+        twelfthPercentage: s.twelfth_percentage ? parseFloat(s.twelfth_percentage) : undefined,
+        diplomaPercentage: s.diploma_percentage ? parseFloat(s.diploma_percentage) : undefined,
         placementStatus: (s.placement_status as any) || 'Unplaced',
         companyPlaced: s.company_placed || '(pending)',
         packageOffered: s.package_offered || '--',
+        address: s.address || undefined,
+        city: s.city || undefined,
+        state: s.state || undefined,
+        country: s.country || 'India',
+        pincode: s.pincode || undefined,
+        resumeHeadline: s.resume_headline || undefined,
+        bio: s.bio || undefined,
+        linkedinUrl: s.linkedin_url || undefined,
+        githubUrl: s.github_url || undefined,
+        portfolioUrl: s.portfolio_url || undefined,
+        leetcodeUrl: s.leetcode_url || undefined,
+        hackerrankUrl: s.hackerrank_url || undefined,
         avatar: s.users?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
         skills: s.skills || ['Problem Solving', 'Communication'],
       }));
@@ -192,25 +242,80 @@ export const Students: React.FC = () => {
 
   const handleAddStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStudentName || !newStudentRoll || !newStudentEmail) {
-      toastError('Validation Error', 'Name, Roll Number, and Email are required.');
+    if (!enrollForm.full_name || !enrollForm.roll_number || !enrollForm.email) {
+      toastError('Validation Error', 'Full Candidate Name, Roll Number, and Email Address are required.');
       return;
     }
 
     try {
       await createStudent({
-        roll_number: newStudentRoll,
-        email: newStudentEmail,
-        full_name: newStudentName,
-        cgpa: parseFloat(newStudentCgpa) || 8.0,
-        passing_year: parseInt(newStudentYear) || 2025,
+        full_name: enrollForm.full_name,
+        email: enrollForm.email,
+        phone: enrollForm.phone || undefined,
+        alternate_phone: enrollForm.alternate_phone || undefined,
+        gender: enrollForm.gender || undefined,
+        date_of_birth: enrollForm.date_of_birth || undefined,
+        roll_number: enrollForm.roll_number,
+        enrollment_number: enrollForm.enrollment_number || undefined,
+        branch_id: enrollForm.branch_id || undefined,
+        cgpa: parseFloat(enrollForm.cgpa) || 8.0,
+        passing_year: parseInt(enrollForm.passing_year) || 2025,
+        current_semester: parseInt(enrollForm.current_semester) || 1,
+        tenth_percentage: enrollForm.tenth_percentage ? parseFloat(enrollForm.tenth_percentage) : undefined,
+        twelfth_percentage: enrollForm.twelfth_percentage ? parseFloat(enrollForm.twelfth_percentage) : undefined,
+        diploma_percentage: enrollForm.diploma_percentage ? parseFloat(enrollForm.diploma_percentage) : undefined,
+        active_backlogs: parseInt(enrollForm.active_backlogs) || 0,
+        history_backlogs: parseInt(enrollForm.history_backlogs) || 0,
+        placement_status: enrollForm.placement_status,
+        address: enrollForm.address || undefined,
+        city: enrollForm.city || undefined,
+        state: enrollForm.state || undefined,
+        country: enrollForm.country || 'India',
+        pincode: enrollForm.pincode || undefined,
+        resume_headline: enrollForm.resume_headline || undefined,
+        bio: enrollForm.bio || undefined,
+        linkedin_url: enrollForm.linkedin_url || undefined,
+        github_url: enrollForm.github_url || undefined,
+        portfolio_url: enrollForm.portfolio_url || undefined,
+        leetcode_url: enrollForm.leetcode_url || undefined,
+        hackerrank_url: enrollForm.hackerrank_url || undefined,
       });
 
       setIsAddModalOpen(false);
-      setNewStudentName('');
-      setNewStudentRoll('');
-      setNewStudentEmail('');
-      success('Student Enrolled', `${newStudentName} added to TPO database.`);
+      // Reset form
+      setEnrollForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        alternate_phone: '',
+        gender: 'Male',
+        date_of_birth: '',
+        roll_number: '',
+        enrollment_number: '',
+        branch_id: '',
+        current_semester: '1',
+        passing_year: '2025',
+        cgpa: '8.0',
+        tenth_percentage: '',
+        twelfth_percentage: '',
+        diploma_percentage: '',
+        active_backlogs: '0',
+        history_backlogs: '0',
+        placement_status: 'Unplaced',
+        address: '',
+        city: '',
+        state: '',
+        country: 'India',
+        pincode: '',
+        resume_headline: '',
+        bio: '',
+        linkedin_url: '',
+        github_url: '',
+        portfolio_url: '',
+        leetcode_url: '',
+        hackerrank_url: '',
+      });
+      success('Student Enrolled Successfully', `${enrollForm.full_name} added to TPO database.`);
       fetchStudentsData();
     } catch (err: any) {
       toastError('Enrollment Error', err.response?.data?.message || 'Failed to create student record.');
@@ -257,15 +362,17 @@ export const Students: React.FC = () => {
             Refresh
           </Button>
 
-          <Button
-            variant="primary"
-            size="md"
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setIsAddModalOpen(true)}
-            className="font-extrabold text-xs shrink-0"
-          >
-            Add New Student
-          </Button>
+          <PermissionGuard module={Module.STUDENTS} action={Action.CREATE}>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setIsAddModalOpen(true)}
+              className="font-extrabold text-xs shrink-0"
+            >
+              Add New Student
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -317,7 +424,7 @@ export const Students: React.FC = () => {
       </div>
 
       {/* FILTER & SEARCH CONTROL BAR */}
-      <Card className="p-4">
+      <Card className="p-4 relative z-30">
         <div className="flex flex-col lg:flex-row items-center gap-3">
           <div className="w-full lg:flex-1">
             <SearchInput
@@ -524,29 +631,165 @@ export const Students: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Candidate Main Avatar Card */}
-                <div className="flex items-center gap-4 bg-[#101726] border border-[#202D42] rounded-2xl p-4">
-                  <Avatar src={selectedStudent.avatar} name={selectedStudent.name} size="lg" />
-                  <div>
-                    <h3 className="text-lg font-extrabold text-white">{selectedStudent.name}</h3>
-                    <p className="text-xs text-[#A3E635] font-mono font-bold">{selectedStudent.rollNumber}</p>
-                    <p className="text-xs text-[#94A3B8] mt-0.5">{selectedStudent.email}</p>
+                {/* Candidate Main Profile Banner Card */}
+                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-3">
+                  <div className="flex items-start gap-4">
+                    <Avatar src={selectedStudent.avatar} name={selectedStudent.name} size="lg" />
+                    <div className="space-y-1 overflow-hidden">
+                      <h3 className="text-lg font-extrabold text-white leading-tight">{selectedStudent.name}</h3>
+                      {selectedStudent.resumeHeadline && (
+                        <p className="text-xs text-[#A3E635] font-semibold truncate">{selectedStudent.resumeHeadline}</p>
+                      )}
+                      <div className="flex flex-wrap gap-2 text-xs font-mono font-bold pt-1">
+                        <span className="text-[#A3E635] bg-[#A3E635]/10 px-2 py-0.5 rounded border border-[#A3E635]/20">
+                          Roll: {selectedStudent.rollNumber}
+                        </span>
+                        {selectedStudent.enrollmentNumber && (
+                          <span className="text-[#94A3B8] bg-[#1C293F] px-2 py-0.5 rounded">
+                            EN: {selectedStudent.enrollmentNumber}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact & Personal details */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#202D42] text-xs">
+                    <div>
+                      <span className="text-[10px] text-[#64748B] uppercase font-bold block">Email</span>
+                      <span className="text-white font-medium truncate block">{selectedStudent.email}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#64748B] uppercase font-bold block">Phone</span>
+                      <span className="text-white font-medium">{selectedStudent.phone || 'N/A'}</span>
+                    </div>
+                    {selectedStudent.gender && (
+                      <div>
+                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">Gender</span>
+                        <span className="text-white font-medium">{selectedStudent.gender}</span>
+                      </div>
+                    )}
+                    {selectedStudent.dateOfBirth && (
+                      <div>
+                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">DOB</span>
+                        <span className="text-white font-medium">{selectedStudent.dateOfBirth}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Academic Highlights */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">CGPA</span>
-                    <span className="text-lg font-extrabold text-white">{selectedStudent.cgpa.toFixed(2)}</span>
-                  </div>
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Placement</span>
-                    <Badge variant={selectedStudent.placementStatus === 'Placed' ? 'success' : 'neutral'} size="sm">
-                      {selectedStudent.placementStatus}
-                    </Badge>
+                {/* Academic Highlights Grid */}
+                <div className="space-y-2">
+                  <span className="text-xs font-extrabold text-[#A3E635] uppercase tracking-wider block">
+                    Academic Record
+                  </span>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">CGPA</span>
+                      <span className="text-base font-extrabold text-white">{selectedStudent.cgpa.toFixed(2)}</span>
+                    </div>
+                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Branch</span>
+                      <span className="text-xs font-bold text-white truncate block">{selectedStudent.branch}</span>
+                    </div>
+                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Placement</span>
+                      <Badge variant={selectedStudent.placementStatus === 'Placed' ? 'success' : 'neutral'} size="sm">
+                        {selectedStudent.placementStatus}
+                      </Badge>
+                    </div>
+
+                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Semester</span>
+                      <span className="text-xs font-bold text-white">Sem {selectedStudent.currentSemester || 1}</span>
+                    </div>
+                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Passing Year</span>
+                      <span className="text-xs font-bold text-white">{selectedStudent.passingYear}</span>
+                    </div>
+                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Backlogs</span>
+                      <span className={`text-xs font-bold ${selectedStudent.backlogs > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {selectedStudent.backlogs} Active
+                      </span>
+                    </div>
+
+                    {selectedStudent.tenthPercentage !== undefined && (
+                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">10th %</span>
+                        <span className="text-xs font-bold text-white">{selectedStudent.tenthPercentage}%</span>
+                      </div>
+                    )}
+                    {selectedStudent.twelfthPercentage !== undefined && (
+                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">12th %</span>
+                        <span className="text-xs font-bold text-white">{selectedStudent.twelfthPercentage}%</span>
+                      </div>
+                    )}
+                    {selectedStudent.diplomaPercentage !== undefined && (
+                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
+                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Diploma %</span>
+                        <span className="text-xs font-bold text-white">{selectedStudent.diplomaPercentage}%</span>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* Candidate Bio & Address section */}
+                {(selectedStudent.bio || selectedStudent.address || selectedStudent.city) && (
+                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3 space-y-2 text-xs">
+                    {selectedStudent.bio && (
+                      <div>
+                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">Summary / Bio</span>
+                        <p className="text-white/90 text-xs leading-relaxed">{selectedStudent.bio}</p>
+                      </div>
+                    )}
+                    {(selectedStudent.address || selectedStudent.city) && (
+                      <div className="pt-2 border-t border-[#202D42]">
+                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">Address</span>
+                        <p className="text-white/90 text-xs">
+                          {[selectedStudent.address, selectedStudent.city, selectedStudent.state, selectedStudent.country, selectedStudent.pincode].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Professional & Social Profiles */}
+                {(selectedStudent.linkedinUrl || selectedStudent.githubUrl || selectedStudent.portfolioUrl || selectedStudent.leetcodeUrl || selectedStudent.hackerrankUrl) && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-extrabold text-[#A3E635] uppercase tracking-wider block">
+                      Coding & Social Profiles
+                    </span>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {selectedStudent.linkedinUrl && (
+                        <a href={selectedStudent.linkedinUrl} target="_blank" rel="noreferrer" className="bg-[#0A66C2]/20 border border-[#0A66C2]/40 text-[#0A66C2] px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-[#0A66C2]/30">
+                          LinkedIn <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {selectedStudent.githubUrl && (
+                        <a href={selectedStudent.githubUrl} target="_blank" rel="noreferrer" className="bg-[#24292E]/60 border border-[#404448] text-white px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-[#24292E]">
+                          GitHub <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {selectedStudent.portfolioUrl && (
+                        <a href={selectedStudent.portfolioUrl} target="_blank" rel="noreferrer" className="bg-[#A3E635]/15 border border-[#A3E635]/30 text-[#A3E635] px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-[#A3E635]/25">
+                          Portfolio <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {selectedStudent.leetcodeUrl && (
+                        <a href={selectedStudent.leetcodeUrl} target="_blank" rel="noreferrer" className="bg-amber-500/15 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-amber-500/25">
+                          LeetCode <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {selectedStudent.hackerrankUrl && (
+                        <a href={selectedStudent.hackerrankUrl} target="_blank" rel="noreferrer" className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-emerald-500/25">
+                          HackerRank <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Resume Upload & File List Section */}
                 <div className="space-y-3 pt-2 border-t border-[#202D42]">
@@ -625,59 +868,319 @@ export const Students: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title="Enroll New Candidate"
-        subtitle="Add a student record into the official TPO database."
+        subtitle="Add a comprehensive student profile into the official TPO database."
       >
-        <form onSubmit={handleAddStudentSubmit} className="space-y-4">
-          <Input
-            label="Full Candidate Name"
-            placeholder="e.g. Rahul Sharma"
-            value={newStudentName}
-            onChange={(e) => setNewStudentName(e.target.value)}
-            required
-          />
-          <Input
-            label="Roll Number"
-            placeholder="e.g. RS2020CS"
-            value={newStudentRoll}
-            onChange={(e) => setNewStudentRoll(e.target.value)}
-            required
-          />
-          <Input
-            label="Email Address"
-            type="email"
-            placeholder="student@university.edu"
-            value={newStudentEmail}
-            onChange={(e) => setNewStudentEmail(e.target.value)}
-            required
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <Dropdown
-              label="Branch"
-              options={[
-                { label: 'Computer Science', value: 'Computer Science' },
-                { label: 'Information Tech', value: 'Information Tech' },
-                { label: 'Electronics', value: 'Electronics' },
-                { label: 'Mechanical', value: 'Mechanical' },
-              ]}
-              value={newStudentBranch}
-              onChange={setNewStudentBranch}
-            />
-            <Input
-              label="CGPA"
-              type="number"
-              step="0.1"
-              value={newStudentCgpa}
-              onChange={(e) => setNewStudentCgpa(e.target.value)}
-              required
-            />
+        <form onSubmit={handleAddStudentSubmit} className="space-y-4 text-xs">
+          
+          {/* Navigation Tabs Header */}
+          <div className="flex border-b border-[#202D42] gap-2 pb-2">
+            <button
+              type="button"
+              onClick={() => setFormTab('basic')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
+                formTab === 'basic' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Basic Info
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormTab('academic')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
+                formTab === 'academic' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Academic Info
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormTab('address')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
+                formTab === 'address' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Address
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormTab('social')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-colors ${
+                formTab === 'social' ? 'bg-[#A3E635] text-[#0B0F17]' : 'bg-[#101726] text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Links & Bio
+            </button>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" size="md" onClick={() => setIsAddModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" size="md">
-              Enroll Candidate
-            </Button>
+
+          {/* TAB 1: BASIC INFO */}
+          {formTab === 'basic' && (
+            <div className="space-y-3">
+              <Input
+                label="Full Candidate Name *"
+                placeholder="e.g. Rahul Sharma"
+                value={enrollForm.full_name}
+                onChange={(e) => setEnrollForm({ ...enrollForm, full_name: e.target.value })}
+                required
+              />
+              
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Email Address *"
+                  type="email"
+                  placeholder="rahul@university.edu"
+                  value={enrollForm.email}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, email: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Phone Number"
+                  placeholder="+91 98765 43210"
+                  value={enrollForm.phone}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  label="Alternate Phone"
+                  placeholder="+91 98765 00000"
+                  value={enrollForm.alternate_phone}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, alternate_phone: e.target.value })}
+                />
+                <div>
+                  <label className="block font-bold text-white mb-1">Gender</label>
+                  <select
+                    className="w-full bg-[#101726] border border-[#202D42] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#A3E635]"
+                    value={enrollForm.gender}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, gender: e.target.value })}
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <Input
+                  label="Date of Birth"
+                  type="date"
+                  value={enrollForm.date_of_birth}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, date_of_birth: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: ACADEMIC INFO */}
+          {formTab === 'academic' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Roll Number *"
+                  placeholder="e.g. RS2020CS"
+                  value={enrollForm.roll_number}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, roll_number: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Enrollment Number"
+                  placeholder="e.g. EN20200045"
+                  value={enrollForm.enrollment_number}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, enrollment_number: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  label="CGPA *"
+                  type="number"
+                  step="0.01"
+                  placeholder="8.5"
+                  value={enrollForm.cgpa}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, cgpa: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Current Semester"
+                  type="number"
+                  placeholder="7"
+                  value={enrollForm.current_semester}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, current_semester: e.target.value })}
+                />
+                <Input
+                  label="Passing Year"
+                  type="number"
+                  placeholder="2025"
+                  value={enrollForm.passing_year}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, passing_year: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  label="10th Percentage (%)"
+                  type="number"
+                  step="0.1"
+                  placeholder="88.5"
+                  value={enrollForm.tenth_percentage}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, tenth_percentage: e.target.value })}
+                />
+                <Input
+                  label="12th Percentage (%)"
+                  type="number"
+                  step="0.1"
+                  placeholder="85.0"
+                  value={enrollForm.twelfth_percentage}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, twelfth_percentage: e.target.value })}
+                />
+                <Input
+                  label="Diploma Percentage (%)"
+                  type="number"
+                  step="0.1"
+                  placeholder="e.g. 78.0"
+                  value={enrollForm.diploma_percentage}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, diploma_percentage: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  label="Active Backlogs"
+                  type="number"
+                  placeholder="0"
+                  value={enrollForm.active_backlogs}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, active_backlogs: e.target.value })}
+                />
+                <Input
+                  label="History Backlogs"
+                  type="number"
+                  placeholder="0"
+                  value={enrollForm.history_backlogs}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, history_backlogs: e.target.value })}
+                />
+                <div>
+                  <label className="block font-bold text-white mb-1">Placement Status</label>
+                  <select
+                    className="w-full bg-[#101726] border border-[#202D42] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#A3E635]"
+                    value={enrollForm.placement_status}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, placement_status: e.target.value })}
+                  >
+                    <option value="Unplaced">Unplaced</option>
+                    <option value="Placed">Placed</option>
+                    <option value="In Process">In Process</option>
+                    <option value="Opted Out">Opted Out</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: ADDRESS */}
+          {formTab === 'address' && (
+            <div className="space-y-3">
+              <Input
+                label="Street Address"
+                placeholder="House No, Street, Area"
+                value={enrollForm.address}
+                onChange={(e) => setEnrollForm({ ...enrollForm, address: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="City"
+                  placeholder="e.g. Mumbai"
+                  value={enrollForm.city}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, city: e.target.value })}
+                />
+                <Input
+                  label="State"
+                  placeholder="e.g. Maharashtra"
+                  value={enrollForm.state}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, state: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Country"
+                  placeholder="India"
+                  value={enrollForm.country}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, country: e.target.value })}
+                />
+                <Input
+                  label="Pincode"
+                  placeholder="400001"
+                  value={enrollForm.pincode}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, pincode: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: LINKS & BIO */}
+          {formTab === 'social' && (
+            <div className="space-y-3">
+              <Input
+                label="Resume Headline"
+                placeholder="e.g. Aspiring Full Stack Developer & Cloud Engineer"
+                value={enrollForm.resume_headline}
+                onChange={(e) => setEnrollForm({ ...enrollForm, resume_headline: e.target.value })}
+              />
+              <div>
+                <label className="block font-bold text-white mb-1">Candidate Bio / Summary</label>
+                <textarea
+                  className="w-full h-20 bg-[#101726] border border-[#202D42] rounded-xl p-3 text-white focus:outline-none focus:border-[#A3E635]"
+                  placeholder="Brief overview of technical background and aspirations..."
+                  value={enrollForm.bio}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, bio: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="LinkedIn URL"
+                  placeholder="https://linkedin.com/in/username"
+                  value={enrollForm.linkedin_url}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, linkedin_url: e.target.value })}
+                />
+                <Input
+                  label="GitHub URL"
+                  placeholder="https://github.com/username"
+                  value={enrollForm.github_url}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, github_url: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  label="Portfolio URL"
+                  placeholder="https://myportfolio.com"
+                  value={enrollForm.portfolio_url}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, portfolio_url: e.target.value })}
+                />
+                <Input
+                  label="LeetCode URL"
+                  placeholder="https://leetcode.com/username"
+                  value={enrollForm.leetcode_url}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, leetcode_url: e.target.value })}
+                />
+                <Input
+                  label="HackerRank URL"
+                  placeholder="https://hackerrank.com/username"
+                  value={enrollForm.hackerrank_url}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, hackerrank_url: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-3 border-t border-[#202D42]">
+            <div className="text-[11px] text-[#94A3B8]">
+              Tab {formTab === 'basic' ? '1' : formTab === 'academic' ? '2' : formTab === 'address' ? '3' : '4'} of 4
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="button" variant="secondary" size="md" onClick={() => setIsAddModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="md">
+                Enroll Candidate
+              </Button>
+            </div>
           </div>
         </form>
       </Modal>

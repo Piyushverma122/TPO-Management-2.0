@@ -8,7 +8,7 @@ const { sendSuccess, sendError, sendPaginated } = require('../utils/responseHand
  */
 const getPlacements = async (req, res, next) => {
   try {
-    const result = await placementService.listPlacements(req.query);
+    const result = await placementService.listPlacements(req.query, req.user);
     return sendPaginated(
       res,
       'Placements list retrieved',

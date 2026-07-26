@@ -43,6 +43,9 @@ export interface AddCompanyFormValues {
   maxBacklogs: string;
   departments: string[];
   description: string;
+  hrName?: string;
+  hrEmail?: string;
+  hrPhone?: string;
 }
 
 export const AddCompany: React.FC = () => {
@@ -63,16 +66,19 @@ export const AddCompany: React.FC = () => {
       companyName: '',
       jobRole: 'Software Engineer I',
       website: 'https://',
-      ctcMin: '20',
-      ctcMax: '28',
+      ctcMin: '12',
+      ctcMax: '25',
       location: 'Bengaluru, India',
-      bond: '2 Years',
-      deadline: '2025-11-15',
-      minCgpa: '8.0',
+      bond: 'None',
+      deadline: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+      minCgpa: '6.0',
       maxBacklogs: '0',
-      departments: ['Computer Science', 'IT', 'EE'],
+      departments: ['Computer Science', 'IT'],
       description:
-        'We are seeking a highly talented Software Engineer I to design, develop, and deploy cloud-scale microservices. Requirements include strong fundamentals in Data Structures, Algorithms, and System Design.',
+        'We are seeking talented engineers for full-stack software development.',
+      hrName: '',
+      hrEmail: '',
+      hrPhone: '',
     },
   });
 
@@ -91,13 +97,26 @@ export const AddCompany: React.FC = () => {
   const onSubmit = async (data: AddCompanyFormValues) => {
     setIsLoading(true);
     try {
+      const minPackage = parseFloat(data.ctcMin) || 0;
+      const maxPackage = parseFloat(data.ctcMax) || minPackage;
+
       await createCompany({
         name: data.companyName,
         industry: 'Technology & Services',
         website: data.website,
-        tier: parseFloat(data.ctcMax) >= 25 ? 'Super Dream' : 'Dream',
+        tier: maxPackage >= 25 ? 'Super Dream' : maxPackage >= 15 ? 'Dream' : 'Standard',
         status: 'Active',
+        avg_package: minPackage,
+        highest_package: maxPackage,
+        min_cgpa: parseFloat(data.minCgpa) || 6.0,
+        max_backlogs: parseInt(data.maxBacklogs) || 0,
+        description: data.description,
+        headquarters: data.location,
+        hr_name: data.hrName || undefined,
+        hr_email: data.hrEmail || undefined,
+        hr_phone: data.hrPhone || undefined,
       });
+
       setIsLoading(false);
       success(
         'Company Published Successfully!',
@@ -281,6 +300,26 @@ export const AddCompany: React.FC = () => {
                         onChange={field.onChange}
                       />
                     )}
+                  />
+                </div>
+
+                {/* Row 4: Primary HR Recruiter Information */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#202D42]">
+                  <Input
+                    label="HR Recruiter Name"
+                    placeholder="e.g. Rahul Sharma"
+                    {...register('hrName')}
+                  />
+                  <Input
+                    label="HR Recruiter Email"
+                    placeholder="e.g. hr@company.com"
+                    type="email"
+                    {...register('hrEmail')}
+                  />
+                  <Input
+                    label="HR Recruiter Phone"
+                    placeholder="e.g. +91 98765 43210"
+                    {...register('hrPhone')}
                   />
                 </div>
 

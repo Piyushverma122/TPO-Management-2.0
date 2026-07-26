@@ -1,9 +1,10 @@
 const supabase = require('../config/supabase');
+const dataScopeService = require('./dataScopeService');
 
 /**
  * List Placement Records with pagination and multi-field filters
  */
-const listPlacements = async (queryParams) => {
+const listPlacements = async (queryParams, reqUser) => {
   const page = parseInt(queryParams.page) || 1;
   const limit = parseInt(queryParams.limit) || 10;
   const offset = (page - 1) * limit;
@@ -48,6 +49,11 @@ const listPlacements = async (queryParams) => {
     `,
       { count: 'exact' }
     );
+
+  if (reqUser) {
+    const scopeContext = await dataScopeService.resolveScopeContext(reqUser);
+    query = dataScopeService.applyDataScope(query, reqUser, 'placements', scopeContext);
+  }
 
   if (company_id) query = query.eq('company_id', company_id);
   if (student_id) query = query.eq('student_id', student_id);
@@ -179,6 +185,44 @@ const createPlacement = async (payload) => {
     .from('placement_drives')
     .update({ selected_count: selectedCount || 1 })
     .eq('id', drive_id);
+
+  // 4. Update Company Hired Count
+  try {
+    const { count: companyHiredCount } = await supabase
+      .from('placements')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', company_id);
+
+    await supabase
+      .from('companies')
+      .update({ hired_count: companyHiredCount || 1 })
+      .eq('id', company_id);
+  } catch (e) {
+    console.warn('Company hired_count update fallback:', e.message);
+  }
+
+  // 5. Send Placement Celebratory Notification
+  try {
+    const { data: studentObj } = await supabase
+      .from('students')
+      .select('user_id')
+      .eq('id', student_id)
+      .maybeSingle();
+
+    if (studentObj?.user_id) {
+      await supabase.from('notifications').insert([
+        {
+          user_id: studentObj.user_id,
+          title: '🎉 Placement Offer Confirmed!',
+          message: `Congratulations! Your placement offer of ₹${ctcPackage} LPA has been recorded in the TPO Portal.`,
+          type: 'Placement Update',
+          is_read: false,
+        },
+      ]);
+    }
+  } catch (e) {
+    console.warn('Placement notification trigger fallback:', e.message);
+  }
 
   return placement;
 };

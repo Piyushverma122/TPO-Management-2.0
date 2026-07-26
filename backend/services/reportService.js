@@ -49,7 +49,7 @@ const getStudentReport = async (filters = {}) => {
     'Student Name': s.users?.full_name || '',
     'Email': s.users?.email || '',
     'Phone': s.users?.phone || '',
-    'Department': s.users?.department || '',
+    'Department': '',
     'Branch': s.branches?.name || '',
     'Passing Year': s.passing_year,
     'CGPA': s.cgpa,
@@ -109,7 +109,7 @@ const getPlacementReport = async (filters = {}) => {
       students (
         roll_number,
         passing_year,
-        users (full_name, email, department),
+        users (full_name, email),
         branches (name)
       ),
       companies (
@@ -141,7 +141,7 @@ const getPlacementReport = async (filters = {}) => {
     'Joining Date': p.joining_date || '',
     'Offer Status': p.offer_status || 'Accepted',
     'Branch': p.students?.branches?.name || '',
-    'Department': p.students?.users?.department || '',
+    'Department': '',
     'Passing Year': p.students?.passing_year || '',
   }));
 };
@@ -165,7 +165,7 @@ const getTrainingReport = async (filters = {}) => {
       ),
       students (
         roll_number,
-        users (full_name, email, department),
+        users (full_name, email),
         branches (name)
       )
     `
@@ -182,11 +182,13 @@ const getTrainingReport = async (filters = {}) => {
   return (data || []).map((t) => ({
     'Student Name': t.students?.users?.full_name || '',
     'Roll Number': t.students?.roll_number || '',
-    'Course Title': t.training_modules?.title || '',
+    'Training Title': t.training_modules?.title || '',
     'Category': t.training_modules?.category || '',
     'Level': t.training_modules?.level || '',
-    'Progress %': t.progress_percentage || 0,
-    'Completion Status': t.completed ? 'Completed' : 'In Progress',
+    'Progress (%)': t.progress_percentage || 0,
+    'Status': t.completed ? 'Completed' : 'In Progress',
+    'Branch': t.students?.branches?.name || '',
+    'Department': '',
     'Enrolled Date': t.enrolled_at ? new Date(t.enrolled_at).toISOString().split('T')[0] : '',
   }));
 };

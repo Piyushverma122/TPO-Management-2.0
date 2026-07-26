@@ -30,7 +30,11 @@ export const updateAdminProfile = async (data: { full_name?: string; email?: str
 };
 
 export const changePassword = async (data: { currentPassword?: string; oldPassword?: string; newPassword?: string }) => {
-  const response = await apiClient.post('/admin/change-password', data);
+  const newPass = data.newPassword;
+  const response = await apiClient.post('/auth/reset-password', {
+    new_password: newPass,
+    password: newPass,
+  });
   return response.data;
 };
 

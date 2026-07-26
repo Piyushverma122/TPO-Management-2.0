@@ -43,6 +43,8 @@ import {
   changePassword,
   getAuditLogs,
 } from '../api/admin.api';
+import { PermissionGuard } from '../components/auth/PermissionGuard';
+import { Module, Action } from '../config/rbac';
 
 // Audit Logs Item
 interface AuditLogItem {

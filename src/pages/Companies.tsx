@@ -41,6 +41,8 @@ import { Avatar } from '../components/ui/Avatar';
 import { RadialProgress } from '../components/ui/ProgressBar';
 import { useToast } from '../components/ui/Toast';
 import { Company } from '../types';
+import { PermissionGuard } from '../components/auth/PermissionGuard';
+import { Module, Action } from '../config/rbac';
 import {
   getCompanies,
   createCompany,
@@ -75,6 +77,8 @@ export const Companies: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedTier, setSelectedTier] = useState('All');
+  const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -100,30 +104,39 @@ export const Companies: React.FC = () => {
         industry: selectedIndustry !== 'All' ? selectedIndustry : undefined,
       });
 
-      const rawList = res.data?.companies || [];
-      const total = res.data?.total || 0;
+      const rawList = Array.isArray(res.data) ? res.data : (res.data?.companies || (res as any).companies || []);
+      const total = (res as any).pagination?.totalEntries || res.data?.total || (res as any).total || rawList.length;
 
-      const formattedList: Company[] = rawList.map((c: any) => ({
-        id: c.id,
-        name: c.name || 'Corporate Partner',
-        logo: c.logo_url || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
-        industry: c.industry || 'Technology & Services',
-        website: c.website || 'https://example.com',
-        tier: (c.tier as any) || 'Super Dream',
-        minCgpa: c.min_cgpa ? parseFloat(c.min_cgpa) : 7.0,
-        allowedBranches: c.allowed_branches || ['Computer Science', 'IT'],
-        maxBacklogs: c.max_backlogs || 0,
-        hrContact: {
-          name: c.hr_name || 'Campus Recruiter',
-          email: c.hr_email || 'hr@company.com',
-          phone: c.hr_phone || '+91 98000 11223',
-        },
-        visitedYear: c.visited_year || 2024,
-        hiredCount: c.hired_count || 15,
-        avgPackage: c.avg_package ? `₹${c.avg_package} LPA` : '₹12 LPA',
-        highestPackage: c.highest_package ? `₹${c.highest_package} LPA` : '₹25 LPA',
-        status: (c.status as any) || 'Active',
-      }));
+      const formattedList: Company[] = rawList.map((c: any) => {
+        const contact = c.company_contacts?.find((ct: any) => ct.is_primary) || c.company_contacts?.[0];
+        
+        const avgPkg = c.avg_package && parseFloat(c.avg_package) > 0 ? `₹${c.avg_package} LPA` : (c.highest_package && parseFloat(c.highest_package) > 0 ? `₹${c.highest_package} LPA` : 'N/A');
+        const highestPkg = c.highest_package && parseFloat(c.highest_package) > 0 ? `₹${c.highest_package} LPA` : (c.avg_package && parseFloat(c.avg_package) > 0 ? `₹${c.avg_package} LPA` : 'N/A');
+
+        return {
+          id: c.id,
+          name: c.name || 'Corporate Partner',
+          logo: c.logo_url || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
+          industry: c.industry || 'Technology & Services',
+          website: c.website || 'https://example.com',
+          tier: (c.tier as any) || 'Standard',
+          minCgpa: c.min_cgpa ? parseFloat(c.min_cgpa) : 6.0,
+          allowedBranches: c.allowed_branches || ['Computer Science', 'Information Tech', 'Electronics'],
+          maxBacklogs: c.max_backlogs !== undefined ? parseInt(c.max_backlogs) : 0,
+          hrContact: {
+            name: c.hr_name || contact?.hr_name || 'Not Specified',
+            email: c.hr_email || contact?.email || 'N/A',
+            phone: c.hr_phone || contact?.phone || 'N/A',
+          },
+          visitedYear: c.visited_year || new Date().getFullYear(),
+          hiredCount: c.hired_count || 0,
+          avgPackage: avgPkg,
+          highestPackage: highestPkg,
+          status: (c.status as any) || 'Active',
+          location: c.headquarters || 'Bengaluru, India',
+          description: c.description || 'Corporate recruitment partner conducting placement drives.',
+        };
+      });
 
       setCompanies(formattedList);
       setTotalRecords(total);
@@ -137,7 +150,7 @@ export const Companies: React.FC = () => {
 
   useEffect(() => {
     fetchCompaniesData();
-  }, [currentPage, searchQuery, selectedIndustry, selectedStatus]);
+  }, [currentPage, searchQuery, selectedTier, selectedStatus, selectedIndustry]);
 
   const handleOpenDrawer = (company: Company) => {
     setSelectedCompany(company);
@@ -168,7 +181,7 @@ export const Companies: React.FC = () => {
     }
   };
 
-  const handleCreateCompanySubmit = async (e: React.FormEvent) => {
+  const handleQuickAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCmpName) {
       toastError('Validation Error', 'Company Name is required.');
@@ -197,6 +210,7 @@ export const Companies: React.FC = () => {
     try {
       await deleteCompany(companyId);
       success('Company Removed', 'Company record deleted.');
+      setActionMenuOpenId(null);
       setIsDrawerOpen(false);
       fetchCompaniesData();
     } catch (err: any) {
@@ -211,12 +225,12 @@ export const Companies: React.FC = () => {
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
             Company Management
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {totalRecords} Corporate Partners
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+              {totalRecords} Active Recruiter Partners
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Directory of campus recruitment partners, tier allocations, and package statistics.
+            Manage recruiter profiles, packages, primary contact details, and tier status.
           </p>
         </div>
 
@@ -232,15 +246,17 @@ export const Companies: React.FC = () => {
             Refresh
           </Button>
 
-          <Button
-            variant="primary"
-            size="md"
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => navigate('/companies/add')}
-            className="font-extrabold text-xs shrink-0"
-          >
-            Add New Company
-          </Button>
+          <PermissionGuard module={Module.COMPANIES} action={Action.CREATE}>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => setIsAddModalOpen(true)}
+              className="font-extrabold text-xs shrink-0"
+            >
+              Add New Company
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -281,7 +297,7 @@ export const Companies: React.FC = () => {
       </div>
 
       {/* FILTER & SEARCH CONTROL BAR */}
-      <Card className="p-4">
+      <Card className="p-4 relative z-30">
         <div className="flex flex-col lg:flex-row items-center gap-3">
           <div className="w-full lg:flex-1">
             <SearchInput
@@ -294,13 +310,13 @@ export const Companies: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
             <Dropdown
               options={[
-                { label: 'All Industries', value: 'All' },
-                { label: 'E-commerce & Tech', value: 'E-commerce' },
-                { label: 'Technology & Cloud', value: 'Technology' },
-                { label: 'IT Services', value: 'IT Services' },
+                { label: 'All Tiers', value: 'All' },
+                { label: 'Super Dream (>₹20L)', value: 'Super Dream' },
+                { label: 'Dream (₹10-20L)', value: 'Dream' },
+                { label: 'Standard (<₹10L)', value: 'Standard' },
               ]}
-              value={selectedIndustry}
-              onChange={setSelectedIndustry}
+              value={selectedTier}
+              onChange={setSelectedTier}
             />
 
             <Dropdown
@@ -495,7 +511,7 @@ export const Companies: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-[#202D42] pb-4">
                   <span className="text-xs font-extrabold text-[#A3E635] tracking-wider uppercase">
-                    Company Profile
+                    Company Profile Details
                   </span>
                   <button
                     onClick={() => setIsDrawerOpen(false)}
@@ -512,14 +528,17 @@ export const Companies: React.FC = () => {
                     alt={selectedCompany.name}
                     className="w-16 h-16 rounded-2xl object-cover border-2 border-[#A3E635]"
                   />
-                  <div>
-                    <h3 className="text-lg font-extrabold text-white">{selectedCompany.name}</h3>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-extrabold text-white">{selectedCompany.name}</h3>
+                      <Badge variant={selectedCompany.tier === 'Super Dream' ? 'accent' : 'neutral'} size="sm">{selectedCompany.tier}</Badge>
+                    </div>
                     <p className="text-xs text-[#94A3B8]">{selectedCompany.industry}</p>
                     <a
                       href={selectedCompany.website}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-sky-400 hover:underline flex items-center gap-1 mt-1"
+                      className="text-xs text-[#A3E635] hover:underline flex items-center gap-1 mt-0.5"
                     >
                       <Globe className="w-3 h-3" />
                       {selectedCompany.website}
@@ -528,7 +547,7 @@ export const Companies: React.FC = () => {
                 </div>
 
                 {/* Logo Upload Button */}
-                <div className="pt-1">
+                <div>
                   <label className="cursor-pointer bg-[#101726] hover:bg-[#1C293F] border border-[#202D42] text-white w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors">
                     <Upload className="w-4 h-4 text-[#A3E635]" />
                     {uploadingLogo ? 'Uploading Logo...' : 'Upload New Company Logo'}
@@ -536,27 +555,76 @@ export const Companies: React.FC = () => {
                   </label>
                 </div>
 
-                {/* Package Highlights */}
+                {/* Package Highlights Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Avg CTC</span>
-                    <span className="text-base font-extrabold text-white">{selectedCompany.avgPackage}</span>
+                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Avg Package</span>
+                    <span className="text-base font-extrabold text-white mt-0.5 block">{selectedCompany.avgPackage}</span>
                   </div>
                   <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Highest CTC</span>
-                    <span className="text-base font-extrabold text-[#A3E635]">{selectedCompany.highestPackage}</span>
+                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Highest Package</span>
+                    <span className="text-base font-extrabold text-[#A3E635] mt-0.5 block">{selectedCompany.highestPackage}</span>
+                  </div>
+                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
+                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Min CGPA Cut-off</span>
+                    <span className="text-base font-extrabold text-sky-400 mt-0.5 block">{selectedCompany.minCgpa} CGPA</span>
+                  </div>
+                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
+                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Max Backlogs</span>
+                    <span className="text-base font-extrabold text-rose-400 mt-0.5 block">{selectedCompany.maxBacklogs} Allowed</span>
                   </div>
                 </div>
 
-                {/* HR Recruiter Contact Info */}
-                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-2">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider block border-b border-[#202D42] pb-1">
-                    Primary HR Recruiter
+                {/* Primary HR Recruiter Contact Info */}
+                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-3">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider block border-b border-[#202D42] pb-2">
+                    Primary HR Recruiter Contact
                   </span>
-                  <div className="text-xs space-y-1 pt-1">
-                    <p className="font-bold text-white">{selectedCompany.hrContact.name}</p>
-                    <p className="text-[#94A3B8]">{selectedCompany.hrContact.email}</p>
-                    <p className="text-[#94A3B8]">{selectedCompany.hrContact.phone}</p>
+                  <div className="text-xs space-y-2 pt-1">
+                    <p className="font-extrabold text-white text-sm flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#A3E635]" />
+                      {selectedCompany.hrContact.name}
+                    </p>
+                    <p className="text-[#94A3B8] flex items-center gap-2">
+                      <span className="font-semibold text-white">Email:</span> {selectedCompany.hrContact.email}
+                    </p>
+                    <p className="text-[#94A3B8] flex items-center gap-2">
+                      <span className="font-semibold text-white">Phone:</span> {selectedCompany.hrContact.phone}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Allowed Branches */}
+                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider block border-b border-[#202D42] pb-2">
+                    Eligible Branches / Departments
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {selectedCompany.allowedBranches.map((br) => (
+                      <span
+                        key={br}
+                        className="bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 text-[11px] font-bold px-2.5 py-1 rounded-lg"
+                      >
+                        {br}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Job Description & Location */}
+                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider block border-b border-[#202D42] pb-2">
+                    Company Description & Location
+                  </span>
+                  <div className="text-xs space-y-2 pt-1">
+                    <p className="text-[#94A3B8]">
+                      <span className="font-semibold text-white block mb-0.5">Headquarters / Office Location:</span>
+                      {selectedCompany.location}
+                    </p>
+                    <p className="text-[#94A3B8] leading-relaxed">
+                      <span className="font-semibold text-white block mb-0.5">Overview & Job Requirements:</span>
+                      {selectedCompany.description}
+                    </p>
                   </div>
                 </div>
 

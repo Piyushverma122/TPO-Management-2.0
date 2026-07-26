@@ -24,6 +24,10 @@ const listTrainings = async (queryParams) => {
           phone,
           avatar_url
         )
+      ),
+      training_enrollments (
+        progress_percentage,
+        completed
       )
     `,
       { count: 'exact' }
@@ -48,8 +52,23 @@ const listTrainings = async (queryParams) => {
     throw err;
   }
 
+  const normalizedModules = (modules || []).map((m) => {
+    const enrollments = m.training_enrollments || [];
+    const enrolledCount = enrollments.length;
+    const completedCount = enrollments.filter((e) => e.completed).length;
+    const completionRate = enrolledCount > 0 ? Math.round((completedCount / enrolledCount) * 100) : 0;
+
+    return {
+      ...m,
+      trainer_name: m.faculty?.users?.full_name || 'Senior Instructor',
+      duration: m.duration_hours ? `${m.duration_hours} Hours` : '4 Weeks',
+      enrolled_count: enrolledCount,
+      completion_rate: completionRate,
+    };
+  });
+
   return {
-    trainings: modules || [],
+    trainings: normalizedModules,
     page,
     limit,
     total: count || 0,

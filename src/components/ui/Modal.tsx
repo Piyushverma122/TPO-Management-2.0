@@ -95,12 +95,12 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className={clsx(
-              'w-full bg-[#162032] border border-[#202D42] rounded-3xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]',
+              'w-full bg-[#162032] border border-[#202D42] rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[90vh]',
               maxWidthMap[maxWidth]
             )}
           >
             {/* Modal Header */}
-            <div className="p-6 pb-4 border-b border-[#202D42] flex items-center justify-between">
+            <div className="p-6 pb-4 border-b border-[#202D42] flex items-center justify-between shrink-0">
               <div>
                 <h3 id="modal-title" className="text-lg font-extrabold text-white">{title}</h3>
                 {subtitle && <p className="text-xs text-[#94A3B8] mt-0.5">{subtitle}</p>}
@@ -116,23 +116,14 @@ export const Modal: React.FC<ModalProps> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1">{children}</div>
+            <div className="p-6 overflow-y-auto flex-1 pb-8">{children}</div>
 
-            {/* Modal Footer */}
-            {footer !== undefined ? (
-              <div className="p-4 px-6 border-t border-[#202D42] bg-[#101726] flex items-center justify-end gap-3">
+            {/* Modal Footer (only rendered if explicitly passed) */}
+            {footer ? (
+              <div className="p-4 px-6 border-t border-[#202D42] bg-[#101726] flex items-center justify-end gap-3 shrink-0 rounded-b-3xl">
                 {footer}
               </div>
-            ) : (
-              <div className="p-4 px-6 border-t border-[#202D42] bg-[#101726] flex items-center justify-end gap-3">
-                <Button variant="secondary" size="sm" onClick={onClose}>
-                  Close
-                </Button>
-                <Button variant="primary" size="sm" onClick={onClose}>
-                  Continue
-                </Button>
-              </div>
-            )}
+            ) : null}
           </motion.div>
         </div>
       )}

@@ -18,6 +18,7 @@ module.exports = {
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseKey: process.env.SUPABASE_KEY,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY,
   jwtSecret: process.env.JWT_SECRET || 'fallback_jwt_secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
 };

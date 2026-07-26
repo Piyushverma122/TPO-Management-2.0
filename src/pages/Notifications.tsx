@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell,
   CheckCircle2,
@@ -18,17 +19,23 @@ import {
   RefreshCw,
   Trash2,
   Send,
+  FileText,
+  GraduationCap,
+  Layers,
+  ArrowRight,
 } from 'lucide-react';
 
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input, SearchInput } from '../components/ui/Input';
+import { Dropdown } from '../components/ui/Dropdown';
+import { Pagination } from '../components/ui/Pagination';
 import { Modal } from '../components/ui/Modal';
 import { Avatar } from '../components/ui/Avatar';
-import { RadialProgress } from '../components/ui/ProgressBar';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
+import { useAuth } from '../context/AuthContext';
 import {
   getNotifications,
   markNotificationRead,
@@ -36,84 +43,141 @@ import {
   deleteNotification,
   broadcastNotification,
 } from '../api/notification.api';
+import { PermissionGuard } from '../components/auth/PermissionGuard';
+import { Module, Action } from '../config/rbac';
+import supabase from '../config/supabase';
 
-export interface NotificationItem {
+export interface StudentNotification {
   id: string;
-  category: string;
-  badgeTag: string;
+  type: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
   title: string;
-  description: string;
-  timestamp: string;
+  message: string;
+  createdAt: string;
   isRead: boolean;
-  actionText?: string;
-  avatar?: string;
+  relatedRoute?: string;
+  actionLabel?: string;
 }
 
 export const Notifications: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { success, error: toastError, info } = useToast();
 
   // API State
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
 
-  // Filters & Modals
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [selectedReadFilter, setSelectedReadFilter] = useState('All');
+  const [selectedPriority, setSelectedPriority] = useState('All');
+  const [selectedType, setSelectedType] = useState('All');
 
-  // Broadcast Form State
+  // Broadcast Modal State (Admin / TPO)
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [broadcastTarget, setBroadcastTarget] = useState('all_students');
   const [broadcastLoading, setBroadcastLoading] = useState(false);
 
-  const fetchNotificationsData = async () => {
+  // Fetch Live Notifications for Logged-In Student
+  const fetchNotificationsData = useCallback(async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await getNotifications({
         page: currentPage,
         limit: itemsPerPage,
-        category: selectedCategory !== 'All' ? selectedCategory : undefined,
+        category: selectedType !== 'All' ? selectedType : undefined,
       });
 
       const rawList = res.data?.notifications || [];
-      const total = res.data?.total || 0;
-      const unread = res.data?.unreadCount || 0;
+      const total = res.data?.total || rawList.length;
+      const unread = res.data?.unreadCount || rawList.filter((n: any) => !n.is_read).length;
 
-      const formattedList: NotificationItem[] = rawList.map((n: any) => ({
-        id: n.id,
-        category: n.category || 'System Alert',
-        badgeTag: n.priority === 'HIGH' ? 'Immediate Action' : 'New',
-        title: n.title || 'Notification Alert',
-        description: n.message || n.description || '',
-        timestamp: n.created_at ? new Date(n.created_at).toLocaleTimeString() : 'Just now',
-        isRead: !!n.is_read,
-        actionText: n.action_url ? 'View Action' : undefined,
-      }));
+      const formattedList: StudentNotification[] = rawList.map((n: any) => {
+        const typeStr = n.type || n.category || 'General Announcement';
+        let route = '/dashboard';
+        let actionLbl = 'View Details';
+
+        const lowerType = typeStr.toLowerCase();
+        if (lowerType.includes('drive')) {
+          route = '/drives';
+          actionLbl = 'View Drive';
+        } else if (lowerType.includes('application')) {
+          route = '/applications';
+          actionLbl = 'View Application';
+        } else if (lowerType.includes('interview')) {
+          route = '/interviews';
+          actionLbl = 'View Interview';
+        } else if (lowerType.includes('offer')) {
+          route = '/offers';
+          actionLbl = 'View Offer';
+        } else if (lowerType.includes('training') || lowerType.includes('cert')) {
+          route = '/training';
+          actionLbl = 'View Training';
+        }
+
+        return {
+          id: n.id,
+          type: typeStr,
+          priority: n.priority || (lowerType.includes('offer') ? 'HIGH' : 'MEDIUM'),
+          title: n.title || 'Notification Alert',
+          message: n.message || n.description || '',
+          createdAt: n.created_at ? new Date(n.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Just now',
+          isRead: !!n.is_read,
+          relatedRoute: route,
+          actionLabel: actionLbl,
+        };
+      });
 
       setNotifications(formattedList);
       setTotalRecords(total);
       setUnreadCount(unread);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to load notifications queue.';
-      toastError('Error Loading Notifications', msg);
+      const msg = err.response?.data?.message || 'Failed to load notifications stream.';
+      setErrorMsg(msg);
+      toastError('Notifications Error', msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, selectedType, toastError]);
 
   useEffect(() => {
     fetchNotificationsData();
-  }, [currentPage, selectedCategory]);
 
+    // Supabase Realtime Subscription for Live Notifications
+    const channel = supabase
+      .channel(`public:notifications:${user?.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        (payload: any) => {
+          const newNotif = payload.new;
+          if (!newNotif.user_id || newNotif.user_id === user?.id) {
+            info('New Alert', newNotif.title || newNotif.message);
+            fetchNotificationsData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchNotificationsData, user, info]);
+
+  // Mark All Notifications as Read
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
-      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       success('Notifications Updated', 'Marked all notifications as read.');
     } catch (err: any) {
@@ -121,26 +185,61 @@ export const Notifications: React.FC = () => {
     }
   };
 
-  const handleMarkSingleRead = async (id: string) => {
+  // Mark Single Notification as Read
+  const handleMarkSingleRead = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     try {
       await markNotificationRead(id);
-      setNotifications(notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
-      setUnreadCount(Math.max(0, unreadCount - 1));
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err: any) {
-      toastError('Error', 'Failed to update notification status.');
+      // Silent error fallback
     }
   };
 
-  const handleDeleteNotificationAction = async (id: string) => {
+  // Delete Single Notification
+  const handleDeleteNotification = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       await deleteNotification(id);
-      success('Notification Removed', 'Alert record deleted.');
-      fetchNotificationsData();
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      success('Notification Removed', 'Notification alert record deleted.');
     } catch (err: any) {
       toastError('Delete Error', err.response?.data?.message || 'Failed to delete notification.');
     }
   };
 
+  // Processed Filtered & Searched Notifications
+  const processedNotifications = useMemo(() => {
+    return notifications.filter((notif) => {
+      const matchesSearch =
+        notif.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        notif.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        notif.type.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesRead =
+        selectedReadFilter === 'All' ||
+        (selectedReadFilter === 'Unread' && !notif.isRead) ||
+        (selectedReadFilter === 'Read' && notif.isRead);
+
+      const matchesPriority = selectedPriority === 'All' || notif.priority === selectedPriority;
+
+      return matchesSearch && matchesRead && matchesPriority;
+    });
+  }, [notifications, searchQuery, selectedReadFilter, selectedPriority]);
+
+  // Icon Helper for Notification Types
+  const renderNotificationIcon = (type: string) => {
+    const lower = type.toLowerCase();
+    if (lower.includes('drive')) return <Briefcase className="w-5 h-5 text-[#A3E635]" />;
+    if (lower.includes('application')) return <FileText className="w-5 h-5 text-[#A3E635]" />;
+    if (lower.includes('interview')) return <Calendar className="w-5 h-5 text-sky-400" />;
+    if (lower.includes('offer')) return <Award className="w-5 h-5 text-emerald-400" />;
+    if (lower.includes('training') || lower.includes('cert')) return <GraduationCap className="w-5 h-5 text-purple-400" />;
+    return <Bell className="w-5 h-5 text-amber-400" />;
+  };
+
+  // Broadcast Notification Form Submit (For Admin / TPO)
   const handleBroadcastSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastTitle || !broadcastMessage) {
@@ -156,33 +255,37 @@ export const Notifications: React.FC = () => {
         target_group: broadcastTarget,
       });
 
-      setBroadcastLoading(false);
       setIsBroadcastModalOpen(false);
       setBroadcastTitle('');
       setBroadcastMessage('');
       success('Broadcast Sent', 'Notification broadcasted to selected target audience.');
-      fetchNotificationsData();
+      await fetchNotificationsData();
     } catch (err: any) {
+      toastError('Broadcast Error', err.response?.data?.message || 'Failed to send broadcast.');
+    } finally {
       setBroadcastLoading(false);
-      toastError('Broadcast Error', err.response?.data?.message || 'Failed to send broadcast notification.');
     }
   };
 
   return (
     <div className="space-y-6 pb-16 font-sans">
+      
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Notifications' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-1">
+          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
             Notification Center
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
               {unreadCount} Unread Alerts
             </span>
           </h1>
+          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+            Stay updated with recruitment drive deadlines, interview call schedules, and offer letters.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="secondary"
             size="md"
@@ -190,174 +293,198 @@ export const Notifications: React.FC = () => {
             onClick={fetchNotificationsData}
             disabled={loading}
           >
-            Refresh
+            Refresh Alerts
           </Button>
 
           <Button
-            variant="primary"
+            variant="secondary"
             size="md"
-            leftIcon={<Send className="w-4 h-4" />}
-            onClick={() => setIsBroadcastModalOpen(true)}
-            className="font-extrabold text-xs"
+            leftIcon={<Check className="w-4 h-4 text-[#A3E635]" />}
+            onClick={handleMarkAllRead}
+            disabled={unreadCount === 0}
           >
-            Broadcast Announcement
+            Mark All Read
           </Button>
+
+          <PermissionGuard module={Module.NOTIFICATIONS} action={Action.CREATE}>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Send className="w-4 h-4" />}
+              onClick={() => setIsBroadcastModalOpen(true)}
+              className="font-extrabold text-xs"
+            >
+              Broadcast
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
-      {/* THREE COLUMN LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT COLUMN (3 cols): Notification Filters */}
-        <Card className="lg:col-span-3 p-5 space-y-3 bg-[#101726] border-[#202D42]">
-          <h2 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
-            Notification Filters
-          </h2>
-
-          <div className="space-y-1.5 text-xs font-bold">
-            <button
-              onClick={() => setSelectedCategory('All')}
-              className={`w-full px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-all ${
-                selectedCategory === 'All'
-                  ? 'bg-[#162032] text-[#A3E635] border border-[#A3E635]/40 shadow-[0_0_10px_rgba(163,230,53,0.2)]'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]/60'
-              }`}
-            >
-              <span>All</span>
-              <span className="bg-[#A3E635] text-[#0B0F17] text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">
-                {unreadCount} Unread
-              </span>
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory('Drive Update')}
-              className={`w-full px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-all ${
-                selectedCategory === 'Drive Update'
-                  ? 'bg-[#162032] text-[#A3E635] border border-[#A3E635]/40'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]/60'
-              }`}
-            >
-              <span>Drive Updates</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory('Results')}
-              className={`w-full px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-all ${
-                selectedCategory === 'Results'
-                  ? 'bg-[#162032] text-[#A3E635] border border-[#A3E635]/40'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]/60'
-              }`}
-            >
-              <span>Results</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory('Interview')}
-              className={`w-full px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-all ${
-                selectedCategory === 'Interview'
-                  ? 'bg-[#162032] text-[#A3E635] border border-[#A3E635]/40'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]/60'
-              }`}
-            >
-              <span>Interviews</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory('System Alert')}
-              className={`w-full px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-all ${
-                selectedCategory === 'System Alert'
-                  ? 'bg-[#162032] text-[#A3E635] border border-[#A3E635]/40'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]/60'
-              }`}
-            >
-              <span>System Alerts</span>
-            </button>
+      {/* SEARCH & FILTERS BAR */}
+      <Card className="p-5 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+          <div className="lg:col-span-2">
+            <SearchInput
+              placeholder="Search notifications by title, content, or type..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
+
+          <Dropdown
+            label="Read Status:"
+            options={[
+              { label: 'All Notifications', value: 'All' },
+              { label: 'Unread Only', value: 'Unread' },
+              { label: 'Read Only', value: 'Read' },
+            ]}
+            value={selectedReadFilter}
+            onChange={setSelectedReadFilter}
+          />
+
+          <Dropdown
+            label="Priority Level:"
+            options={[
+              { label: 'All Priorities', value: 'All' },
+              { label: 'High Priority', value: 'HIGH' },
+              { label: 'Medium Priority', value: 'MEDIUM' },
+              { label: 'Low Priority', value: 'LOW' },
+            ]}
+            value={selectedPriority}
+            onChange={setSelectedPriority}
+          />
+        </div>
+      </Card>
+
+      {/* ERROR STATE */}
+      {errorMsg ? (
+        <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
+          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
+          <h3 className="text-lg font-bold text-white">Error Loading Notifications</h3>
+          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+          <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchNotificationsData}>
+            Retry Loading Stream
+          </Button>
         </Card>
-
-        {/* MIDDLE COLUMN (6 cols): Notifications Activity Feed */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#94A3B8]">
-              Showing {notifications.length} notifications
-            </span>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              leftIcon={<Check className="w-3.5 h-3.5 text-[#A3E635]" />}
-              onClick={handleMarkAllRead}
+      ) : loading ? (
+        /* LOADING SKELETON STATE */
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-5 border-[#202D42] animate-pulse space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#162032] rounded-xl" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-[#162032] rounded w-48" />
+                  <div className="h-3 bg-[#162032] rounded w-3/4" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : processedNotifications.length === 0 ? (
+        /* EMPTY STATE */
+        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
+          <Bell className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
+          <h3 className="text-xl font-extrabold text-white">No notifications available.</h3>
+          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+            You do not have any new or unread system notifications right now.
+          </p>
+        </Card>
+      ) : (
+        /* LIVE NOTIFICATIONS STREAM LIST */
+        <div className="space-y-4">
+          {processedNotifications.map((notif) => (
+            <motion.div
+              key={notif.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
             >
-              Mark All as Read
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
-              <div className="w-8 h-8 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <span>Loading notification stream...</span>
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
-              No notifications in queue.
-            </div>
-          ) : (
-            notifications.map((notif) => (
-              <motion.div
-                key={notif.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={() => handleMarkSingleRead(notif.id)}
-                className={`p-4 rounded-2xl border transition-all duration-300 shadow-xl cursor-pointer ${
+              <Card
+                onClick={() => !notif.isRead && handleMarkSingleRead(notif.id)}
+                className={`p-5 border transition-all duration-300 relative group cursor-pointer ${
                   notif.isRead
-                    ? 'bg-[#162032]/60 border-[#202D42]'
-                    : 'bg-[#162032] border-[#A3E635]/40 shadow-[0_0_15px_rgba(163,230,53,0.1)]'
+                    ? 'bg-[#101726]/80 border-[#202D42]'
+                    : 'bg-[#162032] border-[#A3E635]/40 shadow-[0_0_15px_rgba(163,230,53,0.12)]'
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#A3E635]/15 text-[#A3E635] flex items-center justify-center font-bold shrink-0 mt-0.5">
-                      <Bell className="w-4 h-4" />
+                <div className="flex items-start justify-between gap-4">
+                  
+                  {/* Left: Icon + Text Content */}
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="w-11 h-11 rounded-2xl bg-[#101726] border border-[#202D42] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                      {renderNotificationIcon(notif.type)}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={notif.badgeTag === 'Immediate Action' ? 'alert' : 'accent'} size="sm">
-                          {notif.badgeTag}
+
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-extrabold text-white group-hover:text-[#A3E635] transition-colors">
+                          {notif.title}
+                        </span>
+
+                        <Badge
+                          variant={notif.priority === 'HIGH' ? 'alert' : notif.priority === 'MEDIUM' ? 'warning' : 'neutral'}
+                          size="sm"
+                        >
+                          {notif.priority} Priority
                         </Badge>
-                        <span className="text-[10px] text-[#64748B] font-semibold">{notif.timestamp}</span>
+
+                        {!notif.isRead && (
+                          <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-ping" title="Unread" />
+                        )}
                       </div>
-                      <h4 className="text-sm font-extrabold text-white mt-1">{notif.title}</h4>
-                      <p className="text-xs text-[#94A3B8] mt-0.5 leading-relaxed">{notif.description}</p>
+
+                      <p className="text-xs text-[#94A3B8] leading-relaxed">{notif.message}</p>
+
+                      <div className="flex items-center gap-4 text-[10px] text-[#64748B] pt-1">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-[#64748B]" /> {notif.createdAt}
+                        </span>
+                        <span>Category: <strong className="text-white">{notif.type}</strong></span>
+                      </div>
                     </div>
                   </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteNotificationAction(notif.id);
-                    }}
-                    className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
-                    title="Delete Notification"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {/* Right Actions: Open Module & Delete */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {notif.relatedRoute && (
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        leftIcon={<ArrowRight className="w-3.5 h-3.5 text-[#A3E635]" />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (notif.relatedRoute) navigate(notif.relatedRoute);
+                        }}
+                      >
+                        {notif.actionLabel || 'View Module'}
+                      </Button>
+                    )}
+
+                    <button
+                      onClick={(e) => handleDeleteNotification(notif.id, e)}
+                      className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                      title="Delete Notification"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
                 </div>
-              </motion.div>
-            ))
-          )}
+              </Card>
+            </motion.div>
+          ))}
         </div>
+      )}
 
-        {/* RIGHT COLUMN (3 cols): System Status & Unread Counter */}
-        <Card className="lg:col-span-3 p-5 space-y-4 bg-[#101726] border-[#202D42]">
-          <h2 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
-            Alert Center Status
-          </h2>
-
-          <div className="bg-[#162032] border border-[#202D42] rounded-xl p-4 text-center space-y-2">
-            <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Unread Notifications</span>
-            <span className="text-3xl font-extrabold text-[#A3E635]">{unreadCount}</span>
-            <span className="text-[11px] text-[#94A3B8] block">Out of {totalRecords} total alerts</span>
-          </div>
-        </Card>
+      {/* FOOTER BAR & PAGINATION */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
+          onPageChange={setCurrentPage}
+          totalEntries={totalRecords}
+        />
       </div>
 
       {/* BROADCAST ANNOUNCEMENT MODAL */}
@@ -370,13 +497,13 @@ export const Notifications: React.FC = () => {
         <form onSubmit={handleBroadcastSubmit} className="space-y-4">
           <Input
             label="Announcement Title"
-            placeholder="e.g. Schedule Update / Campus Visit"
+            placeholder="e.g. Campus Drive Schedule Announcement"
             value={broadcastTitle}
             onChange={(e) => setBroadcastTitle(e.target.value)}
             required
           />
           <Input
-            label="Notification Message"
+            label="Notification Message Body"
             placeholder="Enter announcement details..."
             value={broadcastMessage}
             onChange={(e) => setBroadcastMessage(e.target.value)}
@@ -392,6 +519,7 @@ export const Notifications: React.FC = () => {
           </div>
         </form>
       </Modal>
+
     </div>
   );
 };

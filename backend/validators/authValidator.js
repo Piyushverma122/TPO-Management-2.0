@@ -39,11 +39,35 @@ const validateLogin = validate([
 ]);
 
 const validateForgotPassword = validate([
-  body('email').isEmail().withMessage('Valid email address is required').normalizeEmail(),
+  body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('Email is required')
+    .isEmail()
+    .withMessage('Valid email address is required')
+    .isLength({ max: 255 })
+    .withMessage('Email must not exceed 255 characters')
+    .normalizeEmail(),
 ]);
 
 const validateResetPassword = validate([
-  body('new_password').isLength({ min: 6 }).withMessage('New password must be at least 6 characters long'),
+  body('new_password')
+    .custom((value, { req }) => {
+      const pass = req.body.new_password || req.body.password;
+      if (!pass || !pass.trim()) {
+        throw new Error('Password is required');
+      }
+      if (pass.length < 8 || pass.length > 128) {
+        throw new Error('Password must be between 8 and 128 characters');
+      }
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/.test(pass)) {
+        throw new Error(
+          'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+        );
+      }
+      req.body.new_password = pass;
+      return true;
+    }),
 ]);
 
 const validateRefreshToken = validate([

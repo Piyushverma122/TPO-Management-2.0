@@ -1,10 +1,11 @@
 const supabase = require('../config/supabase');
 const bcrypt = require('bcryptjs');
+const dataScopeService = require('./dataScopeService');
 
 /**
  * List companies with search, filtering and pagination
  */
-const listCompanies = async (queryParams) => {
+const listCompanies = async (queryParams, reqUser) => {
   const page = parseInt(queryParams.page) || 1;
   const limit = parseInt(queryParams.limit) || 10;
   const offset = (page - 1) * limit;
@@ -13,8 +14,13 @@ const listCompanies = async (queryParams) => {
 
   let query = supabase
     .from('companies')
-    .select('*', { count: 'exact' })
+    .select('*, company_contacts(*)', { count: 'exact' })
     .is('deleted_at', null);
+
+  if (reqUser) {
+    const scopeContext = await dataScopeService.resolveScopeContext(reqUser);
+    query = dataScopeService.applyDataScope(query, reqUser, 'companies', scopeContext);
+  }
 
   if (tier) query = query.eq('tier', tier);
   if (status) query = query.eq('status', status);
@@ -34,8 +40,18 @@ const listCompanies = async (queryParams) => {
     throw err;
   }
 
+  const normalizedCompanies = (companies || []).map((c) => {
+    const primaryContact = c.company_contacts?.find((ct) => ct.is_primary) || c.company_contacts?.[0];
+    return {
+      ...c,
+      hr_name: primaryContact?.hr_name || c.hr_name || null,
+      hr_email: primaryContact?.email || c.hr_email || null,
+      hr_phone: primaryContact?.phone || c.hr_phone || null,
+    };
+  });
+
   return {
-    companies: companies || [],
+    companies: normalizedCompanies,
     page,
     limit,
     total: count || 0,
@@ -45,7 +61,15 @@ const listCompanies = async (queryParams) => {
 /**
  * Get Company by ID
  */
-const getCompanyById = async (companyId) => {
+const getCompanyById = async (companyId, reqUser) => {
+  if (reqUser) {
+    const isAllowed = await dataScopeService.validateOwnership(reqUser, 'companies', companyId, 'VIEW_COMPANY_BY_ID');
+    if (!isAllowed) {
+      const err = new Error('You do not have permission to access this company profile.');
+      err.statusCode = 403;
+      throw err;
+    }
+  }
   const { data: company, error } = await supabase
     .from('companies')
     .select('*')
@@ -127,13 +151,13 @@ const createCompany = async (payload) => {
   }
 
   // 2. Insert primary HR Contact if provided
-  if (hr_name && hr_email) {
+  if (hr_name || hr_email || hr_phone) {
     await supabase.from('company_contacts').insert([
       {
         company_id: company.id,
-        hr_name,
-        email: hr_email,
-        phone: hr_phone || null,
+        hr_name: hr_name || 'HR Recruiter',
+        email: hr_email || 'hr@company.com',
+        phone: hr_phone || 'N/A',
         is_primary: true,
       },
     ]);

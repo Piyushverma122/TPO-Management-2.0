@@ -81,18 +81,6 @@ const validateQueryFilter = validate([
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('drive_id').optional().isUUID(),
   query('company_id').optional().isUUID(),
-  query('status').optional().isIn([
-    'Applied',
-    'Eligible',
-    'Shortlisted',
-    'Round 1',
-    'Round 2',
-    'Technical',
-    'HR',
-    'Offer',
-    'Rejected',
-    'Selected',
-  ]),
 ]);
 
 module.exports = {

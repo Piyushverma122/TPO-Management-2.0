@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const driveController = require('../controllers/driveController');
-const { verifyToken, authorizeRoles } = require('../middlewares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { authorizeModule } = require('../middleware/authorize');
+const { Module, Action } = require('../config/rbac');
 const {
   validateCreateDrive,
   validateUpdateDrive,
@@ -16,18 +18,18 @@ const {
 router.use(verifyToken);
 
 // Placement Drive CRUD Routes
-router.get('/', validateQueryFilter, driveController.getDrives);
-router.get('/:id', validateDriveId, driveController.getDriveById);
-router.post('/', authorizeRoles('admin', 'tpo'), validateCreateDrive, driveController.createDrive);
-router.put('/:id', validateUpdateDrive, driveController.updateDrive);
-router.delete('/:id', authorizeRoles('admin', 'tpo'), validateDriveId, driveController.deleteDrive);
+router.get('/', authorizeModule(Module.PLACEMENT_DRIVES, Action.VIEW), validateQueryFilter, driveController.getDrives);
+router.get('/:id', authorizeModule(Module.PLACEMENT_DRIVES, Action.VIEW), validateDriveId, driveController.getDriveById);
+router.post('/', authorizeModule(Module.PLACEMENT_DRIVES, Action.CREATE), validateCreateDrive, driveController.createDrive);
+router.put('/:id', authorizeModule(Module.PLACEMENT_DRIVES, Action.EDIT), validateUpdateDrive, driveController.updateDrive);
+router.delete('/:id', authorizeModule(Module.PLACEMENT_DRIVES, Action.DELETE), validateDriveId, driveController.deleteDrive);
 
 // Drive Full Profile & Analytics Routes
-router.get('/:id/profile', validateDriveId, driveController.getDriveProfile);
-router.get('/:id/statistics', validateDriveId, driveController.getDriveStatistics);
+router.get('/:id/profile', authorizeModule(Module.PLACEMENT_DRIVES, Action.VIEW), validateDriveId, driveController.getDriveProfile);
+router.get('/:id/statistics', authorizeModule(Module.PLACEMENT_DRIVES, Action.VIEW), validateDriveId, driveController.getDriveStatistics);
 router.get(
   '/:id/eligible-students',
-  authorizeRoles('admin', 'tpo', 'faculty', 'recruiter'),
+  authorizeModule(Module.PLACEMENT_DRIVES, Action.VIEW),
   validateDriveId,
   driveController.getEligibleStudents
 );
@@ -35,19 +37,19 @@ router.get(
 // Eligibility Binding Routes
 router.post(
   '/:id/eligible-branches',
-  authorizeRoles('admin', 'tpo'),
+  authorizeModule(Module.PLACEMENT_DRIVES, Action.EDIT),
   validateBranchArray,
   driveController.bindEligibleBranches
 );
 router.post(
   '/:id/eligible-departments',
-  authorizeRoles('admin', 'tpo'),
+  authorizeModule(Module.PLACEMENT_DRIVES, Action.EDIT),
   validateDeptArray,
   driveController.bindEligibleDepartments
 );
 router.post(
   '/:id/eligible-batches',
-  authorizeRoles('admin', 'tpo'),
+  authorizeModule(Module.PLACEMENT_DRIVES, Action.EDIT),
   validateBatchArray,
   driveController.bindEligibleBatches
 );

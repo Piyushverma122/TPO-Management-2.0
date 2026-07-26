@@ -1,10 +1,11 @@
-const supabase = require('../config/supabase');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 const bcrypt = require('bcryptjs');
+const dataScopeService = require('./dataScopeService');
 
 /**
  * List students with pagination, search, and multi-field filters
  */
-const listStudents = async (queryParams) => {
+const listStudents = async (queryParams, reqUser) => {
   const page = parseInt(queryParams.page) || 1;
   const limit = parseInt(queryParams.limit) || 10;
   const offset = (page - 1) * limit;
@@ -42,11 +43,23 @@ const listStudents = async (queryParams) => {
         id,
         name,
         code
+      ),
+      placements (
+        package,
+        offer_status,
+        companies (
+          name
+        )
       )
     `,
       { count: 'exact' }
     )
     .is('deleted_at', null);
+
+  if (reqUser) {
+    const scopeContext = await dataScopeService.resolveScopeContext(reqUser);
+    query = dataScopeService.applyDataScope(query, reqUser, 'students', scopeContext);
+  }
 
   // Apply filters
   if (branch) {
@@ -70,15 +83,23 @@ const listStudents = async (queryParams) => {
   }
 
   if (search) {
-    query = query.or(
-      `roll_number.ilike.%${search}%,users.full_name.ilike.%${search}%,users.email.ilike.%${search}%`
-    );
+    const { data: matchedUsers } = await supabase
+      .from('users')
+      .select('id')
+      .or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+
+    const matchedUserIds = (matchedUsers || []).map((u) => u.id);
+    if (matchedUserIds.length > 0) {
+      query = query.or(`roll_number.ilike.%${search}%,user_id.in.(${matchedUserIds.join(',')})`);
+    } else {
+      query = query.ilike('roll_number', `%${search}%`);
+    }
   }
 
   // Pagination & Order
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 
-  const { data, count, error } = await query;
+  const { data: students, count, error } = await query;
 
   if (error) {
     const err = new Error(error.message);
@@ -86,8 +107,17 @@ const listStudents = async (queryParams) => {
     throw err;
   }
 
+  const normalizedStudents = (students || []).map((s) => {
+    const activePlacement = s.placements?.[0];
+    return {
+      ...s,
+      company_placed: activePlacement?.companies?.name || '(pending)',
+      package_offered: activePlacement?.package ? `₹${activePlacement.package} LPA` : '--',
+    };
+  });
+
   return {
-    students: data || [],
+    students: normalizedStudents,
     page,
     limit,
     total: count || 0,
@@ -97,7 +127,15 @@ const listStudents = async (queryParams) => {
 /**
  * Get Student by ID
  */
-const getStudentById = async (studentId) => {
+const getStudentById = async (studentId, reqUser) => {
+  if (reqUser) {
+    const isAllowed = await dataScopeService.validateOwnership(reqUser, 'students', studentId, 'VIEW_STUDENT_BY_ID');
+    if (!isAllowed) {
+      const err = new Error('You do not have permission to access this student record.');
+      err.statusCode = 403;
+      throw err;
+    }
+  }
   const { data: student, error } = await supabase
     .from('students')
     .select(
@@ -139,14 +177,52 @@ const createStudent = async (payload) => {
     password = 'Student@Pass2026',
     full_name,
     roll_number,
+    enrollment_number,
     branch_id,
     cgpa,
     passing_year,
     current_semester = 1,
+    date_of_birth,
+    dob,
+    gender,
     phone,
+    alternate_phone,
+    address,
+    city,
+    state,
+    country = 'India',
+    pincode,
+    linkedin_url,
+    github_url,
+    portfolio_url,
+    leetcode_url,
+    hackerrank_url,
+    resume_headline,
+    bio,
+    tenth_percentage,
+    twelfth_percentage,
+    diploma_percentage,
+    active_backlogs = 0,
+    history_backlogs = 0,
+    placement_status = 'Unplaced',
   } = payload;
 
-  // 1. Check if user email exists in public.users
+  // 1. Pre-check if roll_number already exists in public.students
+  if (roll_number) {
+    const { data: existingRoll } = await supabase
+      .from('students')
+      .select('id')
+      .eq('roll_number', roll_number)
+      .maybeSingle();
+
+    if (existingRoll) {
+      const err = new Error(`Student with Roll Number '${roll_number}' already exists.`);
+      err.statusCode = 409;
+      throw err;
+    }
+  }
+
+  // 2. Check if user email exists in public.users
   const { data: existingUser } = await supabase
     .from('users')
     .select('id')
@@ -170,17 +246,18 @@ const createStudent = async (payload) => {
       throw err;
     }
   } else {
-    // 2. Register user in Supabase Auth if new
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name, role: 'student' } },
-    });
-
-    if (authError && !authError.message.includes('already registered')) {
-      const err = new Error(authError.message);
-      err.statusCode = 400;
-      throw err;
+    // 3. Register user in Supabase Auth if new
+    let authData = null;
+    try {
+      const authRes = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name, role: 'STUDENT' },
+      });
+      authData = authRes.data;
+    } catch (authErr) {
+      console.warn('Auth admin fallback:', authErr.message);
     }
 
     userId = authData?.user?.id;
@@ -191,12 +268,13 @@ const createStudent = async (payload) => {
         .select('id')
         .eq('email', email)
         .maybeSingle();
-      userId = fetchUser?.id;
+
+      userId = fetchUser?.id || require('crypto').randomUUID();
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 3. Create/update user record in public.users
+    // 4. Create/update user record in public.users
     const { error: userError } = await supabase.from('users').upsert(
       [
         {
@@ -219,27 +297,129 @@ const createStudent = async (payload) => {
     }
   }
 
-  // 4. Create student profile in public.students
+  // 5. Create student profile in public.students
+  const studentInsertPayload = {
+    user_id: userId,
+    roll_number: roll_number || `RN${Date.now().toString().slice(-6)}`,
+    enrollment_number: enrollment_number || null,
+    branch_id: branch_id || null,
+    cgpa: cgpa !== undefined && cgpa !== null && cgpa !== '' ? parseFloat(cgpa) : 8.0,
+    passing_year: passing_year ? parseInt(passing_year) : new Date().getFullYear() + 2,
+    current_semester: current_semester ? parseInt(current_semester) : 1,
+    date_of_birth: date_of_birth || dob || null,
+    gender: gender || null,
+    phone: phone || null,
+    alternate_phone: alternate_phone || null,
+    address: address || null,
+    city: city || null,
+    state: state || null,
+    country: country || 'India',
+    pincode: pincode || null,
+    linkedin_url: linkedin_url || null,
+    github_url: github_url || null,
+    portfolio_url: portfolio_url || null,
+    leetcode_url: leetcode_url || null,
+    hackerrank_url: hackerrank_url || null,
+    resume_headline: resume_headline || null,
+    bio: bio || null,
+    tenth_percentage: tenth_percentage !== undefined && tenth_percentage !== null && tenth_percentage !== '' ? parseFloat(tenth_percentage) : null,
+    twelfth_percentage: twelfth_percentage !== undefined && twelfth_percentage !== null && twelfth_percentage !== '' ? parseFloat(twelfth_percentage) : null,
+    diploma_percentage: diploma_percentage !== undefined && diploma_percentage !== null && diploma_percentage !== '' ? parseFloat(diploma_percentage) : null,
+    active_backlogs: active_backlogs ? parseInt(active_backlogs) : 0,
+    history_backlogs: history_backlogs ? parseInt(history_backlogs) : 0,
+    placement_status: placement_status || 'Unplaced',
+  };
+
   const { data: student, error: studentError } = await supabase
     .from('students')
-    .insert([
-      {
-        user_id: userId,
-        roll_number: roll_number || `RN${Date.now().toString().slice(-6)}`,
-        branch_id: branch_id || null,
-        cgpa: parseFloat(cgpa) || 8.0,
-        passing_year: parseInt(passing_year) || new Date().getFullYear() + 2,
-        current_semester: parseInt(current_semester) || 1,
-        placement_status: 'Unplaced',
-      },
-    ])
+    .insert([studentInsertPayload])
     .select('*')
     .single();
 
   if (studentError) {
-    const err = new Error(studentError.message);
-    err.statusCode = 500;
+    let statusCode = 500;
+    let message = studentError.message;
+    if (
+      studentError.code === '23505' ||
+      studentError.message?.includes('duplicate key') ||
+      studentError.message?.includes('violates unique constraint')
+    ) {
+      statusCode = 409;
+      if (studentError.message?.includes('roll_number')) {
+        message = `Student with Roll Number '${roll_number}' already exists.`;
+      } else {
+        message = 'Duplicate candidate record already exists.';
+      }
+    }
+    const err = new Error(message);
+    err.statusCode = statusCode;
     throw err;
+  }
+
+  // 6. Auto-create default resume profile
+  try {
+    const { data: defaultResume, error: resErr } = await supabaseAdmin
+      .from('resumes')
+      .insert([
+        {
+          student_id: student.id,
+          version_title: `${full_name || 'Candidate'} Primary Resume`,
+          file_name: 'default_resume.pdf',
+          file_url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          storage_path: 'resumes/default_resume.pdf',
+          file_size: 1024,
+          is_active: true,
+          is_verified: true,
+        },
+      ])
+      .select('id')
+      .maybeSingle();
+
+    if (resErr) console.error('Resume insert error:', resErr);
+
+    if (defaultResume) {
+      await supabaseAdmin
+        .from('students')
+        .update({ active_resume_id: defaultResume.id })
+        .eq('id', student.id);
+      student.active_resume_id = defaultResume.id;
+    }
+  } catch (e) {
+    console.error('Auto resume creation fallback error:', e);
+  }
+
+  // 7. Auto-create Welcome Notification
+  try {
+    if (userId) {
+      const { error: notifErr } = await supabaseAdmin.from('notifications').insert([
+        {
+          user_id: userId,
+          title: 'Welcome to Smart TPO Portal 🚀',
+          message: `Hello ${full_name || 'Candidate'}, your candidate account and student profile have been registered successfully!`,
+          type: 'System Alert',
+          is_read: false,
+        },
+      ]);
+      if (notifErr) console.error('Notification insert error:', notifErr);
+    }
+  } catch (e) {
+    console.error('Welcome notification trigger fallback error:', e);
+  }
+
+  // 8. Log Audit Event
+  try {
+    if (userId) {
+      await supabaseAdmin.from('audit_logs').insert([
+        {
+          user_id: userId,
+          action: 'STUDENT_ENROLLED',
+          category: 'Student Lifecycle',
+          details: `Enrolled student candidate ${full_name} (${student.roll_number})`,
+        },
+      ]);
+    }
+  } catch (e) {
+    console.error('Audit log trigger fallback error:', e);
   }
 
   return student;

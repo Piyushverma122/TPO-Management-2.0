@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
 const driveService = require('./driveService');
+const dataScopeService = require('./dataScopeService');
 
 /**
  * Student Apply for Placement Drive
@@ -224,32 +225,15 @@ const listApplications = async (reqUser, queryParams) => {
     );
 
   // Role Security Scope
-  if (reqUser.role === 'student') {
-    const { data: std } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', reqUser.id)
-      .maybeSingle();
-
-    if (std) {
-      query = query.eq('student_id', std.id);
-    }
-  } else if (reqUser.role === 'recruiter') {
-    const { data: recruiter } = await supabase
-      .from('recruiters')
-      .select('company_id')
-      .eq('user_id', reqUser.id)
-      .maybeSingle();
-
-    if (recruiter) {
-      query = query.eq('placement_drives.company_id', recruiter.company_id);
-    }
+  if (reqUser) {
+    const scopeContext = await dataScopeService.resolveScopeContext(reqUser);
+    query = dataScopeService.applyDataScope(query, reqUser, 'applications', scopeContext);
   }
 
   if (drive_id) query = query.eq('drive_id', drive_id);
   if (status) query = query.eq('status', status);
 
-  query = query.order('applied_date', { ascending: false }).range(offset, offset + limit - 1);
+  query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 
   const { data: apps, count, error } = await query;
 
@@ -259,8 +243,14 @@ const listApplications = async (reqUser, queryParams) => {
     throw err;
   }
 
+  const normalizedApps = (apps || []).map((app) => ({
+    ...app,
+    drives: app.placement_drives,
+    applied_at: app.applied_date || app.created_at,
+  }));
+
   return {
-    applications: apps || [],
+    applications: normalizedApps,
     page,
     limit,
     total: count || 0,
@@ -294,8 +284,7 @@ const getApplicationById = async (applicationId) => {
           full_name,
           email,
           phone,
-          avatar_url,
-          department
+          avatar_url
         ),
         branches (
           id,
@@ -391,6 +380,24 @@ const updateApplicationStatus = async (applicationId, stage, roundName, remarks,
       .from('placement_drives')
       .update({ selected_count: count || 0 })
       .eq('id', app.drive_id);
+  }
+
+  // 4. Send Stage Transition Notification to Candidate
+  try {
+    const candidateUserId = app.students?.users?.id || app.students?.user_id;
+    if (candidateUserId) {
+      await supabase.from('notifications').insert([
+        {
+          user_id: candidateUserId,
+          title: `Application Status Updated: ${stage}`,
+          message: `Your application for ${app.placement_drives?.role_title || 'Role'} at ${app.placement_drives?.companies?.name || 'Company'} has moved to: ${stage}.`,
+          type: 'Application Update',
+          is_read: false,
+        },
+      ]);
+    }
+  } catch (e) {
+    console.warn('Stage notification fallback:', e.message);
   }
 
   return updatedApp;

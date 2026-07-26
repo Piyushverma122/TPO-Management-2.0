@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const companyController = require('../controllers/companyController');
-const { verifyToken, authorizeRoles } = require('../middlewares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { authorizeModule } = require('../middleware/authorize');
+const { Module, Action } = require('../config/rbac');
 const { uploadCompanyLogo, uploadCompanyDoc } = require('../config/multer');
 const {
   validateCreateCompany,
   validateUpdateCompany,
   validateCompanyId,
   validateCreateRecruiter,
-  validateUpdateRecruiter,
   validateQueryFilter,
 } = require('../validators/companyValidator');
 
@@ -16,41 +17,42 @@ const {
 router.use(verifyToken);
 
 // Company CRUD Routes
-router.get('/', validateQueryFilter, companyController.getCompanies);
-router.get('/:id', validateCompanyId, companyController.getCompanyById);
-router.post('/', authorizeRoles('admin', 'tpo'), validateCreateCompany, companyController.createCompany);
-router.put('/:id', validateUpdateCompany, companyController.updateCompany);
-router.delete('/:id', authorizeRoles('admin', 'tpo'), validateCompanyId, companyController.deleteCompany);
+router.get('/', authorizeModule(Module.COMPANIES, Action.VIEW), validateQueryFilter, companyController.getCompanies);
+router.get('/:id', authorizeModule(Module.COMPANIES, Action.VIEW), validateCompanyId, companyController.getCompanyById);
+router.post('/', authorizeModule(Module.COMPANIES, Action.CREATE), validateCreateCompany, companyController.createCompany);
+router.put('/:id', authorizeModule(Module.COMPANIES, Action.EDIT), validateUpdateCompany, companyController.updateCompany);
+router.delete('/:id', authorizeModule(Module.COMPANIES, Action.DELETE), validateCompanyId, companyController.deleteCompany);
 
 // Company Full Profile
-router.get('/:id/profile', validateCompanyId, companyController.getCompanyProfile);
+router.get('/:id/profile', authorizeModule(Module.COMPANIES, Action.VIEW), validateCompanyId, companyController.getCompanyProfile);
 
 // Company Logo & Document Management Routes
 router.post(
   '/:id/logo',
+  authorizeModule(Module.COMPANIES, Action.EDIT),
   validateCompanyId,
   uploadCompanyLogo.single('logo'),
   companyController.uploadLogo
 );
 router.post(
   '/:id/document',
+  authorizeModule(Module.COMPANIES, Action.UPLOAD),
   validateCompanyId,
   uploadCompanyDoc.single('document'),
   companyController.uploadDocument
 );
-router.get('/:id/documents', validateCompanyId, companyController.listDocuments);
-router.delete('/document/:documentId', companyController.deleteDocument);
+router.get('/:id/documents', authorizeModule(Module.COMPANIES, Action.VIEW), validateCompanyId, companyController.listDocuments);
+router.delete('/document/:documentId', authorizeModule(Module.COMPANIES, Action.DELETE), companyController.deleteDocument);
 
 // Recruiter Management Routes
-router.get('/:id/recruiters', validateCompanyId, companyController.listRecruiters);
+router.get('/:id/recruiters', authorizeModule(Module.COMPANIES, Action.VIEW), validateCompanyId, companyController.listRecruiters);
 router.post(
   '/:id/recruiters',
-  authorizeRoles('admin', 'tpo'),
+  authorizeModule(Module.COMPANIES, Action.CREATE),
   validateCreateRecruiter,
   companyController.createRecruiter
 );
 
-// Separate recruiter routes mounted directly under /recruiters handled in index.js or sub-routes
 module.exports = {
   companyRouter: router,
 };

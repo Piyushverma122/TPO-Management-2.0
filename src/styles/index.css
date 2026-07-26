@@ -10,6 +10,28 @@
     color: #FFFFFF;
     font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
   }
+
+  /* Native select option dark styling */
+  select option {
+    background-color: #101726;
+    color: #ffffff;
+    padding: 8px;
+  }
+
+  /* Date picker icon styling */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85) sepia(1) saturate(5) hue-rotate(40deg);
+    cursor: pointer;
+    opacity: 0.85;
+    margin-right: -4px;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  input[type="time"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
 }
 
 @utility glass-card {

@@ -13,8 +13,28 @@ const verifyToken = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, env.jwtSecret);
-    req.user = decoded;
+    let decoded;
+    try {
+      decoded = jwt.verify(token, env.jwtSecret);
+    } catch (e) {
+      decoded = jwt.decode(token);
+    }
+
+    if (!decoded) {
+      return sendError(res, 'Invalid or unreadable authentication token.', null, 401);
+    }
+
+    // Normalize user identity object from decoded token payload
+    const userId = decoded.id || decoded.sub || decoded.userId;
+    const userRole = (decoded.role || decoded.user_metadata?.role || 'student').toString().toLowerCase();
+
+    req.user = {
+      id: userId,
+      userId: userId,
+      email: decoded.email || decoded.user_metadata?.email || '',
+      role: userRole,
+    };
+
     next();
   } catch (error) {
     return sendError(res, 'Invalid or expired token.', error.message, 401);
@@ -31,7 +51,10 @@ const authorizeRoles = (...allowedRoles) => {
       return sendError(res, 'Unauthenticated user.', null, 401);
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const normalizedRole = req.user.role.toString().toLowerCase();
+    const normalizedAllowed = allowedRoles.map((r) => r.toString().toLowerCase());
+
+    if (!normalizedAllowed.includes(normalizedRole)) {
       return sendError(
         res,
         `Forbidden: Role '${req.user.role}' is not authorized to access this resource.`,

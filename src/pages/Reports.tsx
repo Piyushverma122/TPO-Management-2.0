@@ -38,45 +38,11 @@ import { RadialProgress } from '../components/ui/ProgressBar';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
 import { getPlacementStatistics, getPlacements } from '../api/placement.api';
-import {
-  getDashboardReport,
-  exportPDF,
-  exportExcel,
-  exportCSV,
-} from '../api/report.api';
+import { getDashboardReport, exportPDF, exportExcel, exportCSV } from '../api/report.api';
+import { PermissionGuard } from '../components/auth/PermissionGuard';
+import { Module, Action } from '../config/rbac';
 
-// Default Company Wise Placements Fallback
-const companyPlacementData = [
-  { name: 'Amazon', count: 35 },
-  { name: 'Google', count: 30 },
-  { name: 'Deloitte', count: 25 },
-  { name: 'Accenture', count: 20 },
-  { name: 'IBM', count: 15 },
-];
-
-// Department Wise Placement Donut Data
-const deptPlacementData = [
-  { name: 'CS', value: 40, color: '#A3E635' },
-  { name: 'EE', value: 25, color: '#10B981' },
-  { name: 'ME', value: 20, color: '#38BDF8' },
-  { name: 'Civil', value: 15, color: '#F59E0B' },
-];
-
-// Monthly Progress Trend Data
-const monthlyTrendData = [
-  { month: 'Jan', val: 120 },
-  { month: 'Feb', val: 180 },
-  { month: 'Mar', val: 140 },
-  { month: 'Apr', val: 260 },
-  { month: 'May', val: 320 },
-  { month: 'Jun', val: 280 },
-  { month: 'Jul', val: 390 },
-  { month: 'Aug', val: 450 },
-  { month: 'Sep', val: 410 },
-  { month: 'Oct', val: 520 },
-  { month: 'Nov', val: 480 },
-  { month: 'Dec', val: 600 },
-];
+// Reports metrics and chart structures are derived dynamically from database APIs
 
 export const Reports: React.FC = () => {
   const { success, error: toastError, info } = useToast();
@@ -90,10 +56,10 @@ export const Reports: React.FC = () => {
     averagePackage: string;
     placementPercentage: number;
   }>({
-    totalPlacements: 4100,
-    highestPackage: '₹45 LPA',
-    averagePackage: '₹12.5 LPA',
-    placementPercentage: 94,
+    totalPlacements: 0,
+    highestPackage: '₹0 LPA',
+    averagePackage: '₹0 LPA',
+    placementPercentage: 0,
   });
 
   const [placementsList, setPlacementsList] = useState<any[]>([]);
@@ -109,10 +75,10 @@ export const Reports: React.FC = () => {
         if (statsRes.data?.statistics) {
           const s = statsRes.data.statistics;
           setStats({
-            totalPlacements: s.totalPlacements || 4100,
-            highestPackage: s.highestPackage ? `₹${s.highestPackage} LPA` : '₹45 LPA',
-            averagePackage: s.averagePackage ? `₹${s.averagePackage} LPA` : '₹12.5 LPA',
-            placementPercentage: s.placementPercentage || 94,
+            totalPlacements: s.totalPlacements || 0,
+            highestPackage: s.highestPackage ? `₹${s.highestPackage} LPA` : '₹0 LPA',
+            averagePackage: s.averagePackage ? `₹${s.averagePackage} LPA` : '₹0 LPA',
+            placementPercentage: s.placementPercentage || 0,
           });
         }
       }
@@ -193,36 +159,38 @@ export const Reports: React.FC = () => {
             Refresh
           </Button>
 
-          <Button
-            variant="secondary"
-            size="md"
-            leftIcon={<FileSpreadsheet className="w-4 h-4 text-[#A3E635]" />}
-            isLoading={exportingType === 'csv'}
-            onClick={() => handleExportFile('csv')}
-          >
-            CSV
-          </Button>
+          <PermissionGuard module={Module.REPORTS} action={Action.EXPORT}>
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={<FileSpreadsheet className="w-4 h-4 text-[#A3E635]" />}
+              isLoading={exportingType === 'csv'}
+              onClick={() => handleExportFile('csv')}
+            >
+              CSV
+            </Button>
 
-          <Button
-            variant="secondary"
-            size="md"
-            leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
-            isLoading={exportingType === 'excel'}
-            onClick={() => handleExportFile('excel')}
-          >
-            Excel
-          </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+              isLoading={exportingType === 'excel'}
+              onClick={() => handleExportFile('excel')}
+            >
+              Excel
+            </Button>
 
-          <Button
-            variant="primary"
-            size="md"
-            leftIcon={<Download className="w-4 h-4" />}
-            isLoading={exportingType === 'pdf'}
-            onClick={() => handleExportFile('pdf')}
-            className="font-extrabold text-xs"
-          >
-            Export PDF Report
-          </Button>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Download className="w-4 h-4" />}
+              isLoading={exportingType === 'pdf'}
+              onClick={() => handleExportFile('pdf')}
+              className="font-extrabold text-xs"
+            >
+              Export PDF Report
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -242,7 +210,7 @@ export const Reports: React.FC = () => {
 
           <div className="h-12 pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyTrendData.slice(0, 6)}>
+              <AreaChart data={[]}>
                 <Area type="monotone" dataKey="val" stroke="#A3E635" fill="#A3E635" fillOpacity={0.2} strokeWidth={2.5} />
               </AreaChart>
             </ResponsiveContainer>
@@ -260,10 +228,10 @@ export const Reports: React.FC = () => {
             {loading ? '...' : stats.highestPackage}
           </div>
           <div className="flex items-center gap-2 pt-1">
-            <Avatar src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" name="Rahul" size="sm" border />
+            <Avatar src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" name="Candidate" size="sm" border />
             <div>
-              <p className="text-xs font-extrabold text-white leading-tight">Rahul Sharma</p>
-              <p className="text-[10px] text-[#A3E635]">Amazon (SDE-1)</p>
+              <p className="text-xs font-extrabold text-white leading-tight">Placement Record</p>
+              <p className="text-[10px] text-[#A3E635]">Top Package Record</p>
             </div>
           </div>
         </Card>
@@ -282,7 +250,7 @@ export const Reports: React.FC = () => {
 
           <div className="h-12 pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyTrendData.slice(6, 12)}>
+              <AreaChart data={[]}>
                 <Area type="monotone" dataKey="val" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.2} strokeWidth={2.5} />
               </AreaChart>
             </ResponsiveContainer>
@@ -300,9 +268,9 @@ export const Reports: React.FC = () => {
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
                 Top Company Wise Placements (No. of Students)
               </h3>
-              <div className="h-44 w-full">
+              <div className="h-44 w-full flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={companyPlacementData} layout="vertical" margin={{ left: 20 }}>
+                  <BarChart data={[]} layout="vertical" margin={{ left: 20 }}>
                     <XAxis type="number" stroke="#64748B" fontSize={10} hide />
                     <YAxis dataKey="name" type="category" stroke="#94A3B8" fontSize={11} tickLine={false} />
                     <Bar dataKey="count" fill="#A3E635" radius={[0, 6, 6, 0]} />
@@ -319,8 +287,8 @@ export const Reports: React.FC = () => {
               <div className="h-32 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={deptPlacementData} innerRadius={28} outerRadius={48} paddingAngle={4} dataKey="value">
-                      {deptPlacementData.map((entry, idx) => (
+                    <Pie data={[]} innerRadius={28} outerRadius={48} paddingAngle={4} dataKey="value">
+                      {[].map((entry: any, idx: number) => (
                         <Cell key={`cell-${idx}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -328,7 +296,7 @@ export const Reports: React.FC = () => {
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#94A3B8]">
-                {deptPlacementData.map((d) => (
+                {[].map((d: any) => (
                   <div key={d.name} className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
                     <span>{d.name}: {d.value}%</span>
@@ -345,13 +313,13 @@ export const Reports: React.FC = () => {
                 Monthly Placement Trend & Growth Curve
               </h3>
               <span className="text-xs text-[#A3E635] font-semibold flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" /> +18.4% YoY
+                <TrendingUp className="w-3.5 h-3.5" /> Live Data
               </span>
             </div>
 
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={[]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorPlacements" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#A3E635" stopOpacity={0.5} />

@@ -31,16 +31,24 @@ const checkCompanyAccess = async (req, companyId) => {
  */
 const getCompanies = async (req, res, next) => {
   try {
-    const result = await companyService.listCompanies(req.query);
-    return sendPaginated(
-      res,
-      'Companies list retrieved',
-      result.companies,
-      result.page,
-      result.limit,
-      result.total,
-      200
-    );
+    const result = await companyService.listCompanies(req.query, req.user);
+    return res.status(200).json({
+      success: true,
+      message: 'Companies list retrieved',
+      data: {
+        companies: result.companies,
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+      },
+      companies: result.companies,
+      pagination: {
+        currentPage: Number(result.page),
+        perPage: Number(result.limit),
+        totalEntries: Number(result.total),
+        totalPages: Math.ceil(result.total / result.limit) || 1,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -53,7 +61,7 @@ const getCompanies = async (req, res, next) => {
  */
 const getCompanyById = async (req, res, next) => {
   try {
-    const company = await companyService.getCompanyById(req.params.id);
+    const company = await companyService.getCompanyById(req.params.id, req.user);
     return sendSuccess(res, 'Company details retrieved', { company }, 200);
   } catch (error) {
     next(error);

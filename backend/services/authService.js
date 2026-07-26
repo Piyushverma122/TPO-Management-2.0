@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const supabase = require('../config/supabase');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 const env = require('../config/env');
 
 /**
@@ -199,37 +199,139 @@ const logoutUser = async () => {
 };
 
 /**
- * Trigger forgot password email via Supabase Auth
+ * Trigger forgot password email via Supabase Auth with DB & Auth validation checks
  */
 const forgotPassword = async (email) => {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  // 1. Query public.users for email, is_active, and deleted_at
+  const { data: userRecord, error: dbError } = await supabase
+    .from('users')
+    .select('id, email, is_active, deleted_at')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (dbError || !userRecord) {
+    const err = new Error('No user found with this email.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (userRecord.deleted_at) {
+    const err = new Error('This account has been deleted.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (!userRecord.is_active) {
+    const err = new Error('This account has been deactivated.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // 2. Verify Auth account is provisioned in system (has password_hash or auth binding)
+  if (userRecord.password_hash === null) {
+    const err = new Error('User account is not available.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // 3. Dispatch reset password email via Supabase Auth
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${env.clientUrl}/reset-password`,
   });
 
-  if (error) {
-    const err = new Error(error.message);
+  if (resetError) {
+    if (
+      resetError.message.toLowerCase().includes('not found') ||
+      resetError.message.toLowerCase().includes('invalid user')
+    ) {
+      const err = new Error('User account is not available.');
+      err.statusCode = 404;
+      throw err;
+    }
+    const err = new Error(resetError.message || 'Unable to send reset email.');
     err.statusCode = 400;
     throw err;
   }
 
-  return { message: 'Password reset link sent to registered email address.' };
+  return { message: 'Password reset link has been sent successfully.' };
 };
 
 /**
- * Reset password for authenticated session
+ * Reset / Change password for user
+ * Updates Supabase Auth (auth.users) as SINGLE SOURCE OF TRUTH.
  */
-const resetPassword = async (newPassword) => {
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword,
-  });
+const resetPassword = async (newPassword, userId, userEmail) => {
+  let targetId = userId;
 
-  if (error) {
-    const err = new Error(error.message);
-    err.statusCode = 400;
+  // If targetId is not in JWT payload, resolve user ID by email
+  if (!targetId && userEmail) {
+    const { data: foundUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', userEmail)
+      .maybeSingle();
+
+    if (foundUser) {
+      targetId = foundUser.id;
+    }
+  }
+
+  if (!targetId) {
+    const err = new Error('User account is not available.');
+    err.statusCode = 404;
     throw err;
   }
 
-  return { message: 'Password updated successfully.' };
+  // STEP 3 & STEP 5: Update password in Supabase Auth (auth.users) using supabaseAdmin
+  let authUpdated = false;
+
+  const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.updateUserById(targetId, {
+    password: newPassword,
+  });
+
+  if (!adminError && adminData?.user) {
+    authUpdated = true;
+  } else {
+    // Sync to auth.users via update_auth_password SQL function
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    const { error: rpcErr } = await supabase.rpc('update_auth_password', {
+      target_user_id: targetId,
+      new_hash: passwordHash,
+    });
+
+    if (!rpcErr) {
+      authUpdated = true;
+    }
+  }
+
+  // STEP 4: NEVER ignore errors. If Supabase auth.users update fails, THROW error (HTTP 500)
+  if (!authUpdated) {
+    const err = new Error('Unable to update password.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  // STEP 6: Update public.users.password_hash ONLY AFTER auth.users update succeeds
+  const salt = await bcrypt.genSalt(10);
+  const passwordHash = await bcrypt.hash(newPassword, salt);
+
+  const { error: dbError } = await supabase
+    .from('users')
+    .update({
+      password_hash: passwordHash,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', targetId);
+
+  if (dbError) {
+    const err = new Error('Failed to sync password hash to public database.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  return { message: 'Password has been reset successfully.' };
 };
 
 /**

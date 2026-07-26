@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
-const { verifyToken, authorizeRoles } = require('../middlewares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { authorizeModule } = require('../middleware/authorize');
+const { Module, Action } = require('../config/rbac');
 const {
   validateCreateNotification,
   validateBroadcastNotification,
@@ -13,17 +15,17 @@ const {
 router.use(verifyToken);
 
 // User Notifications
-router.get('/', validateQueryFilter, notificationController.getNotifications);
-router.put('/read-all', notificationController.markAllAsRead);
-router.put('/:id/read', validateNotificationId, notificationController.markAsRead);
-router.delete('/:id', validateNotificationId, notificationController.deleteNotification);
+router.get('/', authorizeModule(Module.NOTIFICATIONS, Action.VIEW), validateQueryFilter, notificationController.getNotifications);
+router.put('/read-all', authorizeModule(Module.NOTIFICATIONS, Action.VIEW), notificationController.markAllAsRead);
+router.put('/:id/read', authorizeModule(Module.NOTIFICATIONS, Action.VIEW), validateNotificationId, notificationController.markAsRead);
+router.delete('/:id', authorizeModule(Module.NOTIFICATIONS, Action.EDIT), validateNotificationId, notificationController.deleteNotification);
 
 // Targeted Single & Broadcast Announcements
-router.post('/', authorizeRoles('admin', 'tpo'), validateCreateNotification, notificationController.createNotification);
-router.post('/broadcast', authorizeRoles('admin', 'tpo'), validateBroadcastNotification, notificationController.broadcastNotification);
+router.post('/', authorizeModule(Module.NOTIFICATIONS, Action.CREATE), validateCreateNotification, notificationController.createNotification);
+router.post('/broadcast', authorizeModule(Module.NOTIFICATIONS, Action.CREATE), validateBroadcastNotification, notificationController.broadcastNotification);
 
 // Statistics & Email Logs
-router.get('/statistics', authorizeRoles('admin', 'tpo'), notificationController.getStatistics);
-router.get('/email/logs', authorizeRoles('admin', 'tpo'), notificationController.getEmailLogs);
+router.get('/statistics', authorizeModule(Module.NOTIFICATIONS, Action.VIEW), notificationController.getStatistics);
+router.get('/email/logs', authorizeModule(Module.NOTIFICATIONS, Action.VIEW), notificationController.getEmailLogs);
 
 module.exports = router;

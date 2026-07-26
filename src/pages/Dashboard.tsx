@@ -41,6 +41,7 @@ import { Input } from '../components/ui/Input';
 import { Dropdown } from '../components/ui/Dropdown';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../config/supabase';
 import {
   getAdminDashboard,
   getTPODashboard,
@@ -54,54 +55,13 @@ import {
   FacultyDashboardData,
 } from '../api/dashboard.api';
 
-// Default Monthly Placements Data
-const monthlyData = [
-  { month: 'Jan', placed: 120 },
-  { month: 'Feb', placed: 180 },
-  { month: 'Mar', placed: 150 },
-  { month: 'Apr', placed: 240 },
-  { month: 'May', placed: 290 },
-  { month: 'Jun', placed: 220 },
-  { month: 'Jul', placed: 310 },
-  { month: 'Aug', placed: 420 },
-  { month: 'Sep', placed: 380 },
-  { month: 'Oct', placed: 490 },
-  { month: 'Nov', placed: 410 },
-  { month: 'Dec', placed: 520 },
-];
-
-// Sparkline Mini Data
-const totalStudentsSparkline = [
-  { month: 'Sep', val: 3200 },
-  { month: 'Oct', val: 3800 },
-  { month: 'Nov', val: 4500 },
-  { month: 'Dec', val: 5200 },
-];
-
-const companiesSparkline = [
-  { month: 'Sep', val: 120 },
-  { month: 'Oct', val: 210 },
-  { month: 'Nov', val: 290 },
-  { month: 'Dec', val: 350 },
-];
-
-const placedSparkline = [
-  { month: 'Sep', val: 2100 },
-  { month: 'Oct', val: 2900 },
-  { month: 'Nov', val: 3400 },
-  { month: 'Dec', val: 4100 },
-];
-
-// Branch Wise Placement Donut Data
-const branchData = [
-  { name: 'CS/IT', value: 45, color: '#A3E635' },
-  { name: 'ME', value: 20, color: '#10B981' },
-  { name: 'Civil', value: 15, color: '#F59E0B' },
-  { name: 'EE', value: 20, color: '#38BDF8' },
-];
+import { StudentDashboard } from './StudentDashboard';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  if (user?.role === 'student') {
+    return <StudentDashboard />;
+  }
   const { success, error: toastError } = useToast();
   const [driveFilter, setDriveFilter] = useState<'Recent' | 'All' | 'Interviews'>('Recent');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -157,6 +117,19 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
+
+    const channel = supabase
+      .channel('public:dashboard_events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'placement_drives' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'placements' }, () => fetchDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drive_applications' }, () => fetchDashboardData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleCreateDrive = (e: React.FormEvent) => {
@@ -181,11 +154,11 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            {user?.role === 'student'
+            {(user?.role as string) === 'student'
               ? 'Student Placement Portal'
-              : user?.role === 'recruiter'
+              : (user?.role as string) === 'recruiter'
               ? 'Recruiter Portal Dashboard'
-              : user?.role === 'faculty'
+              : (user?.role as string) === 'faculty'
               ? 'Faculty Academic Dashboard'
               : 'TPO Admin Dashboard'}
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
@@ -256,21 +229,20 @@ export const Dashboard: React.FC = () => {
 
           <div className="h-14 mt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={totalStudentsSparkline}>
+              <AreaChart data={(adminData as any)?.placementTrend || []}>
                 <defs>
                   <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#A3E635" stopOpacity={0.4} />
                     <stop offset="100%" stopColor="#A3E635" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <Area type="monotone" dataKey="val" stroke="#A3E635" strokeWidth={2.5} fill="url(#grad1)" />
+                <Area type="monotone" dataKey="placed" stroke="#A3E635" strokeWidth={2.5} fill="url(#grad1)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <div className="flex justify-between text-[10px] font-bold text-[#64748B] mt-1 uppercase tracking-wider">
-            <span>Sep</span>
-            <span>Oct</span>
-            <span>Nov</span>
+            <span>Jan</span>
+            <span>Jun</span>
             <span>Dec</span>
           </div>
         </motion.div>
@@ -294,15 +266,14 @@ export const Dashboard: React.FC = () => {
 
           <div className="h-14 mt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={companiesSparkline}>
-                <Bar dataKey="val" fill="#A3E635" radius={[4, 4, 0, 0]} />
+              <BarChart data={(adminData as any)?.placementTrend || []}>
+                <Bar dataKey="placed" fill="#A3E635" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="flex justify-between text-[10px] font-bold text-[#64748B] mt-1 uppercase tracking-wider">
-            <span>Sep</span>
-            <span>Oct</span>
-            <span>Nov</span>
+            <span>Jan</span>
+            <span>Jun</span>
             <span>Dec</span>
           </div>
         </motion.div>
@@ -327,15 +298,14 @@ export const Dashboard: React.FC = () => {
 
           <div className="h-14 mt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={placedSparkline}>
-                <Area type="monotone" dataKey="val" stroke="#0B0F17" strokeWidth={3} fill="none" />
+              <AreaChart data={(adminData as any)?.placementTrend || []}>
+                <Area type="monotone" dataKey="placed" stroke="#0B0F17" strokeWidth={3} fill="none" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <div className="flex justify-between text-[10px] font-extrabold text-[#0B0F17]/80 mt-1 uppercase tracking-wider">
-            <span>Sep</span>
-            <span>Oct</span>
-            <span>Nov</span>
+            <span>Jan</span>
+            <span>Jun</span>
             <span>Dec</span>
           </div>
         </motion.div>
@@ -481,7 +451,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={(adminData as any)?.placementTrend || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorPlaced" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#A3E635" stopOpacity={0.5} />
@@ -531,24 +501,28 @@ export const Dashboard: React.FC = () => {
                 <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2">
                   <span className="text-[11px] font-bold text-white block">Branch Wise Placement</span>
                   <div className="h-28 flex items-center justify-center relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={branchData}
-                          innerRadius={25}
-                          outerRadius={40}
-                          paddingAngle={3}
-                          dataKey="value"
-                        >
-                          {branchData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {((adminData as any)?.branchDistribution || []).length === 0 ? (
+                      <span className="text-[11px] text-[#94A3B8]">No placement data</span>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={(adminData as any)?.branchDistribution}
+                            innerRadius={25}
+                            outerRadius={40}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {((adminData as any)?.branchDistribution || []).map((entry: any, index: number) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-[10px] font-semibold text-[#94A3B8]">
-                    {branchData.map((b) => (
+                    {((adminData as any)?.branchDistribution || []).map((b: any) => (
                       <div key={b.name} className="flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: b.color }} />
                         <span>{b.name}</span>
@@ -565,15 +539,14 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="h-16">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={placedSparkline}>
-                        <Area type="monotone" dataKey="val" stroke="#A3E635" strokeWidth={2} fill="#A3E635" fillOpacity={0.2} />
+                      <AreaChart data={(adminData as any)?.placementTrend || []}>
+                        <Area type="monotone" dataKey="placed" stroke="#A3E635" strokeWidth={2} fill="#A3E635" fillOpacity={0.2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                   <div className="flex justify-between text-[9px] font-bold text-[#64748B] uppercase">
-                    <span>Sep</span>
-                    <span>Oct</span>
-                    <span>Nov</span>
+                    <span>Jan</span>
+                    <span>Jun</span>
                     <span>Dec</span>
                   </div>
                 </div>

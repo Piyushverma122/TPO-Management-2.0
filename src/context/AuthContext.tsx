@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           console.error('Session verification error:', error);
           localStorage.removeItem('tpo_token');
+          localStorage.removeItem('tpo_refresh_token');
           localStorage.removeItem('tpo_user');
           setUser(null);
         }
@@ -63,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await loginApi({ email, password });
     const payload = res.data;
     const token = payload?.accessToken || payload?.session?.access_token;
+    const refreshToken = payload?.session?.refresh_token;
     const apiUser = payload?.user || payload;
 
     const formattedUser: User = {
@@ -72,6 +74,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (token) {
       localStorage.setItem('tpo_token', token);
+    }
+    if (refreshToken) {
+      localStorage.setItem('tpo_refresh_token', refreshToken);
     }
     localStorage.setItem('tpo_user', JSON.stringify(formattedUser));
     setUser(formattedUser);
@@ -86,6 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Logout API failed, clearing local session:', error);
     } finally {
       localStorage.removeItem('tpo_token');
+      localStorage.removeItem('tpo_refresh_token');
       localStorage.removeItem('tpo_user');
       setUser(null);
     }

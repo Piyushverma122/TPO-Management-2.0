@@ -1,5 +1,24 @@
 const supabase = require('../config/supabase');
 
+const EVENT_TYPE_ALIASES = {
+  interview: 'mock_interview',
+  interviews: 'mock_interview',
+  mock_interview: 'mock_interview',
+  drive: 'placement_drive',
+  drives: 'placement_drive',
+  placement_drive: 'placement_drive',
+  training: 'training',
+  meeting: 'meeting',
+  deadline: 'deadline',
+  reminder: 'reminder',
+};
+
+const mapEventTypeAlias = (rawType) => {
+  if (!rawType) return null;
+  const clean = rawType.toString().toLowerCase().trim();
+  return EVENT_TYPE_ALIASES[clean] || null;
+};
+
 /**
  * List Calendar Events with date range and event_type filters
  */
@@ -20,7 +39,12 @@ const listEvents = async (queryParams) => {
     `
     );
 
-  if (event_type) query = query.eq('event_type', event_type);
+  if (event_type) {
+    const mappedType = mapEventTypeAlias(event_type);
+    if (mappedType) {
+      query = query.eq('event_type', mappedType);
+    }
+  }
   if (start_date) query = query.gte('start_time', start_date);
   if (end_date) query = query.lte('end_time', end_date);
 

@@ -63,8 +63,6 @@ const validateDriveId = validate([
 const validateQueryFilter = validate([
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-  query('status').optional().isIn(['Ongoing', 'Upcoming', 'Conducted', 'Completed', 'Draft']),
-  query('job_type').optional().isIn(['Full Time', 'Internship', 'PPO', 'Dual (Intern + FT)']),
 ]);
 
 const validateBranchArray = validate([
