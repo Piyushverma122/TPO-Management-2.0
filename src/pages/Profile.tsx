@@ -84,11 +84,20 @@ export const ProfilePage: React.FC = () => {
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [updatingPass, setUpdatingPass] = useState(false);
 
-  // Fetch Live Logged-in Student Profile from Backend API
+  const isStudent = user?.role === 'student';
+
+  // Fetch Live Logged-in Profile from Backend API
   const fetchStudentProfile = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
+      if (!isStudent) {
+        setPhone(user?.phone || '+91 98765 43210');
+        setAvatarUrl(user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120');
+        setLoading(false);
+        return;
+      }
+
       // Search for the logged-in student record matching user.id or email
       const [studentsRes, appRes] = await Promise.all([
         getStudents({ limit: 100 }),
@@ -98,40 +107,40 @@ export const ProfilePage: React.FC = () => {
       const studentList = studentsRes.data?.students || [];
       const currentStudent = studentList.find(
         (s: any) => s.user_id === user?.id || s.users?.email === user?.email
-      ) || studentList[0];
-
-      if (!currentStudent) {
-        throw new Error('Student record not found for logged in account.');
-      }
-
-      setStudentRecord(currentStudent);
-      setApplications(appRes.data?.applications || []);
-
-      // Populate Editable Fields
-      setPhone(currentStudent.phone || currentStudent.users?.phone || '');
-      setAddress(currentStudent.address || '');
-      setCity(currentStudent.city || '');
-      setState(currentStudent.state || '');
-      setPincode(currentStudent.pincode || '');
-      setSkills(
-        Array.isArray(currentStudent.skills)
-          ? currentStudent.skills.join(', ')
-          : currentStudent.skills || 'Python, C++, SQL, React'
       );
-      setLanguages(currentStudent.languages || 'English, Hindi');
-      setProjects(currentStudent.projects || 'Smart Placement Management Portal, ATS Resume Screener');
-      setLinkedinUrl(currentStudent.linkedin_url || '');
-      setGithubUrl(currentStudent.github_url || '');
-      setPortfolioUrl(currentStudent.portfolio_url || '');
-      setAvatarUrl(currentStudent.users?.avatar_url || '');
+
+      if (currentStudent) {
+        setStudentRecord(currentStudent);
+        setApplications(appRes.data?.applications || []);
+
+        // Populate Editable Fields
+        setPhone(currentStudent.phone || currentStudent.users?.phone || '');
+        setAddress(currentStudent.address || '');
+        setCity(currentStudent.city || '');
+        setState(currentStudent.state || '');
+        setPincode(currentStudent.pincode || '');
+        setSkills(
+          Array.isArray(currentStudent.skills)
+            ? currentStudent.skills.join(', ')
+            : currentStudent.skills || 'Python, C++, SQL, React'
+        );
+        setLanguages(currentStudent.languages || 'English, Hindi');
+        setProjects(currentStudent.projects || 'Smart Placement Management Portal, ATS Resume Screener');
+        setLinkedinUrl(currentStudent.linkedin_url || '');
+        setGithubUrl(currentStudent.github_url || '');
+        setPortfolioUrl(currentStudent.portfolio_url || '');
+        setAvatarUrl(currentStudent.users?.avatar_url || '');
+      } else {
+        setStudentRecord(null);
+      }
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Failed to fetch student profile.';
+      const msg = err.response?.data?.message || err.message || 'Failed to fetch profile details.';
       setErrorMsg(msg);
       toastError('Profile Fetch Error', msg);
     } finally {
       setLoading(false);
     }
-  }, [user, toastError]);
+  }, [user, isStudent, toastError]);
 
   useEffect(() => {
     fetchStudentProfile();
@@ -218,15 +227,17 @@ export const ProfilePage: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <Breadcrumb items={[{ label: 'Student Profile' }]} />
+          <Breadcrumb items={[{ label: !isStudent ? 'Admin Profile & Settings' : 'Student Profile' }]} />
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
-            Student Profile Portal
+            {!isStudent ? 'TPO Administrative Profile' : 'Student Candidate Profile'}
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              Live Supabase Record
+              {!isStudent ? (user?.role ? user.role.replace('_', ' ').toUpperCase() : 'TPO SUPER ADMIN') : 'Candidate Record'}
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Manage your personal details, academic credentials, professional links, and placement status.
+            {!isStudent
+              ? 'Manage official TPO administrator details, system access credentials, and contact information.'
+              : 'Manage your personal details, academic credentials, professional links, and placement status.'}
           </p>
         </div>
 
@@ -268,7 +279,7 @@ export const ProfilePage: React.FC = () => {
       {errorMsg ? (
         <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
           <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Candidate Profile</h3>
+          <h3 className="text-lg font-bold text-white">Error Loading Profile</h3>
           <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchStudentProfile}>
             Retry Loading Profile
@@ -279,6 +290,76 @@ export const ProfilePage: React.FC = () => {
         <div className="space-y-6">
           <div className="h-44 bg-[#162032] rounded-2xl animate-pulse border border-[#202D42]" />
           <div className="h-96 bg-[#162032] rounded-2xl animate-pulse border border-[#202D42]" />
+        </div>
+      ) : !isStudent ? (
+        /* TPO ADMINISTRATOR PROFILE VIEW */
+        <div className="space-y-6">
+          <Card className="p-6 bg-gradient-to-r from-[#162032] via-[#101726] to-[#162032] border-[#202D42]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <Avatar
+                  src={avatarUrl || user?.avatar}
+                  name={user?.name || 'Dr. James Anderson'}
+                  size="lg"
+                  className="w-20 h-20 border-2 border-[#A3E635] shadow-lg shrink-0"
+                />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-2xl font-extrabold text-white">
+                      {user?.name || 'Dr. James Anderson'}
+                    </h2>
+                    <span className="bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 text-xs font-extrabold px-2.5 py-0.5 rounded-full uppercase">
+                      {user?.role ? user.role.replace('_', ' ') : 'TPO SUPER ADMIN'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#A3E635] font-semibold">
+                    Head of Training & Placement Cell • Training & Placement Office
+                  </p>
+                  <p className="text-xs text-[#94A3B8] flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5" /> {user?.email || 'tpo.admin@college.edu'}
+                    <span className="text-[#64748B]">•</span>
+                    <Phone className="w-3.5 h-3.5" /> {phone || '+91 98765 43210'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 md:w-72 space-y-1">
+                <span className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider block">Access Privileges</span>
+                <span className="text-xs font-extrabold text-white block">Full System Control & Role Management</span>
+                <span className="text-[11px] text-[#A3E635] font-semibold block">Active TPO Session</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* OFFICIAL TPO INFORMATION CARD */}
+          <Card className="p-6 space-y-5 border-[#202D42]">
+            <h3 className="text-base font-extrabold text-white border-b border-[#202D42] pb-3">Official TPO Profile Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <Input label="Full Name" value={user?.name || 'Dr. James Anderson'} disabled />
+              <Input label="Official Email Address" value={user?.email || 'tpo.admin@college.edu'} disabled />
+              <Input
+                label="Contact Phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={!isEditing}
+                placeholder="+91 98765 43210"
+              />
+              <Input label="Designation" value="Head of Training & Placement Cell" disabled />
+              <Input label="Department / Office" value="Training & Placement Office (TPO Cell)" disabled />
+              <Input label="Office Location" value="Main Administrative Block, Room 204" disabled />
+            </div>
+
+            {isEditing && (
+              <div className="pt-4 flex justify-end gap-3 border-t border-[#202D42]">
+                <Button variant="secondary" size="md" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="md" onClick={() => { setIsEditing(false); success('Profile Saved', 'TPO Official profile updated.'); }}>
+                  Save Official Profile
+                </Button>
+              </div>
+            )}
+          </Card>
         </div>
       ) : (
         <>

@@ -261,9 +261,9 @@ export const Offers: React.FC = () => {
       </div>
 
       {/* SEARCH & FILTERS BAR */}
-      <Card className="p-5 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-          <div className="lg:col-span-2">
+      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          <div className="flex-1 w-full min-w-0">
             <SearchInput
               placeholder="Search by company, job role, or package..."
               value={searchQuery}
@@ -271,27 +271,44 @@ export const Offers: React.FC = () => {
             />
           </div>
 
-          <Dropdown
-            label="Filter by Status:"
-            options={[
-              { label: 'All Statuses', value: 'All' },
-              { label: 'Offer Released', value: 'Offer Released' },
-              { label: 'Accepted', value: 'Accepted' },
-              { label: 'Rejected', value: 'Rejected' },
-            ]}
-            value={selectedStatus}
-            onChange={setSelectedStatus}
-          />
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
+            <Dropdown
+              className="w-full sm:w-44 shrink-0"
+              options={[
+                { label: 'All Statuses', value: 'All' },
+                { label: 'Offer Released', value: 'Offer Released' },
+                { label: 'Accepted', value: 'Accepted' },
+                { label: 'Rejected', value: 'Rejected' },
+              ]}
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+            />
 
-          <Dropdown
-            label="Sort Offers:"
-            options={[
-              { label: 'Latest Offer', value: 'Latest Offer' },
-              { label: 'Highest Package', value: 'Highest Package' },
-            ]}
-            value={selectedSort}
-            onChange={setSelectedSort}
-          />
+            <Dropdown
+              className="w-full sm:w-40 shrink-0"
+              options={[
+                { label: 'Latest Offer', value: 'Latest Offer' },
+                { label: 'Highest Package', value: 'Highest Package' },
+              ]}
+              value={selectedSort}
+              onChange={setSelectedSort}
+            />
+
+            {(selectedStatus !== 'All' || selectedSort !== 'Latest Offer' || searchQuery !== '') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedStatus('All');
+                  setSelectedSort('Latest Offer');
+                }}
+                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
         </div>
       </Card>
 

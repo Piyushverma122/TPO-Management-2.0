@@ -148,8 +148,39 @@ export const Dashboard: React.FC = () => {
   const recentDrivesList = adminData?.upcomingDrives || [];
   const recentActivitiesList = adminData?.recentActivities || [];
 
+  // Motion Animation Variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.04,
+      },
+    },
+  };
+
+  const cardItemVariants = {
+    hidden: { opacity: 0, y: 18, scale: 0.98 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 280,
+        damping: 22,
+      },
+    },
+  };
+
   return (
-    <div className="space-y-6 pb-10">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6 pb-10"
+    >
       {/* Top Welcome Title Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -161,7 +192,7 @@ export const Dashboard: React.FC = () => {
               : (user?.role as string) === 'faculty'
               ? 'Faculty Academic Dashboard'
               : 'TPO Admin Dashboard'}
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 shadow-[0_0_10px_rgba(163,230,53,0.2)]">
               Live Session
             </span>
           </h1>
@@ -197,7 +228,11 @@ export const Dashboard: React.FC = () => {
 
       {/* Error Message Banner if API fails */}
       {errorMsg && (
-        <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between text-rose-300 text-sm font-semibold">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between text-rose-300 text-sm font-semibold"
+        >
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
             <span>{errorMsg}</span>
@@ -205,21 +240,25 @@ export const Dashboard: React.FC = () => {
           <Button variant="secondary" size="sm" onClick={fetchDashboardData}>
             Retry
           </Button>
-        </div>
+        </motion.div>
       )}
 
       {/* TOP 4 STATISTIC METRIC CARDS ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+      >
         {/* Stat 1: Total Students */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/30 transition-all duration-300 shadow-xl"
+          variants={cardItemVariants}
+          whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl hover:shadow-[0_12px_25px_rgba(0,0,0,0.3)] group"
         >
           <div className="flex items-center justify-between text-[#94A3B8]">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-              <Users className="w-4 h-4 text-[#94A3B8]" />
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider group-hover:text-white transition-colors">
+              <Users className="w-4 h-4 text-[#A3E635]" />
               <span>Total Students</span>
             </div>
           </div>
@@ -249,14 +288,13 @@ export const Dashboard: React.FC = () => {
 
         {/* Stat 2: Companies Visited */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/30 transition-all duration-300 shadow-xl"
+          variants={cardItemVariants}
+          whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl hover:shadow-[0_12px_25px_rgba(0,0,0,0.3)] group"
         >
           <div className="flex items-center justify-between text-[#94A3B8]">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-              <Building2 className="w-4 h-4 text-[#94A3B8]" />
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider group-hover:text-white transition-colors">
+              <Building2 className="w-4 h-4 text-sky-400" />
               <span>Companies Visited</span>
             </div>
           </div>
@@ -267,7 +305,7 @@ export const Dashboard: React.FC = () => {
           <div className="h-14 mt-3">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={(adminData as any)?.placementTrend || []}>
-                <Bar dataKey="placed" fill="#A3E635" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="placed" fill="#38BDF8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -280,10 +318,9 @@ export const Dashboard: React.FC = () => {
 
         {/* Stat 3: HIGHLIGHTED NEON GREEN CARD - Placed Students */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="bg-[#A3E635] text-[#0B0F17] rounded-2xl p-5 shadow-[0_0_30px_rgba(163,230,53,0.35)] relative overflow-hidden group"
+          variants={cardItemVariants}
+          whileHover={{ y: -5, scale: 1.02, transition: { duration: 0.2 } }}
+          className="bg-[#A3E635] text-[#0B0F17] rounded-2xl p-5 shadow-[0_0_30px_rgba(163,230,53,0.35)] relative overflow-hidden group cursor-pointer"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#0B0F17]/80">
@@ -293,7 +330,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="text-3xl font-extrabold text-[#0B0F17] mt-2 tracking-tight flex items-center justify-between">
             <span>{loading ? <div className="h-8 w-24 bg-[#0B0F17]/20 animate-pulse rounded-md" /> : placedCount.toLocaleString()}</span>
-            <Trophy className="w-7 h-7 text-[#0B0F17]/30" />
+            <Trophy className="w-7 h-7 text-[#0B0F17]/30 group-hover:rotate-12 transition-transform duration-300" />
           </div>
 
           <div className="h-14 mt-3">
@@ -312,14 +349,13 @@ export const Dashboard: React.FC = () => {
 
         {/* Stat 4: Upcoming Drives */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/30 transition-all duration-300 shadow-xl"
+          variants={cardItemVariants}
+          whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl hover:shadow-[0_12px_25px_rgba(0,0,0,0.3)] group"
         >
           <div className="flex items-center justify-between text-[#94A3B8]">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-              <Calendar className="w-4 h-4 text-[#94A3B8]" />
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider group-hover:text-white transition-colors">
+              <Calendar className="w-4 h-4 text-purple-400" />
               <span>Upcoming Drives</span>
             </div>
           </div>
@@ -328,57 +364,53 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="mt-4 flex items-center gap-1.5 overflow-x-auto pt-1">
-            <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center font-bold text-[11px] text-black shrink-0">
+            <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center font-bold text-[11px] text-black shrink-0 shadow-sm">
               G
             </div>
-            <div className="w-6 h-6 rounded-md bg-[#FF9900] flex items-center justify-center font-bold text-[11px] text-black shrink-0">
+            <div className="w-6 h-6 rounded-md bg-[#FF9900] flex items-center justify-center font-bold text-[11px] text-black shrink-0 shadow-sm">
               a
             </div>
-            <div className="w-6 h-6 rounded-md bg-[#006699] flex items-center justify-center font-bold text-[11px] text-white shrink-0">
+            <div className="w-6 h-6 rounded-md bg-[#006699] flex items-center justify-center font-bold text-[11px] text-white shrink-0 shadow-sm">
               EY
             </div>
-            <div className="w-6 h-6 rounded-md bg-[#1877F2] flex items-center justify-center font-bold text-[11px] text-white shrink-0">
+            <div className="w-6 h-6 rounded-md bg-[#1877F2] flex items-center justify-center font-bold text-[11px] text-white shrink-0 shadow-sm">
               ∞
             </div>
-            <div className="w-6 h-6 rounded-md bg-rose-600 flex items-center justify-center font-bold text-[11px] text-white shrink-0">
+            <div className="w-6 h-6 rounded-md bg-rose-600 flex items-center justify-center font-bold text-[11px] text-white shrink-0 shadow-sm">
               P
             </div>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* MAIN TWO-COLUMN SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT MAIN COLUMN (7 cols): Drive Analytics & Records + Monthly Graph */}
         <div className="lg:col-span-7 space-y-6">
-          <Card className="p-5 space-y-4">
+          <Card className="p-5 space-y-4 border-[#202D42] hover:border-[#A3E635]/30 transition-colors duration-300">
             <div className="flex items-center justify-between border-b border-[#202D42] pb-4">
               <h2 className="text-base font-extrabold text-white">Drive Analytics & Records</h2>
+              
+              {/* Smooth Sliding Pill Tab Switcher */}
               <div className="flex items-center gap-1 bg-[#101726] border border-[#202D42] p-1 rounded-xl">
-                <button
-                  onClick={() => setDriveFilter('Recent')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                    driveFilter === 'Recent' ? 'bg-[#A3E635] text-[#0B0F17]' : 'text-[#94A3B8] hover:text-white'
-                  }`}
-                >
-                  Recent
-                </button>
-                <button
-                  onClick={() => setDriveFilter('All')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                    driveFilter === 'All' ? 'bg-[#A3E635] text-[#0B0F17]' : 'text-[#94A3B8] hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setDriveFilter('Interviews')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                    driveFilter === 'Interviews' ? 'bg-[#A3E635] text-[#0B0F17]' : 'text-[#94A3B8] hover:text-white'
-                  }`}
-                >
-                  Interviews
-                </button>
+                {(['Recent', 'All', 'Interviews'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setDriveFilter(filter)}
+                    className={`relative px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors duration-200 cursor-pointer ${
+                      driveFilter === filter ? 'text-[#0B0F17]' : 'text-[#94A3B8] hover:text-white'
+                    }`}
+                  >
+                    {driveFilter === filter && (
+                      <motion.div
+                        layoutId="activeDriveFilterTab"
+                        className="absolute inset-0 bg-[#A3E635] rounded-lg shadow-[0_0_12px_rgba(163,230,53,0.4)]"
+                        transition={{ type: 'spring' as const, stiffness: 380, damping: 28 }}
+                      />
+                    )}
+                    <span className="relative z-10">{filter}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -411,7 +443,7 @@ export const Dashboard: React.FC = () => {
                   </TableRow>
                 ) : (
                   recentDrivesList.map((drive: any, idx: number) => (
-                    <TableRow key={drive.id || idx}>
+                    <TableRow key={drive.id || idx} className="hover:bg-[#162032]/60 transition-colors">
                       <TableCell className="font-bold text-[#A3E635]">{drive.drive_code || `D-${3101 + idx}`}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
@@ -431,7 +463,7 @@ export const Dashboard: React.FC = () => {
                         {drive.ctc ? `₹${drive.ctc} LPA` : '₹12 LPA'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <button className="text-[#94A3B8] hover:text-white p-1 rounded-lg hover:bg-[#202D42] transition-colors">
+                        <button className="text-[#94A3B8] hover:text-white p-1.5 rounded-lg hover:bg-[#202D42] transition-colors cursor-pointer">
                           <MoreVertical className="w-4 h-4" />
                         </button>
                       </TableCell>
@@ -445,7 +477,7 @@ export const Dashboard: React.FC = () => {
             <div className="pt-4 border-t border-[#202D42]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-white">Monthly Placement Graph</h3>
-                <span className="text-xs text-[#A3E635] font-semibold flex items-center gap-1">
+                <span className="text-xs text-[#A3E635] font-semibold flex items-center gap-1 bg-[#A3E635]/10 border border-[#A3E635]/20 px-2.5 py-0.5 rounded-full">
                   <TrendingUp className="w-3.5 h-3.5" /> +18.4% YoY Growth
                 </span>
               </div>
@@ -467,6 +499,7 @@ export const Dashboard: React.FC = () => {
                         borderRadius: '12px',
                         color: '#FFFFFF',
                         fontSize: '12px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
                       }}
                     />
                     <Area
@@ -486,7 +519,7 @@ export const Dashboard: React.FC = () => {
 
         {/* RIGHT COLUMN (5 cols): Insights & Top Recruiters + Recent Activity Timeline */}
         <div className="lg:col-span-5 space-y-6">
-          <Card className="p-5 space-y-5">
+          <Card className="p-5 space-y-5 border-[#202D42] hover:border-[#A3E635]/30 transition-colors duration-300">
             <h2 className="text-base font-extrabold text-white border-b border-[#202D42] pb-3">
               Insights & Top Recruiters
             </h2>
@@ -498,7 +531,10 @@ export const Dashboard: React.FC = () => {
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                 {/* Branch Wise Placement Donut Card */}
-                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2">
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2 hover:border-[#A3E635]/30 transition-all"
+                >
                   <span className="text-[11px] font-bold text-white block">Branch Wise Placement</span>
                   <div className="h-28 flex items-center justify-center relative">
                     {((adminData as any)?.branchDistribution || []).length === 0 ? (
@@ -529,10 +565,13 @@ export const Dashboard: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Highest Package Card */}
-                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2 flex flex-col justify-between hover:border-[#A3E635]/30 transition-all"
+                >
                   <div>
                     <span className="text-[11px] font-bold text-[#94A3B8] block">Highest Package</span>
                     <span className="text-xl font-extrabold text-white">₹45.0 LPA</span>
@@ -549,7 +588,7 @@ export const Dashboard: React.FC = () => {
                     <span>Jun</span>
                     <span>Dec</span>
                   </div>
-                </div>
+                </motion.div>
               </div>
             </div>
 
@@ -571,30 +610,26 @@ export const Dashboard: React.FC = () => {
                 Top Recruiters
               </span>
               <div className="grid grid-cols-4 gap-2">
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-white hover:border-[#A3E635]/40 transition-colors">
-                  amazon
-                </div>
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-white hover:border-[#A3E635]/40 transition-colors">
-                  IBM
-                </div>
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-white hover:border-[#A3E635]/40 transition-colors">
-                  Deloitte.
-                </div>
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-rose-400 hover:border-[#A3E635]/40 transition-colors">
-                  P&G
-                </div>
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-sky-400 hover:border-[#A3E635]/40 transition-colors">
-                  KPMG
-                </div>
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-amber-400 hover:border-[#A3E635]/40 transition-colors">
-                  EY
-                </div>
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-[#A3E635] hover:border-[#A3E635]/40 transition-colors">
-                  P&G
-                </div>
-                <div className="bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-rose-500 hover:border-[#A3E635]/40 transition-colors">
-                  ORACLE
-                </div>
+                {[
+                  { name: 'amazon', color: 'text-white' },
+                  { name: 'IBM', color: 'text-white' },
+                  { name: 'Deloitte.', color: 'text-white' },
+                  { name: 'P&G', color: 'text-rose-400' },
+                  { name: 'KPMG', color: 'text-sky-400' },
+                  { name: 'EY', color: 'text-amber-400' },
+                  { name: 'Google', color: 'text-[#A3E635]' },
+                  { name: 'ORACLE', color: 'text-rose-500' },
+                ].map((rec, idx) => (
+                  <motion.div
+                    key={idx}
+                    whileHover={{ scale: 1.06, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: 'spring' as const, stiffness: 350, damping: 20 }}
+                    className={`bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs ${rec.color} hover:border-[#A3E635]/40 hover:bg-[#162032] transition-colors cursor-pointer shadow-sm`}
+                  >
+                    {rec.name}
+                  </motion.div>
+                ))}
               </div>
             </div>
 
@@ -606,7 +641,7 @@ export const Dashboard: React.FC = () => {
               <div className="space-y-3">
                 {recentActivitiesList.length === 0 ? (
                   <>
-                    <div className="flex items-start gap-3 text-xs">
+                    <motion.div whileHover={{ x: 3 }} className="flex items-start gap-3 text-xs cursor-pointer">
                       <div className="w-6 h-6 rounded-full bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center shrink-0 mt-0.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                       </div>
@@ -614,8 +649,8 @@ export const Dashboard: React.FC = () => {
                         <p className="font-bold text-white leading-snug">Amazon declared results, 10 placed</p>
                         <span className="text-[10px] text-[#64748B]">2 hours ago</span>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-xs">
+                    </motion.div>
+                    <motion.div whileHover={{ x: 3 }} className="flex items-start gap-3 text-xs cursor-pointer">
                       <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
                         <Calendar className="w-3.5 h-3.5" />
                       </div>
@@ -623,11 +658,11 @@ export const Dashboard: React.FC = () => {
                         <p className="font-bold text-white leading-snug">IBM drive rescheduled to 5th Nov</p>
                         <span className="text-[10px] text-[#64748B]">Yesterday</span>
                       </div>
-                    </div>
+                    </motion.div>
                   </>
                 ) : (
                   recentActivitiesList.map((act: any, idx: number) => (
-                    <div key={act.id || idx} className="flex items-start gap-3 text-xs">
+                    <motion.div key={act.id || idx} whileHover={{ x: 3 }} className="flex items-start gap-3 text-xs cursor-pointer">
                       <div className="w-6 h-6 rounded-full bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center shrink-0 mt-0.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                       </div>
@@ -637,7 +672,7 @@ export const Dashboard: React.FC = () => {
                           {act.created_at ? new Date(act.created_at).toLocaleTimeString() : 'Recently'}
                         </span>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
@@ -681,6 +716,6 @@ export const Dashboard: React.FC = () => {
           </div>
         </form>
       </Modal>
-    </div>
+    </motion.div>
   );
 };

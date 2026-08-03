@@ -67,7 +67,7 @@ export const SettingsPage: React.FC = () => {
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
 
   // Settings State
-  const [themeMode, setThemeMode] = useState<'dark' | 'light' | 'contrast'>('dark');
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [accentColor, setAccentColor] = useState('lime');
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [inAppBadges, setInAppBadges] = useState(true);
@@ -281,41 +281,29 @@ export const SettingsPage: React.FC = () => {
             <h3 className="text-sm font-extrabold text-white">Theme & Visual Accents</h3>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setThemeMode('dark')}
-              className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${
+              className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-2 transition-all cursor-pointer ${
                 themeMode === 'dark'
-                  ? 'bg-[#162032] border-[#A3E635] text-[#A3E635]'
-                  : 'bg-[#101726] border-[#202D42] text-[#94A3B8]'
+                  ? 'bg-[#162032] border-[#A3E635] text-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]'
+                  : 'bg-[#101726] border-[#202D42] text-[#94A3B8] hover:text-white hover:border-[#2A3B57]'
               }`}
             >
-              <Moon className="w-4 h-4" />
-              Dark
+              <Moon className="w-5 h-5" />
+              Dark Mode
             </button>
 
             <button
               onClick={() => setThemeMode('light')}
-              className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${
+              className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-2 transition-all cursor-pointer ${
                 themeMode === 'light'
-                  ? 'bg-[#162032] border-[#A3E635] text-[#A3E635]'
-                  : 'bg-[#101726] border-[#202D42] text-[#94A3B8]'
+                  ? 'bg-[#162032] border-[#A3E635] text-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]'
+                  : 'bg-[#101726] border-[#202D42] text-[#94A3B8] hover:text-white hover:border-[#2A3B57]'
               }`}
             >
-              <Sun className="w-4 h-4" />
-              Light
-            </button>
-
-            <button
-              onClick={() => setThemeMode('contrast')}
-              className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${
-                themeMode === 'contrast'
-                  ? 'bg-[#162032] border-[#A3E635] text-[#A3E635]'
-                  : 'bg-[#101726] border-[#202D42] text-[#94A3B8]'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              Contrast
+              <Sun className="w-5 h-5" />
+              Light Mode
             </button>
           </div>
 

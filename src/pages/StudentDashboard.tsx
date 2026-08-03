@@ -214,59 +214,71 @@ export const StudentDashboard: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* 8 OVERVIEW METRIC CARDS GRID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
+          {/* 4 OVERVIEW METRIC CARDS GRID */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          >
             {/* 1. Profile Completion % */}
-            <Card className="p-4 flex items-center justify-between border-[#202D42]">
-              <div>
-                <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Profile Completion</span>
-                <span className="text-2xl font-extrabold text-white mt-1 block">{profileCompletion}%</span>
-                <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Live Profile Status</span>
-              </div>
-              <div className="w-11 h-11 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-lg">
-                <UserCheck className="w-5 h-5" />
-              </div>
-            </Card>
+            <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
+              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-colors shadow-lg group">
+                <div>
+                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Profile Completion</span>
+                  <span className="text-2xl font-extrabold text-white mt-1 block">{profileCompletion}%</span>
+                  <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Live Profile Status</span>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+              </Card>
+            </motion.div>
 
             {/* 2. Resume Status */}
-            <Card className="p-4 flex items-center justify-between border-[#202D42]">
-              <div>
-                <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Resume Status</span>
-                <span className="text-lg font-extrabold text-white mt-1 block">
-                  {studentMetrics?.activeResume ? 'Uploaded (Active)' : 'Action Needed'}
-                </span>
-                <span className="text-[11px] text-sky-400 font-semibold mt-1 block">ATS Optimized</span>
-              </div>
-              <div className="w-11 h-11 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-lg">
-                <FileText className="w-5 h-5" />
-              </div>
-            </Card>
+            <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
+              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-sky-500/40 transition-colors shadow-lg group">
+                <div>
+                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Resume Status</span>
+                  <span className="text-lg font-extrabold text-white mt-1 block">
+                    {studentMetrics?.activeResume ? 'Uploaded (Active)' : 'Action Needed'}
+                  </span>
+                  <span className="text-[11px] text-sky-400 font-semibold mt-1 block">ATS Optimized</span>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                  <FileText className="w-5 h-5" />
+                </div>
+              </Card>
+            </motion.div>
 
             {/* 3. My Applications */}
-            <Card className="p-4 flex items-center justify-between border-[#202D42]">
-              <div>
-                <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">My Applications</span>
-                <span className="text-2xl font-extrabold text-white mt-1 block">{applicationStats.total}</span>
-                <span className="text-[11px] text-amber-400 font-semibold mt-1 block">{applicationStats.pending} Pending Review</span>
-              </div>
-              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-lg">
-                <Briefcase className="w-5 h-5" />
-              </div>
-            </Card>
+            <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
+              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-amber-500/40 transition-colors shadow-lg group">
+                <div>
+                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">My Applications</span>
+                  <span className="text-2xl font-extrabold text-white mt-1 block">{applicationStats.total}</span>
+                  <span className="text-[11px] text-[#fbbf24] font-semibold mt-1 block">{applicationStats.pending} Pending Review</span>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+              </Card>
+            </motion.div>
 
             {/* 4. Offers Received */}
-            <Card className="p-4 flex items-center justify-between border-[#202D42]">
-              <div>
-                <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Offers Received</span>
-                <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">{offerStats.totalOffers}</span>
-                <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Highest: {offerStats.highestPackage}</span>
-              </div>
-              <div className="w-11 h-11 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-lg">
-                <Award className="w-5 h-5" />
-              </div>
-            </Card>
-          </div>
+            <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
+              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-colors shadow-lg group">
+                <div>
+                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Offers Received</span>
+                  <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">{offerStats.totalOffers}</span>
+                  <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Highest: {offerStats.highestPackage}</span>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                  <Award className="w-5 h-5" />
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
 
           {/* MAIN DASHBOARD CONTENT GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

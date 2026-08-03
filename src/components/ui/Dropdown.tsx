@@ -75,9 +75,9 @@ export const Dropdown: React.FC<DropdownProps> = ({
   }, [isOpen, highlightedIndex, options, onChange]);
 
   return (
-    <div className={clsx('w-full space-y-1.5 relative select-none', className)} ref={dropdownRef}>
+    <div className={clsx('w-full relative select-none', className)} ref={dropdownRef}>
       {label && (
-        <label className="block text-xs font-semibold text-[#94A3B8] tracking-wide uppercase">
+        <label className="block text-xs font-semibold text-[#94A3B8] tracking-wide uppercase mb-1.5">
           {label}
         </label>
       )}
@@ -87,17 +87,17 @@ export const Dropdown: React.FC<DropdownProps> = ({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={clsx(
-          'w-full bg-[#101726]/80 border rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:outline-none',
+          'w-full h-10 bg-[#101726]/80 border rounded-xl px-3.5 text-xs text-left flex items-center justify-between gap-2 shrink-0 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:outline-none cursor-pointer',
           isOpen
             ? 'border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]'
             : 'border-[#202D42] hover:border-[#2A3B57]',
           error && 'border-rose-500'
         )}
       >
-        <span className={selectedOption ? 'text-white font-medium' : 'text-[#64748B]'}>
+        <span className={clsx('truncate flex-1 min-w-0', selectedOption ? 'text-white font-semibold' : 'text-[#64748B]')}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown className={clsx('w-4 h-4 text-[#94A3B8] transition-transform duration-200', isOpen && 'rotate-180 text-[#A3E635]')} />
+        <ChevronDown className={clsx('w-4 h-4 text-[#94A3B8] shrink-0 transition-transform duration-200', isOpen && 'rotate-180 text-[#A3E635]')} />
       </button>
 
       {/* Options Panel */}
@@ -206,9 +206,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   const filteredOptions = options.filter((opt) => opt.label.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className={clsx('w-full space-y-1.5 relative select-none', className)} ref={dropdownRef}>
+    <div className={clsx('w-full relative select-none', className)} ref={dropdownRef}>
       {label && (
-        <label className="block text-xs font-semibold text-[#94A3B8] tracking-wide uppercase">
+        <label className="block text-xs font-semibold text-[#94A3B8] tracking-wide uppercase mb-1.5">
           {label}
         </label>
       )}

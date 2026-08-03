@@ -169,7 +169,7 @@ export const Eligibility: React.FC = () => {
       </div>
 
       {/* TOP CRITERIA FORM PANEL */}
-      <Card className="p-6 space-y-5 border-[#A3E635]/40 shadow-[0_0_25px_rgba(163,230,53,0.15)] relative overflow-hidden">
+      <Card className="p-6 space-y-5 border-[#A3E635]/40 shadow-[0_0_25px_rgba(163,230,53,0.15)] relative">
         
         {/* Row 1: Select Company & Select Branch */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">

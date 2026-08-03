@@ -124,7 +124,6 @@ export const MASTER_SIDEBAR_CONFIG: SidebarNavItem[] = [
     route: '/notifications',
     icon: Bell,
     module: Module.NOTIFICATIONS,
-    badge: '5',
   },
   {
     id: 'users',

@@ -22,6 +22,7 @@ import { Reports } from './pages/Reports';
 import { Notifications } from './pages/Notifications';
 import { ProfilePage } from './pages/Profile';
 import { SettingsPage } from './pages/Settings';
+import { UsersPage } from './pages/Users';
 import { NotFound } from './pages/NotFound';
 import { Unauthorized } from './pages/Unauthorized';
 import { MainLayout } from './components/layout/MainLayout';
@@ -255,7 +256,7 @@ export const AppContent: React.FC = () => {
           path="/users"
           element={
             <ProtectedRoute module={Module.USERS}>
-              <SettingsPage />
+              <UsersPage />
             </ProtectedRoute>
           }
         />

@@ -9,7 +9,7 @@ const env = require('../config/env');
  * @param {string} [loginUrl] - Optional login page URL
  */
 const sendStudentWelcomeEmail = async (toEmail, studentName, password, loginUrl) => {
-  const appUrl = loginUrl || env.clientUrl || 'http://localhost:5173';
+  const appUrl = loginUrl || env.clientUrl || 'http://localhost:3000';
   const loginLink = `${appUrl}/login`;
 
   const subject = 'Welcome to TPO Management System — Your Login Credentials';

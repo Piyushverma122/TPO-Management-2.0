@@ -18,9 +18,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
 
   const sidebarContent = (
     <div className="h-full flex flex-col justify-between select-none">
-      <div>
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Brand Header */}
-        <div className="p-5 flex items-center justify-between border-b border-[#202D42]">
+        <div className="h-16 px-5 flex items-center justify-between border-b border-[#202D42] shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#A3E635] text-[#0B0F17] flex items-center justify-center font-extrabold text-xl shadow-[0_0_15px_rgba(163,230,53,0.5)]">
               S
@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
         </div>
 
         {/* Dynamic Nav Links List */}
-        <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)]">
+        <nav className="p-3 space-y-1 overflow-y-auto flex-1">
           {dynamicNavItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -110,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
       </div>
 
       {/* User Profile Footer & Logout */}
-      <div className="p-4 border-t border-[#202D42] bg-[#0B0F17]/50 space-y-2">
+      <div className="p-4 border-t border-[#202D42] bg-[#0B0F17]/50 space-y-2 shrink-0">
         <div className="flex items-center justify-between">
           <NavLink to="/profile" onClick={onCloseMobile} className="flex items-center gap-2.5 overflow-hidden group">
             <img

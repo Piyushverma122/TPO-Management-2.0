@@ -31,6 +31,18 @@ export const ResetPasswordPage: React.FC = () => {
         const rawParams = hash ? hash.substring(1) : search ? search.substring(1) : '';
         const params = new URLSearchParams(rawParams);
 
+        const error = params.get('error');
+        const errorCode = params.get('error_code');
+        const errorDesc = params.get('error_description');
+
+        if (error || errorCode || errorDesc) {
+          const formattedMsg = (errorDesc || 'Email link is invalid or has expired. Please request a new password reset link.')
+            .replace(/\+/g, ' ');
+          setErrorMessage(formattedMsg);
+          setIsValidToken(false);
+          return;
+        }
+
         const type = params.get('type');
         const token = params.get('access_token') || params.get('token') || params.get('refresh_token');
 

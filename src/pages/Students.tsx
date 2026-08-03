@@ -406,14 +406,45 @@ export const Students: React.FC = () => {
     }
   };
 
+  // Motion Animation Variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.04,
+      },
+    },
+  };
+
+  const cardItemVariants = {
+    hidden: { opacity: 0, y: 18, scale: 0.98 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 280,
+        damping: 22,
+      },
+    },
+  };
+
   return (
-    <div className="space-y-6 pb-12 relative font-sans">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6 pb-12 relative font-sans"
+    >
       {/* Top Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
             Student Directory
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 shadow-[0_0_10px_rgba(163,230,53,0.2)]">
               {totalRecords} Total Registered
             </span>
           </h1>
@@ -449,65 +480,79 @@ export const Students: React.FC = () => {
       </div>
 
       {/* TOP 4 STATISTIC METRIC CARDS ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <Card className="p-5 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Total Enrolled</span>
-            <span className="text-2xl font-extrabold text-white mt-1 block">{totalRecords}</span>
-            <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">+12% batch growth</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-xl">
-            <Users className="w-6 h-6" />
-          </div>
-        </Card>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+      >
+        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
+          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl group">
+            <div>
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Total Enrolled</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">{totalRecords}</span>
+              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">+12% batch growth</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
+              <Users className="w-6 h-6" />
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="p-5 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Eligible Candidates</span>
-            <span className="text-2xl font-extrabold text-white mt-1 block">{Math.round(totalRecords * 0.85)}</span>
-            <span className="text-[11px] text-[#38BDF8] font-semibold mt-1 block">85% meets 7.0+ CGPA</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xl">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-        </Card>
+        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
+          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-sky-500/40 transition-all duration-300 shadow-xl group">
+            <div>
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Eligible Candidates</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">{Math.round(totalRecords * 0.85)}</span>
+              <span className="text-[11px] text-[#38BDF8] font-semibold mt-1 block">85% meets 7.0+ CGPA</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="p-5 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Successfully Placed</span>
-            <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">{Math.round(totalRecords * 0.72)}</span>
-            <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">72% placement rate</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/20 text-[#A3E635] border border-[#A3E635]/40 flex items-center justify-center font-bold text-xl">
-            <Trophy className="w-6 h-6" />
-          </div>
-        </Card>
+        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
+          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl group">
+            <div>
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Successfully Placed</span>
+              <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">{Math.round(totalRecords * 0.72)}</span>
+              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">72% placement rate</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/20 text-[#A3E635] border border-[#A3E635]/40 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
+              <Trophy className="w-6 h-6" />
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="p-5 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Opted Out / Unplaced</span>
-            <span className="text-2xl font-extrabold text-rose-400 mt-1 block">{Math.round(totalRecords * 0.15)}</span>
-            <span className="text-[11px] text-rose-400 font-semibold mt-1 block">Higher Studies / Prep</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center font-bold text-xl">
-            <XCircle className="w-6 h-6" />
-          </div>
-        </Card>
-      </div>
+        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
+          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-rose-500/40 transition-all duration-300 shadow-xl group">
+            <div>
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Opted Out / Unplaced</span>
+              <span className="text-2xl font-extrabold text-rose-400 mt-1 block">{Math.round(totalRecords * 0.15)}</span>
+              <span className="text-[11px] text-rose-400 font-semibold mt-1 block">Higher Studies / Prep</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
+              <XCircle className="w-6 h-6" />
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* FILTER & SEARCH CONTROL BAR */}
-      <Card className="p-4 relative z-30">
-        <div className="flex flex-col lg:flex-row items-center gap-3">
-          <div className="w-full lg:flex-1">
+      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          <div className="flex-1 w-full min-w-0">
             <SearchInput
-              placeholder="Search by student name, roll number, or skills..."
+              placeholder="Search student by name, roll number, department, or skills..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
             <Dropdown
+              className="w-full sm:w-44 shrink-0"
               options={[
                 { label: 'All Departments', value: 'All' },
                 { label: 'Computer Science', value: 'Computer Science' },
@@ -520,6 +565,7 @@ export const Students: React.FC = () => {
             />
 
             <Dropdown
+              className="w-full sm:w-36 shrink-0"
               options={[
                 { label: 'All Batches', value: 'All' },
                 { label: '2025 Batch', value: '2025' },
@@ -530,6 +576,7 @@ export const Students: React.FC = () => {
             />
 
             <Dropdown
+              className="w-full sm:w-40 shrink-0"
               options={[
                 { label: 'All Statuses', value: 'All' },
                 { label: 'Placed Only', value: 'Placed' },
@@ -539,6 +586,22 @@ export const Students: React.FC = () => {
               value={selectedStatus}
               onChange={setSelectedStatus}
             />
+
+            {(selectedDept !== 'All' || selectedYear !== 'All' || selectedStatus !== 'All' || searchQuery !== '') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedDept('All');
+                  setSelectedYear('All');
+                  setSelectedStatus('All');
+                }}
+                className="text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 py-2 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
       </Card>
@@ -1482,6 +1545,6 @@ export const Students: React.FC = () => {
           </div>
         </div>
       </Modal>
-    </div>
+    </motion.div>
   );
 };

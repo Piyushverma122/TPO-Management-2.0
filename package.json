@@ -16,7 +16,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.1",
     "lucide-react": "^1.16.0",
-    "react": "^19.2.0 font",
+    "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.71.1",
     "react-router-dom": "^7.13.0",

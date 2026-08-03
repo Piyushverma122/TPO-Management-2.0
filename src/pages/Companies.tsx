@@ -261,45 +261,77 @@ export const Companies: React.FC = () => {
       </div>
 
       {/* TOP 3 STATISTIC METRIC CARDS ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <Card className="p-5 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Total Recruiter Partners</span>
-            <span className="text-2xl font-extrabold text-white mt-1 block">{totalRecords}</span>
-            <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">+18 active recruitment drives</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-xl">
-            <Building2 className="w-6 h-6" />
-          </div>
-        </Card>
+      <motion.div
+        className="grid grid-cols-1 sm:grid-cols-3 gap-5"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: 0.08 } },
+        }}
+      >
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 15 },
+            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
+          }}
+          whileHover={{ y: -4 }}
+        >
+          <Card className="p-5 flex items-center justify-between group">
+            <div>
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Total Recruiter Partners</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">{totalRecords}</span>
+              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">+18 active recruitment drives</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
+              <Building2 className="w-6 h-6" />
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="p-5 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Average CTC Offered</span>
-            <span className="text-2xl font-extrabold text-white mt-1 block">₹12.5 LPA</span>
-            <span className="text-[11px] text-sky-400 font-semibold mt-1 block">Across all tiers</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xl">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-        </Card>
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 15 },
+            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
+          }}
+          whileHover={{ y: -4 }}
+        >
+          <Card className="p-5 flex items-center justify-between group">
+            <div>
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Average CTC Offered</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">₹12.5 LPA</span>
+              <span className="text-[11px] text-sky-400 font-semibold mt-1 block">Across all tiers</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="p-5 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Highest Package Offered</span>
-            <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">₹48.0 LPA</span>
-            <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Super Dream Tier</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/20 text-[#A3E635] border border-[#A3E635]/40 flex items-center justify-center font-bold text-xl">
-            <Award className="w-6 h-6" />
-          </div>
-        </Card>
-      </div>
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 15 },
+            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
+          }}
+          whileHover={{ y: -4 }}
+        >
+          <Card className="p-5 flex items-center justify-between group">
+            <div>
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Highest Package Offered</span>
+              <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">₹48.0 LPA</span>
+              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Super Dream Tier</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/20 text-[#A3E635] border border-[#A3E635]/40 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
+              <Award className="w-6 h-6" />
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* FILTER & SEARCH CONTROL BAR */}
-      <Card className="p-4 relative z-30">
-        <div className="flex flex-col lg:flex-row items-center gap-3">
-          <div className="w-full lg:flex-1">
+      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          <div className="flex-1 w-full min-w-0">
             <SearchInput
               placeholder="Search companies by name, industry, or package..."
               value={searchQuery}
@@ -307,8 +339,9 @@ export const Companies: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
             <Dropdown
+              className="w-full sm:w-44 shrink-0"
               options={[
                 { label: 'All Tiers', value: 'All' },
                 { label: 'Super Dream (>₹20L)', value: 'Super Dream' },
@@ -320,6 +353,7 @@ export const Companies: React.FC = () => {
             />
 
             <Dropdown
+              className="w-full sm:w-36 shrink-0"
               options={[
                 { label: 'All Statuses', value: 'All' },
                 { label: 'Active', value: 'Active' },
