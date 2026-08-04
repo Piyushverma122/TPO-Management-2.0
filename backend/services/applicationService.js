@@ -230,8 +230,8 @@ const listApplications = async (reqUser, queryParams) => {
     query = dataScopeService.applyDataScope(query, reqUser, 'applications', scopeContext);
   }
 
-  if (drive_id) query = query.eq('drive_id', drive_id);
-  if (status) query = query.eq('status', status);
+  if (drive_id && drive_id !== 'undefined' && drive_id !== 'null') query = query.eq('drive_id', drive_id);
+  if (status && status !== 'undefined' && status !== 'null') query = query.eq('status', status);
 
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 

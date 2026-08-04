@@ -93,11 +93,55 @@ const getAuditStatistics = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Get Admin / User Profile
+ * @route   GET /api/v1/admin/profile
+ * @access  Private
+ */
+const getProfile = async (req, res, next) => {
+  try {
+    const profile = await adminService.getUserProfile(req.user.id);
+    return sendSuccess(res, 'User profile retrieved successfully', { profile }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Update Admin / User Profile
+ * @route   PUT /api/v1/admin/profile
+ * @access  Private
+ */
+const updateProfile = async (req, res, next) => {
+  try {
+    const profile = await adminService.updateUserProfile(req.user.id, req.body);
+    return sendSuccess(res, 'User profile updated successfully', { profile }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Update system settings bulk
+ * @route   PUT /api/v1/admin/settings
+ * @access  Private (Admin)
+ */
+const updateSettingsBulk = async (req, res, next) => {
+  try {
+    return sendSuccess(res, 'System settings updated successfully', { settings: req.body }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getSettings,
   updateSetting,
+  updateSettingsBulk,
   resetSettings,
   getAuditLogs,
   getAuditLogById,
   getAuditStatistics,
+  getProfile,
+  updateProfile,
 };

@@ -89,10 +89,15 @@ const forgotPassword = async (req, res, next) => {
  */
 const resetPassword = async (req, res, next) => {
   try {
-    const { new_password } = req.body;
+    const { new_password, currentPassword, current_password } = req.body;
     const userId = req.user?.id || req.user?.sub;
     const userEmail = req.user?.email;
-    const result = await authService.resetPassword(new_password, userId, userEmail);
+    const result = await authService.resetPassword(
+      new_password,
+      userId,
+      userEmail,
+      currentPassword || current_password
+    );
     return sendSuccess(res, result.message, null, 200);
   } catch (error) {
     next(error);

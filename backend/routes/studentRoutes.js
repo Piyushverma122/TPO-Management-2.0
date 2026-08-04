@@ -15,15 +15,16 @@ const {
 // All routes require authentication
 router.use(verifyToken);
 
+// Student Full Profile Route (Self & By ID)
+router.get('/profile', authorizeModule(Module.PROFILE, Action.VIEW), studentController.getStudentProfile);
+router.get('/:id/profile', authorizeModule(Module.PROFILE, Action.VIEW), validateStudentId, studentController.getStudentProfile);
+
 // Student Directory & CRUD Routes
 router.get('/', authorizeModule(Module.STUDENTS, Action.VIEW), validateQueryFilter, studentController.getStudents);
 router.get('/:id', authorizeModule(Module.STUDENTS, Action.VIEW), validateStudentId, studentController.getStudentById);
 router.post('/', authorizeModule(Module.STUDENTS, Action.CREATE), validateCreateStudent, studentController.createStudent);
 router.put('/:id', authorizeModule(Module.STUDENTS, Action.EDIT), validateUpdateStudent, studentController.updateStudent);
 router.delete('/:id', authorizeModule(Module.STUDENTS, Action.DELETE), validateStudentId, studentController.deleteStudent);
-
-// Student Full Profile Route
-router.get('/:id/profile', authorizeModule(Module.PROFILE, Action.VIEW), validateStudentId, studentController.getStudentProfile);
 
 // Resume Management Routes
 router.post(

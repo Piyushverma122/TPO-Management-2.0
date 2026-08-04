@@ -29,14 +29,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ module, children
     return <Navigate to="/login" replace />;
   }
 
-  // 3. Check module access permissions via RBAC configuration
+  // 3. Allow temporary access to Settings for first-login password change
+  if (module === Module.SETTINGS && user?.must_change_password) {
+    return children ? <>{children}</> : <Outlet />;
+  }
+
+  // 4. Check module access permissions via RBAC configuration
   const hasModuleAccess = canAccessModule(user?.role, module);
 
   if (!hasModuleAccess) {
     return <Navigate to="/403" replace />;
   }
 
-  // 4. Render children or nested router Outlet
+  // 5. Render children or nested router Outlet
   return children ? <>{children}</> : <Outlet />;
 };
 

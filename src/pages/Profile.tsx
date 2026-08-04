@@ -41,7 +41,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
-import { getStudents, updateStudent } from '../api/student.api';
+import { getStudentProfile, updateStudent } from '../api/student.api';
 import { getApplications } from '../api/application.api';
 
 export const ProfilePage: React.FC = () => {
@@ -98,16 +98,13 @@ export const ProfilePage: React.FC = () => {
         return;
       }
 
-      // Search for the logged-in student record matching user.id or email
-      const [studentsRes, appRes] = await Promise.all([
-        getStudents({ limit: 100 }),
+      // Fetch logged-in student profile & applications
+      const [profileRes, appRes] = await Promise.all([
+        getStudentProfile(),
         getApplications(),
       ]);
 
-      const studentList = studentsRes.data?.students || [];
-      const currentStudent = studentList.find(
-        (s: any) => s.user_id === user?.id || s.users?.email === user?.email
-      );
+      const currentStudent = profileRes.data?.profile || profileRes.data?.student || profileRes.data;
 
       if (currentStudent) {
         setStudentRecord(currentStudent);

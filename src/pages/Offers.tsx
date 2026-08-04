@@ -35,7 +35,6 @@ import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
 import { getApplications, updateApplication } from '../api/application.api';
-import { getPlacements, updatePlacement } from '../api/placement.api';
 
 export interface OfferItem {
   id: string;
@@ -77,13 +76,8 @@ export const Offers: React.FC = () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const [appRes, placementRes] = await Promise.all([
-        getApplications(),
-        getPlacements(),
-      ]);
-
+      const appRes = await getApplications();
       const rawApps = appRes.data?.applications || [];
-      const rawPlacements = placementRes.data?.placements || [];
 
       // Filter applications that have reached Offer / Selected / Placed / Accepted / Rejected state
       const offerApps = rawApps.filter((a: any) => {

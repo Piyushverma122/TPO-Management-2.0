@@ -628,19 +628,32 @@ const deleteStudent = async (studentId) => {
  * Get Full Student Profile Aggregation
  */
 const getStudentFullProfile = async (studentId) => {
-  const student = await getStudentById(studentId);
+  let resolvedId = studentId;
+
+  // Resolve student record if studentId is user_id or student.id
+  const { data: foundStudent } = await supabase
+    .from('students')
+    .select('id')
+    .or(`id.eq.${studentId},user_id.eq.${studentId}`)
+    .maybeSingle();
+
+  if (foundStudent) {
+    resolvedId = foundStudent.id;
+  }
+
+  const student = await getStudentById(resolvedId);
 
   // Fetch Skills
   const { data: skills } = await supabase
     .from('student_skills')
     .select('id, skill_id, proficiency_level, skills (id, name, category)')
-    .eq('student_id', studentId);
+    .eq('student_id', resolvedId);
 
   // Fetch Active Resume
   const { data: activeResume } = await supabase
     .from('resumes')
     .select('*')
-    .eq('student_id', studentId)
+    .eq('student_id', resolvedId)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -648,13 +661,13 @@ const getStudentFullProfile = async (studentId) => {
   const { data: documents } = await supabase
     .from('student_documents')
     .select('*')
-    .eq('student_id', studentId);
+    .eq('student_id', resolvedId);
 
   // Fetch Semester Records
   const { data: semesters } = await supabase
     .from('student_semesters')
     .select('*')
-    .eq('student_id', studentId)
+    .eq('student_id', resolvedId)
     .order('semester', { ascending: true });
 
   return {

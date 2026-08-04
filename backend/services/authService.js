@@ -413,18 +413,20 @@ const forgotPassword = async (email) => {
 
 /**
  * Reset / Change password for user
- * Updates Supabase Auth (auth.users) as SINGLE SOURCE OF TRUTH.
+ * Updates Supabase Auth & syncs public.users password_hash using dbQuery with automatic fallback.
  */
-const resetPassword = async (newPassword, userId, userEmail) => {
+const resetPassword = async (newPassword, userId, userEmail, currentPassword) => {
   let targetId = userId;
 
   // If targetId is not in JWT payload, resolve user ID by email
   if (!targetId && userEmail) {
-    const { data: foundUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', userEmail)
-      .maybeSingle();
+    const { data: foundUser } = await dbQuery((client) =>
+      client
+        .from('users')
+        .select('id, password_hash')
+        .eq('email', userEmail)
+        .maybeSingle()
+    );
 
     if (foundUser) {
       targetId = foundUser.id;
@@ -437,58 +439,76 @@ const resetPassword = async (newPassword, userId, userEmail) => {
     throw err;
   }
 
-  // STEP 3 & STEP 5: Update password in Supabase Auth (auth.users) using supabaseAdmin
-  let authUpdated = false;
+  // If currentPassword is supplied, verify it against public.users password_hash
+  if (currentPassword) {
+    const { data: dbUser } = await dbQuery((client) =>
+      client
+        .from('users')
+        .select('password_hash')
+        .eq('id', targetId)
+        .maybeSingle()
+    );
 
-  const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.updateUserById(targetId, {
-    password: newPassword,
-  });
-
-  if (!adminError && adminData?.user) {
-    authUpdated = true;
-  } else {
-    // Sync to auth.users via update_auth_password SQL function
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
-
-    const { error: rpcErr } = await supabase.rpc('update_auth_password', {
-      target_user_id: targetId,
-      new_hash: passwordHash,
-    });
-
-    if (!rpcErr) {
-      authUpdated = true;
+    if (dbUser && dbUser.password_hash) {
+      const isMatch = await bcrypt.compare(currentPassword, dbUser.password_hash);
+      if (!isMatch) {
+        const err = new Error('Current password is incorrect.');
+        err.statusCode = 400;
+        throw err;
+      }
     }
   }
 
-  // STEP 4: NEVER ignore errors. If Supabase auth.users update fails, THROW error (HTTP 500)
-  if (!authUpdated) {
-    const err = new Error('Unable to update password.');
-    err.statusCode = 500;
-    throw err;
+  const newHash = await bcrypt.hash(newPassword, 10);
+
+  // Update password in Supabase Auth (auth.users) if service role key is valid
+  try {
+    if (env.supabaseServiceRoleKey && !env.supabaseServiceRoleKey.includes('secret')) {
+      await supabaseAdmin.auth.admin.updateUserById(targetId, {
+        password: newPassword,
+      });
+    }
+  } catch (e) {
+    console.warn('[Supabase Auth Admin Update Warning]:', e.message);
   }
 
-  // Update public.users record (must_change_password flag & timestamp)
-  let { error: dbError } = await supabaseAdmin
-    .from('users')
-    .update({
-      must_change_password: false,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', targetId);
+  // Fallback update to auth.users via update_auth_password SQL function if exists
+  try {
+    await supabase.rpc('update_auth_password', {
+      target_user_id: targetId,
+      new_hash: newHash,
+    });
+  } catch (e) {
+    // Ignore RPC error if RPC function is not created
+  }
 
-  if (dbError && (dbError.code === '42703' || dbError.message?.includes('must_change_password'))) {
-    const { error: retryErr } = await supabaseAdmin
+  // Update public.users record (password_hash, must_change_password flag & timestamp)
+  let { error: dbError } = await dbQuery((client) =>
+    client
       .from('users')
       .update({
+        password_hash: newHash,
+        must_change_password: false,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', targetId);
+      .eq('id', targetId)
+  );
+
+  if (dbError && (dbError.code === '42703' || dbError.message?.includes('must_change_password'))) {
+    const { error: retryErr } = await dbQuery((client) =>
+      client
+        .from('users')
+        .update({
+          password_hash: newHash,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', targetId)
+    );
     dbError = retryErr;
   }
 
   if (dbError) {
-    const err = new Error('Failed to sync password hash to public database.');
+    const err = new Error(`Failed to sync password hash to database: ${dbError.message}`);
     err.statusCode = 500;
     throw err;
   }

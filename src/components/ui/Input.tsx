@@ -1,6 +1,6 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState } from 'react';
 import { clsx } from 'clsx';
-import { Search } from 'lucide-react';
+import { Search, Eye, EyeOff } from 'lucide-react';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -11,8 +11,27 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, leftIcon, rightIcon, helperText, className, id, ...props }, ref) => {
+  ({ label, error, leftIcon, rightIcon, helperText, className, id, type, ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+
+    const isPasswordType = type === 'password';
+    const [showPassword, setShowPassword] = useState(false);
+
+    const effectiveType = isPasswordType ? (showPassword ? 'text' : 'password') : type;
+
+    const defaultPasswordToggle = isPasswordType ? (
+      <button
+        type="button"
+        onClick={() => setShowPassword((prev) => !prev)}
+        className="text-[#64748B] hover:text-[#A3E635] transition-colors focus:outline-none cursor-pointer flex items-center justify-center"
+        tabIndex={-1}
+        title={showPassword ? 'Hide password' : 'Show password'}
+      >
+        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    ) : null;
+
+    const activeRightIcon = rightIcon !== undefined ? rightIcon : defaultPasswordToggle;
 
     return (
       <div className="w-full space-y-1.5">
@@ -30,19 +49,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             id={inputId}
             ref={ref}
+            type={effectiveType}
             className={clsx(
               'w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#64748B]',
               'focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all duration-200',
               leftIcon && 'pl-10',
-              rightIcon && 'pr-10',
+              activeRightIcon && 'pr-10',
               error && 'border-rose-500/80 focus:border-rose-500 focus:ring-rose-500',
               className
             )}
             {...props}
           />
-          {rightIcon && (
+          {activeRightIcon && (
             <div className="absolute right-3.5 text-[#64748B] flex items-center justify-center">
-              {rightIcon}
+              {activeRightIcon}
             </div>
           )}
         </div>

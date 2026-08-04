@@ -116,7 +116,7 @@ export const ROLE_PERMISSIONS: RolePermissionsMatrix = {
     [Module.STUDENTS]: { view: false },
     [Module.COMPANIES]: { view: false },
     [Module.PLACEMENT_DRIVES]: { view: true },
-    [Module.APPLICATIONS]: { view: true, create: true },
+    [Module.APPLICATIONS]: { view: true, create: true, edit: true, delete: true },
     [Module.INTERVIEWS]: { view: true },
     [Module.PLACEMENTS]: { view: false },
     [Module.OFFER_LETTERS]: { view: true },

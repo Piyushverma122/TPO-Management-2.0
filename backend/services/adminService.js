@@ -203,6 +203,51 @@ const getAuditStatistics = async () => {
   };
 };
 
+/**
+ * Get User Profile
+ */
+const getUserProfile = async (userId) => {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, email, full_name, role, phone, avatar_url, must_change_password, created_at')
+    .eq('id', userId)
+    .single();
+
+  if (error || !user) {
+    const err = new Error('User profile record not found.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return user;
+};
+
+/**
+ * Update User Profile
+ */
+const updateUserProfile = async (userId, payload) => {
+  const { full_name, phone, avatar_url } = payload;
+  const updateFields = {};
+  if (full_name !== undefined) updateFields.full_name = full_name;
+  if (phone !== undefined) updateFields.phone = phone;
+  if (avatar_url !== undefined) updateFields.avatar_url = avatar_url;
+
+  const { data: updatedUser, error } = await supabase
+    .from('users')
+    .update(updateFields)
+    .eq('id', userId)
+    .select('id, email, full_name, role, phone, avatar_url, must_change_password, created_at')
+    .single();
+
+  if (error) {
+    const err = new Error(error.message);
+    err.statusCode = 500;
+    throw err;
+  }
+
+  return updatedUser;
+};
+
 module.exports = {
   listSettings,
   updateSetting,
@@ -210,4 +255,6 @@ module.exports = {
   listAuditLogs,
   getAuditLogById,
   getAuditStatistics,
+  getUserProfile,
+  updateUserProfile,
 };

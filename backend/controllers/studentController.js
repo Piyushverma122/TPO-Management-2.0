@@ -111,8 +111,13 @@ const deleteStudent = async (req, res, next) => {
  */
 const getStudentProfile = async (req, res, next) => {
   try {
-    const profile = await studentService.getStudentFullProfile(req.params.id);
-    return sendSuccess(res, 'Full candidate profile retrieved', { profile }, 200);
+    const studentId =
+      req.params.id && req.params.id !== 'profile' && req.params.id !== 'me'
+        ? req.params.id
+        : req.user?.id;
+
+    const profile = await studentService.getStudentFullProfile(studentId);
+    return sendSuccess(res, 'Full candidate profile retrieved', { profile, student: profile }, 200);
   } catch (error) {
     next(error);
   }

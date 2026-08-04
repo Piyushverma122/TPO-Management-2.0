@@ -160,11 +160,6 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      await updateAdminProfile({
-        full_name: profileName,
-        email: profileEmail,
-      });
-
       if (newPassword) {
         await changePassword({
           currentPassword,
@@ -173,7 +168,14 @@ export const SettingsPage: React.FC = () => {
         updateUser({ must_change_password: false });
       }
 
+      await updateAdminProfile({
+        full_name: profileName,
+        email: profileEmail,
+      });
+
       setIsEditProfileOpen(false);
+      setCurrentPassword('');
+      setNewPassword('');
       success('Profile Updated', newPassword ? 'Password updated successfully. Account fully secured!' : 'Master profile settings saved.');
     } catch (err: any) {
       toastError('Update Error', err.response?.data?.message || 'Failed to update profile.');
