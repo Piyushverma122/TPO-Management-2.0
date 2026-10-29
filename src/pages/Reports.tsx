@@ -137,7 +137,7 @@ export const Reports: React.FC = () => {
     setExportingType(type);
     try {
       let blobData: Blob;
-      let filename = `Placement_Report_2025.${type === 'excel' ? 'xlsx' : type}`;
+      const filename = `Placement_Report_2025.${type === 'excel' ? 'xlsx' : type}`;
 
       try {
         if (type === 'pdf') {

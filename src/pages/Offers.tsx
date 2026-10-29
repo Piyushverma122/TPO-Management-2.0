@@ -135,7 +135,7 @@ export const Offers: React.FC = () => {
 
   // Filtered & Sorted Offers
   const processedOffers = useMemo(() => {
-    let result = offers.filter((item) => {
+    const result = offers.filter((item) => {
       const matchesSearch =
         item.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.roleTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||

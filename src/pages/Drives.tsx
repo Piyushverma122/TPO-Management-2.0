@@ -329,7 +329,7 @@ export const Drives: React.FC = () => {
 
   // Filtered & Sorted Drives
   const processedDrives = useMemo(() => {
-    let result = drives.filter((drive) => {
+    const result = drives.filter((drive) => {
       const matchesSearch =
         drive.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         drive.roleTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||

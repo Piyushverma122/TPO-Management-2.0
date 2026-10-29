@@ -270,7 +270,7 @@ export const Applications: React.FC = () => {
 
   // Processed Filtered & Sorted Applications
   const processedApplications = useMemo(() => {
-    let list = applications.filter((app) => {
+    const list = applications.filter((app) => {
       const matchesSearch =
         app.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         app.roleTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||

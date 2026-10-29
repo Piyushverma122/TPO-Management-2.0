@@ -141,7 +141,7 @@ export const Interviews: React.FC = () => {
 
   // Filtered & Sorted Interviews
   const processedInterviews = useMemo(() => {
-    let result = interviews.filter((item) => {
+    const result = interviews.filter((item) => {
       const matchesSearch =
         item.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.roleTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||

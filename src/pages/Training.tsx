@@ -168,7 +168,7 @@ export const Training: React.FC = () => {
 
   // Processed Filtered & Sorted Trainings
   const processedTrainings = useMemo(() => {
-    let result = trainings.filter((t) => {
+    const result = trainings.filter((t) => {
       const matchesSearch =
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.trainerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
