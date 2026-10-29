@@ -1,13 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ckhebftuzvbtqhipkxka.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNraGViZnR1enZidHFoaXBreGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5ODI1NzksImV4cCI6MjEwMDU1ODU3OX0.arcR1_3KhY0CxwGIsse_sDBcokUdOZQxKvNnHFIZ1ZE';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set in .env');
+}
+
+// Used for Realtime only. Authentication is handled by the backend API, so the client
+// does not manage its own session; call setRealtimeAuth() with the backend-issued JWT.
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
   },
 });
+
+export const setRealtimeAuth = (token: string | null) => {
+  supabase.realtime.setAuth(token);
+};
 
 export default supabase;

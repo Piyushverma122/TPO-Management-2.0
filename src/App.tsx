@@ -1,35 +1,41 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
-import { Login } from './pages/Login';
-import { ForgotPasswordPage } from './pages/ForgotPassword';
-import { ResetPasswordPage } from './pages/ResetPassword';
-import { Dashboard } from './pages/Dashboard';
-import { Students } from './pages/Students';
-import { Companies } from './pages/Companies';
-import { AddCompany } from './pages/AddCompany';
-import { Drives } from './pages/Drives';
-import { Applications } from './pages/Applications';
-import { Eligibility } from './pages/Eligibility';
-import { Resumes } from './pages/Resumes';
-import { Interviews } from './pages/Interviews';
-import { Offers } from './pages/Offers';
-import { MessagesPage } from './pages/Messages';
-import { Training } from './pages/Training';
-import { Reports } from './pages/Reports';
-import { Notifications } from './pages/Notifications';
-import { ProfilePage } from './pages/Profile';
-import { SettingsPage } from './pages/Settings';
-import { UsersPage } from './pages/Users';
-import { NotFound } from './pages/NotFound';
-import { Unauthorized } from './pages/Unauthorized';
+const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPasswordPage })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const Students = lazy(() => import('./pages/Students').then((m) => ({ default: m.Students })));
+const Companies = lazy(() => import('./pages/Companies').then((m) => ({ default: m.Companies })));
+const AddCompany = lazy(() => import('./pages/AddCompany').then((m) => ({ default: m.AddCompany })));
+const Drives = lazy(() => import('./pages/Drives').then((m) => ({ default: m.Drives })));
+const Applications = lazy(() => import('./pages/Applications').then((m) => ({ default: m.Applications })));
+const Eligibility = lazy(() => import('./pages/Eligibility').then((m) => ({ default: m.Eligibility })));
+const Resumes = lazy(() => import('./pages/Resumes').then((m) => ({ default: m.Resumes })));
+const Interviews = lazy(() => import('./pages/Interviews').then((m) => ({ default: m.Interviews })));
+const Offers = lazy(() => import('./pages/Offers').then((m) => ({ default: m.Offers })));
+const MessagesPage = lazy(() => import('./pages/Messages').then((m) => ({ default: m.MessagesPage })));
+const Training = lazy(() => import('./pages/Training').then((m) => ({ default: m.Training })));
+const Reports = lazy(() => import('./pages/Reports').then((m) => ({ default: m.Reports })));
+const Notifications = lazy(() => import('./pages/Notifications').then((m) => ({ default: m.Notifications })));
+const ProfilePage = lazy(() => import('./pages/Profile').then((m) => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.SettingsPage })));
+const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
+const Unauthorized = lazy(() => import('./pages/Unauthorized').then((m) => ({ default: m.Unauthorized })));
+const UsersPage = lazy(() => import('./pages/Users').then((m) => ({ default: m.UsersPage })));
 import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Module } from './config/rbac';
 
 const queryClient = new QueryClient();
+
+const PageFallback: React.FC = () => (
+  <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
+    <div className="w-12 h-12 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 // Authenticated User Verification Wrapper
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -189,6 +195,14 @@ export const AppContent: React.FC = () => {
           }
         />
         <Route
+          path="/placements"
+          element={
+            <ProtectedRoute module={Module.PLACEMENTS}>
+              <Offers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/interviews"
           element={
             <ProtectedRoute module={Module.INTERVIEWS}>
@@ -207,7 +221,7 @@ export const AppContent: React.FC = () => {
         <Route
           path="/messages"
           element={
-            <ProtectedRoute module={Module.NOTIFICATIONS}>
+            <ProtectedRoute module={Module.MESSAGES}>
               <MessagesPage />
             </ProtectedRoute>
           }
@@ -273,7 +287,9 @@ export const App: React.FC = () => {
       <AuthProvider>
         <ToastProvider>
           <Router>
-            <AppContent />
+            <Suspense fallback={<PageFallback />}>
+              <AppContent />
+            </Suspense>
           </Router>
         </ToastProvider>
       </AuthProvider>

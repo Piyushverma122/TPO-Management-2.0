@@ -122,36 +122,32 @@ export const Training: React.FC = () => {
       const rawList = res.data?.trainings || [];
       const total = res.data?.total || rawList.length;
 
-      const formattedList: StudentTrainingItem[] = rawList.map((t: any, idx: number) => {
-        const finishedMods = t.finished_modules || (idx % 2 === 0 ? 6 : 8);
-        const totalMods = t.total_modules || 8;
-        const prog = Math.round((finishedMods / totalMods) * 100);
-        const isComp = prog >= 100 || t.status === 'Completed';
+      const formattedList: StudentTrainingItem[] = rawList.map((t: any) => {
+        const finishedMods = Number(t.finished_modules) || 0;
+        const totalMods = Number(t.total_modules) || 0;
+        const prog = totalMods > 0 ? Math.round((finishedMods / totalMods) * 100) : 0;
+        const isComp = t.status === 'Completed' || (totalMods > 0 && prog >= 100);
 
         return {
           id: t.id,
-          title: t.title || 'Advanced Full Stack Web Bootcamp',
+          title: t.title || 'Untitled Training',
           category: t.category || 'Technical',
-          trainerName: t.trainer_name || t.faculty?.users?.full_name || 'Senior Instructor',
-          description: t.description || 'Comprehensive training course covering modern full-stack development, cloud deployment, and system design architecture.',
-          duration: t.duration || '40 Hours (4 Weeks)',
-          startDate: t.start_date ? new Date(t.start_date).toLocaleDateString() : 'Active Track',
-          endDate: t.end_date ? new Date(t.end_date).toLocaleDateString() : 'Upcoming',
+          trainerName: t.trainer_name || t.faculty?.users?.full_name || 'N/A',
+          description: t.description || '',
+          duration: t.duration || 'N/A',
+          startDate: t.start_date ? new Date(t.start_date).toLocaleDateString() : 'N/A',
+          endDate: t.end_date ? new Date(t.end_date).toLocaleDateString() : 'N/A',
           mode: t.mode === 'In-Person' ? 'In-Person' : 'Online',
           status: isComp ? 'Completed' : t.status === 'Ongoing' ? 'Ongoing' : 'Enrolled',
           progressPercentage: prog,
           finishedModules: finishedMods,
           totalModules: totalMods,
-          attendancePercentage: t.attendance_percentage ? parseFloat(t.attendance_percentage) : 92,
-          presentSessions: 11,
-          totalSessions: 12,
-          certificateNumber: isComp ? `CERT-2026-${1000 + idx}` : undefined,
-          certificateIssueDate: isComp ? new Date().toLocaleDateString() : undefined,
-          materials: [
-            { title: 'Lecture 1: Course Overview & Setup Slide Deck', type: 'PDF', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
-            { title: 'System Architecture Video Recording', type: 'Video', url: 'https://meet.google.com' },
-            { title: 'Hands-on Code Repository & Homework', type: 'Link', url: 'https://github.com' },
-          ],
+          attendancePercentage: t.attendance_percentage ? parseFloat(t.attendance_percentage) : 0,
+          presentSessions: Number(t.present_sessions) || 0,
+          totalSessions: Number(t.total_sessions) || 0,
+          certificateNumber: isComp ? t.certificate_number || undefined : undefined,
+          certificateIssueDate: isComp && t.certificate_issue_date ? new Date(t.certificate_issue_date).toLocaleDateString() : undefined,
+          materials: Array.isArray(t.materials) ? t.materials : [],
         };
       });
 

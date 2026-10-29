@@ -76,8 +76,8 @@ export const SettingsPage: React.FC = () => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   // Profile Form State
-  const [profileName, setProfileName] = useState(user?.name || 'Dr. James Anderson');
-  const [profileEmail, setProfileEmail] = useState(user?.email || 'james.admin@university.edu');
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -122,12 +122,8 @@ export const SettingsPage: React.FC = () => {
       setAuditLogsList(formattedLogs);
       setTotalLogs(total);
     } catch (e) {
-      // Fallback audit log entries
-      setAuditLogsList([
-        { id: 'log-1', timestamp: 'Oct 15, 10:35 AM', actor: 'Admin User', userAffected: 'System', action: 'Liam Hayes updated student info' },
-        { id: 'log-2', timestamp: 'Oct 15, 10:35 AM', actor: 'Admin User', userAffected: 'System', action: 'Ervara Mahiral exported placement report' },
-      ]);
-      setTotalLogs(2);
+      setAuditLogsList([]);
+      setTotalLogs(0);
     } finally {
       setLoadingLogs(false);
     }

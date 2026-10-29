@@ -75,7 +75,7 @@ export const Eligibility: React.FC = () => {
 
       const formatted: EligibleStudentItem[] = rawStudents.map((s: any) => ({
         id: s.id,
-        photo: s.users?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
+        photo: s.users?.avatar_url || '',
         name: s.users?.full_name || 'Student Candidate',
         rollNo: s.roll_number || 'N/A',
         branch: s.branches?.code || s.branches?.name || 'CS',

@@ -49,22 +49,10 @@ export const Login: React.FC = () => {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const userRole = await login(data.email, data.password);
+      await login(data.email, data.password);
       setIsLoading(false);
       success('Logged In Successfully', 'Welcome back to Smart Placement & TPO Platform.');
-
-      // Automated role-based redirection
-      if (userRole === 'admin' || userRole === 'tpo_admin' || userRole === 'tpo') {
-        navigate('/dashboard');
-      } else if (userRole === 'student') {
-        navigate('/dashboard');
-      } else if (userRole === 'recruiter') {
-        navigate('/dashboard');
-      } else if (userRole === 'faculty') {
-        navigate('/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate('/dashboard');
     } catch (err: any) {
       setIsLoading(false);
       const errMsg =

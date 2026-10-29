@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Avatar } from '../ui/Avatar';
 import { useNavigate } from 'react-router-dom';
 import { Search, Globe, Lock, Smartphone, Bell, Plus, ChevronDown, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -134,11 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onQuickAdd, onToggleSidebar }) =
           className="h-10 px-3 flex items-center gap-2.5 bg-[#162032] border border-[#202D42] hover:border-[#A3E635]/40 rounded-xl cursor-pointer transition-all text-left shrink-0"
           aria-label="User profile menu"
         >
-          <img
-            src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'}
-            alt="User avatar"
-            className="w-7 h-7 rounded-full object-cover border border-[#A3E635]"
-          />
+          <Avatar src={user?.avatar} name={user?.name} size="xs" border />
           <span className="text-xs font-bold text-white hidden sm:inline">{user?.name || 'Dr. James Anderson'}</span>
           <ChevronDown className="w-3.5 h-3.5 text-[#94A3B8] hidden sm:inline" />
         </button>

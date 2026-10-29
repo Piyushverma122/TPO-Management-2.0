@@ -29,6 +29,9 @@ const supabaseAdmin = createClient(
   }
 );
 
-module.exports = supabase;
+// Default export is the service-role client: all server-side data access bypasses RLS,
+// which is enabled on every public table. The anon client is only for Supabase Auth
+// flows (sign in/up, refresh, reset) and is exposed as the named `supabase` export.
+module.exports = supabaseAdmin;
 module.exports.supabase = supabase;
 module.exports.supabaseAdmin = supabaseAdmin;

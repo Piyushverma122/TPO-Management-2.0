@@ -87,7 +87,7 @@ export const Resumes: React.FC = () => {
         rollNumber: s.roll_number || 'N/A',
         department: s.branches?.name || s.branches?.code || 'CS',
         cgpa: typeof s.cgpa === 'number' ? s.cgpa : parseFloat(s.cgpa || '0'),
-        avatar: s.users?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
+        avatar: s.users?.avatar_url || '',
         skills: ['Python', 'SQL', 'React'],
         resumeScore: '88/100',
         atsScore: Math.min(98, Math.max(70, Math.round(parseFloat(s.cgpa || '8') * 10))),

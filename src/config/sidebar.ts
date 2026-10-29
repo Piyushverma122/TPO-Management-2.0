@@ -6,6 +6,7 @@ import {
   Briefcase,
   FileText,
   MessageSquare,
+  MessagesSquare,
   Award,
   FileCheck,
   GraduationCap,
@@ -124,6 +125,13 @@ export const MASTER_SIDEBAR_CONFIG: SidebarNavItem[] = [
     route: '/notifications',
     icon: Bell,
     module: Module.NOTIFICATIONS,
+  },
+  {
+    id: 'messages',
+    title: 'Messages',
+    route: '/messages',
+    icon: MessagesSquare,
+    module: Module.MESSAGES,
   },
   {
     id: 'users',

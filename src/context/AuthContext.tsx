@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
+import { setRealtimeAuth } from '../config/supabase';
 import { loginApi, logoutApi, getCurrentUserApi, forgotPasswordApi, resetPasswordApi } from '../api/auth.api';
 
 interface AuthContextType {
@@ -35,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const verifyAuth = async () => {
       const token = localStorage.getItem('tpo_token');
       if (token) {
+        setRealtimeAuth(token);
         try {
           const res = await getCurrentUserApi();
           if (res.data?.user) {
@@ -50,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.removeItem('tpo_token');
           localStorage.removeItem('tpo_refresh_token');
           localStorage.removeItem('tpo_user');
+          setRealtimeAuth(null);
           setUser(null);
         }
       } else {
@@ -76,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (token) {
       localStorage.setItem('tpo_token', token);
+      setRealtimeAuth(token);
     }
     if (refreshToken) {
       localStorage.setItem('tpo_refresh_token', refreshToken);
@@ -95,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('tpo_token');
       localStorage.removeItem('tpo_refresh_token');
       localStorage.removeItem('tpo_user');
+      setRealtimeAuth(null);
       setUser(null);
     }
   };

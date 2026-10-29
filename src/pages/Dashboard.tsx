@@ -41,7 +41,6 @@ import { Input } from '../components/ui/Input';
 import { Dropdown } from '../components/ui/Dropdown';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabase';
 import {
   getAdminDashboard,
   getTPODashboard,
@@ -59,9 +58,11 @@ import { StudentDashboard } from './StudentDashboard';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  if (user?.role === 'student') {
-    return <StudentDashboard />;
-  }
+  return user?.role === 'student' ? <StudentDashboard /> : <StaffDashboard />;
+};
+
+const StaffDashboard: React.FC = () => {
+  const { user } = useAuth();
   const { success, error: toastError } = useToast();
   const [driveFilter, setDriveFilter] = useState<'Recent' | 'All' | 'Interviews'>('Recent');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -118,18 +119,9 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
 
-    const channel = supabase
-      .channel('public:dashboard_events')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => fetchDashboardData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => fetchDashboardData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'placement_drives' }, () => fetchDashboardData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'placements' }, () => fetchDashboardData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'drive_applications' }, () => fetchDashboardData())
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Direct table subscriptions are not allowed (RLS), so refresh on a slow interval instead.
+    const timer = setInterval(fetchDashboardData, 60000);
+    return () => clearInterval(timer);
   }, [user]);
 
   const handleCreateDrive = (e: React.FormEvent) => {

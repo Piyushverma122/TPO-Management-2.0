@@ -84,8 +84,8 @@ export const MessagesPage: React.FC = () => {
         id: c.id,
         title: c.title || (c.participants?.[0]?.users?.full_name ? c.participants[0].users.full_name : 'Team Channel'),
         isGroup: !!c.is_group,
-        avatar: c.avatar_url || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=120',
-        lastMessage: c.last_message || 'Active conversation thread.',
+        avatar: c.avatar_url || '',
+        lastMessage: c.last_message || '',
         timestamp: c.updated_at ? new Date(c.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent',
         unreadCount: c.unread_count || 0,
       }));
@@ -111,7 +111,7 @@ export const MessagesPage: React.FC = () => {
       const formattedMsgs: ChatMessage[] = rawMsgs.map((m: any) => ({
         id: m.id,
         senderName: m.sender?.full_name || m.sender?.name || (m.sender_id === user?.id ? 'Me' : 'Team Member'),
-        senderAvatar: m.sender?.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120',
+        senderAvatar: m.sender?.avatar_url || '',
         isMe: m.sender_id === user?.id,
         text: m.content || m.text || '',
         timestamp: m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
@@ -153,16 +153,21 @@ export const MessagesPage: React.FC = () => {
         content: contentToSend,
       });
 
-      const newMsgItem: ChatMessage = {
-        id: res.data?.message?.id || `msg-${Date.now()}`,
-        senderName: 'Me',
-        senderAvatar: user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120',
-        isMe: true,
-        text: contentToSend,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      setMessages((prev) => [...prev, newMsgItem]);
+      const sentId = res.data?.message?.id;
+      if (sentId) {
+        const newMsgItem: ChatMessage = {
+          id: sentId,
+          senderName: 'Me',
+          senderAvatar: user?.avatar || '',
+          isMe: true,
+          text: contentToSend,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages((prev) => [...prev, newMsgItem]);
+      } else {
+        // Server did not return the stored message; reload so every row carries a real id.
+        await fetchMessagesForConv(activeConv.id);
+      }
       setConversations((prev) =>
         prev.map((c) => (c.id === activeConv.id ? { ...c, lastMessage: contentToSend, timestamp: 'Now' } : c))
       );

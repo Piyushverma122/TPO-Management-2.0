@@ -1,4 +1,5 @@
 import React from 'react';
+import { Avatar } from '../ui/Avatar';
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, X } from 'lucide-react';
@@ -113,11 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
       <div className="p-4 border-t border-[#202D42] bg-[#0B0F17]/50 space-y-2 shrink-0">
         <div className="flex items-center justify-between">
           <NavLink to="/profile" onClick={onCloseMobile} className="flex items-center gap-2.5 overflow-hidden group">
-            <img
-              src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'}
-              alt={user?.name}
-              className="w-9 h-9 rounded-full object-cover border border-[#A3E635] group-hover:scale-105 transition-transform"
-            />
+            <Avatar src={user?.avatar} name={user?.name} size="sm" border />
             <div className="truncate">
               <p className="text-xs font-bold text-white group-hover:text-[#A3E635] transition-colors truncate">
                 {user?.name || 'Dr. James Anderson'}

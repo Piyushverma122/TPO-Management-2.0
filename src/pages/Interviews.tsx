@@ -92,7 +92,7 @@ export const Interviews: React.FC = () => {
         return {
           id: ev.id,
           companyName: comp,
-          companyLogo: ev.company_logo || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
+          companyLogo: ev.company_logo || '',
           roleTitle: role,
           roundName: ev.round_name || 'Technical Round 1',
           dateTime: ev.start_time ? new Date(ev.start_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Scheduled',

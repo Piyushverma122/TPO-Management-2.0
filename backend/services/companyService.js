@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { supabase: supabaseAuth } = require('../config/supabase');
 const bcrypt = require('bcryptjs');
 const dataScopeService = require('./dataScopeService');
 
@@ -467,7 +468,7 @@ const createRecruiter = async (companyId, payload) => {
   }
 
   // 2. Register in Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  const { data: authData, error: authError } = await supabaseAuth.auth.signUp({
     email,
     password,
     options: { data: { full_name, role: 'recruiter' } },

@@ -116,7 +116,7 @@ export const Companies: React.FC = () => {
         return {
           id: c.id,
           name: c.name || 'Corporate Partner',
-          logo: c.logo_url || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
+          logo: c.logo_url || '',
           industry: c.industry || 'Technology & Services',
           website: c.website || 'https://example.com',
           tier: (c.tier as any) || 'Standard',
@@ -412,11 +412,7 @@ export const Companies: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={cmp.logo}
-                      alt={cmp.name}
-                      className="w-12 h-12 rounded-xl object-cover border border-[#202D42] group-hover:border-[#A3E635]/50 transition-colors"
-                    />
+                    <Avatar src={cmp.logo} name={cmp.name} size="md" className="rounded-xl border border-[#202D42]" />
                     <div>
                       <h3 className="text-base font-extrabold text-white group-hover:text-[#A3E635] transition-colors">
                         {cmp.name}
@@ -483,7 +479,7 @@ export const Companies: React.FC = () => {
                 <TableRow key={cmp.id} onClick={() => handleOpenDrawer(cmp)} className="cursor-pointer">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <img src={cmp.logo} alt={cmp.name} className="w-8 h-8 rounded-lg object-cover border border-[#202D42]" />
+                      <Avatar src={cmp.logo} name={cmp.name} size="sm" className="rounded-lg border border-[#202D42]" />
                       <span className="font-bold text-white">{cmp.name}</span>
                     </div>
                   </TableCell>
@@ -557,11 +553,7 @@ export const Companies: React.FC = () => {
 
                 {/* Company Logo & Branding */}
                 <div className="flex items-center gap-4 bg-[#101726] border border-[#202D42] rounded-2xl p-4">
-                  <img
-                    src={selectedCompany.logo}
-                    alt={selectedCompany.name}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-[#A3E635]"
-                  />
+                  <Avatar src={selectedCompany.logo} name={selectedCompany.name} size="lg" border className="rounded-2xl" />
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-extrabold text-white">{selectedCompany.name}</h3>

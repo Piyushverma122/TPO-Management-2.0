@@ -106,16 +106,16 @@ export const Offers: React.FC = () => {
         return {
           id: a.id,
           applicationId: a.id,
-          companyName: compObj?.name || 'Corporate Partner',
-          companyLogo: compObj?.logo_url || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
-          roleTitle: driveObj?.role_title || 'Software Development Engineer',
-          ctc: driveObj?.ctc ? `₹${driveObj.ctc} LPA` : '₹14 LPA',
+          companyName: compObj?.name || 'N/A',
+          companyLogo: compObj?.logo_url || '',
+          roleTitle: driveObj?.role_title || 'N/A',
+          ctc: driveObj?.ctc ? `₹${driveObj.ctc} LPA` : 'N/A',
           offerDate: new Date(offerDateStr).toLocaleDateString([], { dateStyle: 'medium' }),
-          joiningDate: new Date(Date.now() + 60 * 86400000).toLocaleDateString([], { dateStyle: 'medium' }),
-          location: driveObj?.location || 'Bengaluru / Hybrid',
+          joiningDate: a.joining_date ? new Date(a.joining_date).toLocaleDateString([], { dateStyle: 'medium' }) : 'TBD',
+          location: driveObj?.location || 'N/A',
           status: formattedStatus,
-          pdfUrl: a.offer_letter_url || a.resumes?.file_url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          remarks: a.remarks || 'Official recruitment offer letter issued by campus placement office.',
+          pdfUrl: a.offer_letter_url || '',
+          remarks: a.remarks || '',
         };
       });
 
@@ -201,8 +201,12 @@ export const Offers: React.FC = () => {
 
   // Download PDF Handler
   const handleDownloadPdf = (companyName: string, url?: string) => {
+    if (!url) {
+      toastError('No Document', 'The offer letter file has not been uploaded yet.');
+      return;
+    }
     success('Download Started', `Saved ${companyName.replace(/\s+/g, '_')}_Offer_Letter.pdf`);
-    if (url) window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // Print PDF Handler

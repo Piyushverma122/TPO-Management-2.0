@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { setRealtimeAuth } from '../config/supabase';
 
 // Create a single Axios instance for the entire application
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
@@ -78,6 +79,7 @@ apiClient.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
+            originalRequest._retry = true;
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return apiClient(originalRequest);
           })
@@ -105,6 +107,7 @@ apiClient.interceptors.response.use(
 
         // Persist renewed tokens in localStorage
         localStorage.setItem('tpo_token', newAccessToken);
+        setRealtimeAuth(newAccessToken);
         if (newRefreshToken) {
           localStorage.setItem('tpo_refresh_token', newRefreshToken);
         }

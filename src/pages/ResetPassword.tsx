@@ -52,14 +52,7 @@ export const ResetPasswordPage: React.FC = () => {
           }
           setIsValidToken(true);
         } else {
-          // If no token in URL, check if local storage has a pending recovery session
-          const savedToken = localStorage.getItem('tpo_token');
-          if (savedToken) {
-            setRecoveryToken(savedToken);
-            setIsValidToken(true);
-          } else {
-            setIsValidToken(false);
-          }
+          setIsValidToken(false);
         }
       } catch (err) {
         setIsValidToken(false);
