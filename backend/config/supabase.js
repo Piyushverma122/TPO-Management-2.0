@@ -29,9 +29,13 @@ const supabaseAdmin = createClient(
   }
 );
 
-// Default export is the service-role client: all server-side data access bypasses RLS,
-// which is enabled on every public table. The anon client is only for Supabase Auth
-// flows (sign in/up, refresh, reset) and is exposed as the named `supabase` export.
-module.exports = supabaseAdmin;
+// Default export is the client used for all data queries.
+// - SUPABASE_USE_SERVICE_ROLE=true  -> service-role client (bypasses RLS). Required once RLS is enabled
+//   (see backend/sql/001_enable_rls_and_realtime.sql) and needs a valid SUPABASE_SERVICE_ROLE_KEY.
+// - otherwise                       -> anon client (works only while RLS is disabled).
+// The anon client is always exposed as the named `supabase` export for Supabase Auth flows.
+const useServiceRole = String(process.env.SUPABASE_USE_SERVICE_ROLE || '').toLowerCase() === 'true';
+
+module.exports = useServiceRole ? supabaseAdmin : supabase;
 module.exports.supabase = supabase;
 module.exports.supabaseAdmin = supabaseAdmin;

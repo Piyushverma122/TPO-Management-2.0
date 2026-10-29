@@ -1,6 +1,9 @@
 import apiClient from './axios';
 
 export interface AdminDashboardData {
+  highestPackage?: number;
+  averagePackage?: number;
+  topRecruiters?: { name: string; placed: number }[];
   totalStudents: number;
   totalCompanies: number;
   totalDrives: number;

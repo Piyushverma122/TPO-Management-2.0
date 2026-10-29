@@ -40,6 +40,7 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Dropdown } from '../components/ui/Dropdown';
 import { useToast } from '../components/ui/Toast';
+import { Avatar } from '../components/ui/Avatar';
 import { useAuth } from '../context/AuthContext';
 import {
   getAdminDashboard,
@@ -133,10 +134,13 @@ const StaffDashboard: React.FC = () => {
   };
 
   // Derive Display Metrics
-  const totalStudents = adminData?.totalStudents ?? 5200;
-  const companiesCount = adminData?.totalCompanies ?? 350;
-  const placedCount = adminData?.totalPlacements ?? 4100;
-  const upcomingCount = adminData?.upcomingDrives?.length ?? tpoData?.activeDrives ?? 25;
+  const totalStudents = adminData?.totalStudents ?? 0;
+  const companiesCount = adminData?.totalCompanies ?? 0;
+  const placedCount = adminData?.totalPlacements ?? 0;
+  const upcomingCount = adminData?.upcomingDrives?.length ?? tpoData?.activeDrives ?? 0;
+  const highestPackage = adminData?.highestPackage ?? 0;
+  const averagePackage = adminData?.averagePackage ?? 0;
+  const topRecruiters = adminData?.topRecruiters ?? [];
   const recentDrivesList = adminData?.upcomingDrives || [];
   const recentActivitiesList = adminData?.recentActivities || [];
 
@@ -356,21 +360,15 @@ const StaffDashboard: React.FC = () => {
           </div>
 
           <div className="mt-4 flex items-center gap-1.5 overflow-x-auto pt-1">
-            <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center font-bold text-[11px] text-black shrink-0 shadow-sm">
-              G
-            </div>
-            <div className="w-6 h-6 rounded-md bg-[#FF9900] flex items-center justify-center font-bold text-[11px] text-black shrink-0 shadow-sm">
-              a
-            </div>
-            <div className="w-6 h-6 rounded-md bg-[#006699] flex items-center justify-center font-bold text-[11px] text-white shrink-0 shadow-sm">
-              EY
-            </div>
-            <div className="w-6 h-6 rounded-md bg-[#1877F2] flex items-center justify-center font-bold text-[11px] text-white shrink-0 shadow-sm">
-              ∞
-            </div>
-            <div className="w-6 h-6 rounded-md bg-rose-600 flex items-center justify-center font-bold text-[11px] text-white shrink-0 shadow-sm">
-              P
-            </div>
+            {(adminData?.upcomingDrives ?? []).slice(0, 5).map((d: any) => (
+              <Avatar
+                key={d.id}
+                src={d.companies?.logo_url}
+                name={d.companies?.name || 'Company'}
+                size="xs"
+                className="rounded-md shrink-0"
+              />
+            ))}
           </div>
         </motion.div>
       </motion.div>
@@ -469,9 +467,6 @@ const StaffDashboard: React.FC = () => {
             <div className="pt-4 border-t border-[#202D42]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-white">Monthly Placement Graph</h3>
-                <span className="text-xs text-[#A3E635] font-semibold flex items-center gap-1 bg-[#A3E635]/10 border border-[#A3E635]/20 px-2.5 py-0.5 rounded-full">
-                  <TrendingUp className="w-3.5 h-3.5" /> +18.4% YoY Growth
-                </span>
               </div>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -566,7 +561,7 @@ const StaffDashboard: React.FC = () => {
                 >
                   <div>
                     <span className="text-[11px] font-bold text-[#94A3B8] block">Highest Package</span>
-                    <span className="text-xl font-extrabold text-white">₹45.0 LPA</span>
+                    <span className="text-xl font-extrabold text-white">{highestPackage > 0 ? `₹${highestPackage} LPA` : 'N/A'}</span>
                   </div>
                   <div className="h-16">
                     <ResponsiveContainer width="100%" height="100%">
@@ -588,11 +583,11 @@ const StaffDashboard: React.FC = () => {
             <div className="grid grid-cols-2 gap-3 bg-[#101726] border border-[#202D42] rounded-xl p-3 text-center">
               <div>
                 <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Average Package</span>
-                <span className="text-base font-extrabold text-white">₹10.5 LPA</span>
+                <span className="text-base font-extrabold text-white">{averagePackage > 0 ? `₹${averagePackage} LPA` : 'N/A'}</span>
               </div>
               <div className="border-l border-[#202D42]">
                 <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Highest Package</span>
-                <span className="text-base font-extrabold text-[#A3E635]">₹45 LPA</span>
+                <span className="text-base font-extrabold text-[#A3E635]">{highestPackage > 0 ? `₹${highestPackage} LPA` : 'N/A'}</span>
               </div>
             </div>
 
@@ -602,22 +597,16 @@ const StaffDashboard: React.FC = () => {
                 Top Recruiters
               </span>
               <div className="grid grid-cols-4 gap-2">
-                {[
-                  { name: 'amazon', color: 'text-white' },
-                  { name: 'IBM', color: 'text-white' },
-                  { name: 'Deloitte.', color: 'text-white' },
-                  { name: 'P&G', color: 'text-rose-400' },
-                  { name: 'KPMG', color: 'text-sky-400' },
-                  { name: 'EY', color: 'text-amber-400' },
-                  { name: 'Google', color: 'text-[#A3E635]' },
-                  { name: 'ORACLE', color: 'text-rose-500' },
-                ].map((rec, idx) => (
+                {topRecruiters.length === 0 && (
+                  <p className="col-span-4 text-xs text-[#64748B]">No placements recorded yet.</p>
+                )}
+                {topRecruiters.map((rec, idx) => (
                   <motion.div
                     key={idx}
                     whileHover={{ scale: 1.06, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     transition={{ type: 'spring' as const, stiffness: 350, damping: 20 }}
-                    className={`bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs ${rec.color} hover:border-[#A3E635]/40 hover:bg-[#162032] transition-colors cursor-pointer shadow-sm`}
+                    className={`bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-white hover:border-[#A3E635]/40 hover:bg-[#162032] transition-colors cursor-pointer shadow-sm`}
                   >
                     {rec.name}
                   </motion.div>
@@ -632,26 +621,7 @@ const StaffDashboard: React.FC = () => {
               </span>
               <div className="space-y-3">
                 {recentActivitiesList.length === 0 ? (
-                  <>
-                    <motion.div whileHover={{ x: 3 }} className="flex items-start gap-3 text-xs cursor-pointer">
-                      <div className="w-6 h-6 rounded-full bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center shrink-0 mt-0.5">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-white leading-snug">Amazon declared results, 10 placed</p>
-                        <span className="text-[10px] text-[#64748B]">2 hours ago</span>
-                      </div>
-                    </motion.div>
-                    <motion.div whileHover={{ x: 3 }} className="flex items-start gap-3 text-xs cursor-pointer">
-                      <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                        <Calendar className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-white leading-snug">IBM drive rescheduled to 5th Nov</p>
-                        <span className="text-[10px] text-[#64748B]">Yesterday</span>
-                      </div>
-                    </motion.div>
-                  </>
+                  <p className="text-xs text-[#64748B]">No recent activity.</p>
                 ) : (
                   recentActivitiesList.map((act: any, idx: number) => (
                     <motion.div key={act.id || idx} whileHover={{ x: 3 }} className="flex items-start gap-3 text-xs cursor-pointer">

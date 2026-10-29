@@ -14,7 +14,7 @@ const getHealthStatus = async (req, res) => {
       .select('*', { count: 'exact', head: true });
 
     if (dbError) {
-      return sendError(res, 'Database connection check failed', dbError.message, 503);
+      return sendError(res, 'Database connection check failed', dbError.message || dbError.code || 'Supabase rejected the request (check SUPABASE_SERVICE_ROLE_KEY)', 503);
     }
 
     return sendSuccess(res, 'Smart Placement & TPO Portal Backend API is fully operational', {

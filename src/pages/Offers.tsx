@@ -98,7 +98,7 @@ export const Offers: React.FC = () => {
 
         let formattedStatus: 'Pending' | 'Accepted' | 'Rejected' | 'Offer Released' = 'Pending';
         const st = (a.status || '').toLowerCase();
-        if (st.includes('accepted')) formattedStatus = 'Accepted';
+        if (st.includes('accepted') || (a.offer_status || '').toLowerCase() === 'accepted') formattedStatus = 'Accepted';
         else if (st.includes('rejected') || st.includes('declined')) formattedStatus = 'Rejected';
         else if (st.includes('offer')) formattedStatus = 'Offer Released';
         else formattedStatus = 'Pending';

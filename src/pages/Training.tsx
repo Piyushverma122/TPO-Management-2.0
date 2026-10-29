@@ -123,28 +123,28 @@ export const Training: React.FC = () => {
       const total = res.data?.total || rawList.length;
 
       const formattedList: StudentTrainingItem[] = rawList.map((t: any) => {
-        const finishedMods = Number(t.finished_modules) || 0;
-        const totalMods = Number(t.total_modules) || 0;
-        const prog = totalMods > 0 ? Math.round((finishedMods / totalMods) * 100) : 0;
-        const isComp = t.status === 'Completed' || (totalMods > 0 && prog >= 100);
+        const finishedMods = Number(t.finished_sessions) || 0;
+        const totalMods = Number(t.total_sessions) || 0;
+        const prog = Number(t.avg_progress) || 0;
+        const isComp = t.status === 'Completed';
 
         return {
           id: t.id,
           title: t.title || 'Untitled Training',
           category: t.category || 'Technical',
-          trainerName: t.trainer_name || t.faculty?.users?.full_name || 'N/A',
+          trainerName: t.trainer_name || 'Not assigned',
           description: t.description || '',
           duration: t.duration || 'N/A',
           startDate: t.start_date ? new Date(t.start_date).toLocaleDateString() : 'N/A',
           endDate: t.end_date ? new Date(t.end_date).toLocaleDateString() : 'N/A',
           mode: t.mode === 'In-Person' ? 'In-Person' : 'Online',
-          status: isComp ? 'Completed' : t.status === 'Ongoing' ? 'Ongoing' : 'Enrolled',
+          status: isComp ? 'Completed' : t.status === 'Active' || t.status === 'Ongoing' ? 'Ongoing' : 'Enrolled',
           progressPercentage: prog,
           finishedModules: finishedMods,
           totalModules: totalMods,
           attendancePercentage: t.attendance_percentage ? parseFloat(t.attendance_percentage) : 0,
           presentSessions: Number(t.present_sessions) || 0,
-          totalSessions: Number(t.total_sessions) || 0,
+          totalSessions: totalMods,
           certificateNumber: isComp ? t.certificate_number || undefined : undefined,
           certificateIssueDate: isComp && t.certificate_issue_date ? new Date(t.certificate_issue_date).toLocaleDateString() : undefined,
           materials: Array.isArray(t.materials) ? t.materials : [],

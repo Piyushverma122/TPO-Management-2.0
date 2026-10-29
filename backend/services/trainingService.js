@@ -28,6 +28,15 @@ const listTrainings = async (queryParams) => {
       training_enrollments (
         progress_percentage,
         completed
+      ),
+      training_sessions (
+        id,
+        session_date
+      ),
+      training_materials (
+        title,
+        file_url,
+        mime_type
       )
     `,
       { count: 'exact' }
@@ -58,12 +67,27 @@ const listTrainings = async (queryParams) => {
     const completedCount = enrollments.filter((e) => e.completed).length;
     const completionRate = enrolledCount > 0 ? Math.round((completedCount / enrolledCount) * 100) : 0;
 
+    const sessions = m.training_sessions || [];
+    const now = Date.now();
+    const avgProgress = enrolledCount > 0
+      ? Math.round(enrollments.reduce((sum, e) => sum + (e.progress_percentage || 0), 0) / enrolledCount)
+      : 0;
+    const { training_sessions, training_materials, ...rest } = m;
+
     return {
-      ...m,
-      trainer_name: m.faculty?.users?.full_name || 'Senior Instructor',
-      duration: m.duration_hours ? `${m.duration_hours} Hours` : '4 Weeks',
+      ...rest,
+      trainer_name: m.faculty?.users?.full_name || null,
+      duration: m.duration_hours ? `${m.duration_hours} Hours` : null,
       enrolled_count: enrolledCount,
       completion_rate: completionRate,
+      avg_progress: avgProgress,
+      total_sessions: sessions.length,
+      finished_sessions: sessions.filter((s) => new Date(s.session_date).getTime() < now).length,
+      materials: (training_materials || []).map((x) => ({
+        title: x.title,
+        url: x.file_url,
+        type: x.mime_type === 'application/pdf' ? 'PDF' : x.mime_type?.startsWith('video') ? 'Video' : 'Link',
+      })),
     };
   });
 

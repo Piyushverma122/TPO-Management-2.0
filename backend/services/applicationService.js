@@ -243,11 +243,32 @@ const listApplications = async (reqUser, queryParams) => {
     throw err;
   }
 
-  const normalizedApps = (apps || []).map((app) => ({
-    ...app,
-    drives: app.placement_drives,
-    applied_at: app.applied_date || app.created_at,
-  }));
+  // Offer letter, joining date and offer response live on `placements`; attach them to the matching application.
+  const driveIds = [...new Set((apps || []).map((a) => a.drive_id))];
+  const studentIds = [...new Set((apps || []).map((a) => a.student_id))];
+  const placementByKey = {};
+  if (driveIds.length > 0) {
+    const { data: placementRows } = await supabase
+      .from('placements')
+      .select('drive_id, student_id, offer_letter_url, joining_date, offer_status')
+      .in('drive_id', driveIds)
+      .in('student_id', studentIds);
+    (placementRows || []).forEach((p) => {
+      placementByKey[`${p.drive_id}:${p.student_id}`] = p;
+    });
+  }
+
+  const normalizedApps = (apps || []).map((app) => {
+    const placement = placementByKey[`${app.drive_id}:${app.student_id}`];
+    return {
+      ...app,
+      drives: app.placement_drives,
+      applied_at: app.applied_date || app.created_at,
+      offer_letter_url: placement?.offer_letter_url || null,
+      joining_date: placement?.joining_date || null,
+      offer_status: placement?.offer_status || null,
+    };
+  });
 
   return {
     applications: normalizedApps,

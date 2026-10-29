@@ -1,5 +1,17 @@
 const supabase = require('../config/supabase');
 
+// Supabase returns { error } instead of throwing; surface it so the API fails loudly
+// instead of reporting zeros for every metric.
+const assertNoErrors = (results) => {
+  const failed = results.find((r) => r && r.error);
+  if (failed) {
+    const err = new Error(`Dashboard query failed: ${failed.error.message || failed.error.code || 'database unreachable (check SUPABASE_SERVICE_ROLE_KEY)'}`);
+    err.statusCode = 503;
+    throw err;
+  }
+  return results;
+};
+
 /**
  * Admin Dashboard Overview Metrics
  */
@@ -17,7 +29,8 @@ const getAdminDashboard = async () => {
     { data: recentActivities },
     { data: placementsData },
     { data: placedStudentsList },
-  ] = await Promise.all([
+    { data: packageRows },
+  ] = assertNoErrors(await Promise.all([
     supabase.from('students').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('companies').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('placement_drives').select('id', { count: 'exact', head: true }).is('deleted_at', null),
@@ -46,7 +59,8 @@ const getAdminDashboard = async () => {
       .select('created_at, branches(name, code)')
       .eq('placement_status', 'Placed')
       .is('deleted_at', null),
-  ]);
+    supabase.from('placements').select('package, companies(name)'),
+  ]));
 
   const totalPlacements = Math.max(totalPlacementsRecord || 0, placedStudentsCount || 0);
 
@@ -86,7 +100,24 @@ const getAdminDashboard = async () => {
     color: colors[idx % colors.length],
   }));
 
+  const packages = (packageRows || []).map((r) => Number(r.package)).filter((n) => Number.isFinite(n) && n > 0);
+  const highestPackage = packages.length ? Math.max(...packages) : 0;
+  const averagePackage = packages.length ? packages.reduce((a, b) => a + b, 0) / packages.length : 0;
+
+  const recruiterCounts = {};
+  (packageRows || []).forEach((r) => {
+    const name = r.companies?.name;
+    if (name) recruiterCounts[name] = (recruiterCounts[name] || 0) + 1;
+  });
+  const topRecruiters = Object.entries(recruiterCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([name, placed]) => ({ name, placed }));
+
   return {
+    highestPackage,
+    averagePackage: Math.round(averagePackage * 10) / 10,
+    topRecruiters,
     totalStudents: totalStudents || 0,
     totalCompanies: totalCompanies || 0,
     totalDrives: totalDrives || 0,
@@ -113,20 +144,20 @@ const getTPODashboard = async () => {
     { count: placedStudentsCount },
     { count: totalCompanies },
     { count: activeTrainings },
-  ] = await Promise.all([
+  ] = assertNoErrors(await Promise.all([
     supabase.from('placement_drives').select('id', { count: 'exact', head: true }).in('status', ['Ongoing', 'Upcoming']).is('deleted_at', null),
     supabase.from('drive_applications').select('id', { count: 'exact', head: true }).eq('status', 'Applied'),
     supabase
       .from('application_status_history')
       .select('id, stage, round_name, remarks, created_at, drive_applications(id, placement_drives(role_title, companies(name)), students(users(full_name)))')
-      .ilike('stage', '%round%')
+      .in('stage', ['Round 1', 'Round 2', 'Technical', 'HR'])
       .order('created_at', { ascending: false })
       .limit(5),
     supabase.from('placements').select('package'),
     supabase.from('students').select('id', { count: 'exact', head: true }).eq('placement_status', 'Placed').is('deleted_at', null),
     supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'Active').is('deleted_at', null),
     supabase.from('training_modules').select('id', { count: 'exact', head: true }).eq('status', 'Active').is('deleted_at', null),
-  ]);
+  ]));
 
   const packages = (placements || []).map((p) => parseFloat(p.package) || 0);
   const totalPlacements = Math.max((placements || []).length, placedStudentsCount || 0);
@@ -168,7 +199,7 @@ const getStudentDashboard = async (userId) => {
     { data: activeResume },
     { data: notifications },
     { data: enrollments },
-  ] = await Promise.all([
+  ] = assertNoErrors(await Promise.all([
     studentId
       ? supabase
           .from('drive_applications')
@@ -183,7 +214,7 @@ const getStudentDashboard = async (userId) => {
     studentId
       ? supabase.from('training_enrollments').select('*, training_modules(title)').eq('student_id', studentId)
       : Promise.resolve({ data: [] }),
-  ]);
+  ]));
 
   return {
     placementStatus: student ? student.placement_status : 'Unplaced',
@@ -219,10 +250,10 @@ const getRecruiterDashboard = async (userId) => {
   const [
     { count: activeDrives },
     { data: companyDrives },
-  ] = await Promise.all([
+  ] = assertNoErrors(await Promise.all([
     supabase.from('placement_drives').select('id', { count: 'exact', head: true }).eq('company_id', companyId).in('status', ['Ongoing', 'Upcoming']).is('deleted_at', null),
     supabase.from('placement_drives').select('id').eq('company_id', companyId),
-  ]);
+  ]));
 
   const driveIds = (companyDrives || []).map((d) => d.id);
 
@@ -262,11 +293,11 @@ const getFacultyDashboard = async (userId) => {
     { count: activeTrainings },
     { data: sessions },
     { count: totalPlacements },
-  ] = await Promise.all([
+  ] = assertNoErrors(await Promise.all([
     supabase.from('training_modules').select('id', { count: 'exact', head: true }).eq('status', 'Active').is('deleted_at', null),
     supabase.from('training_sessions').select('id, title, session_date, meeting_link, training_modules(title)').order('session_date', { ascending: true }).limit(5),
     supabase.from('placements').select('id', { count: 'exact', head: true }),
-  ]);
+  ]));
 
   return {
     activeTrainings: activeTrainings || 0,
@@ -283,11 +314,11 @@ const getAnalytics = async () => {
     { data: placements },
     { data: companies },
     { data: students },
-  ] = await Promise.all([
+  ] = assertNoErrors(await Promise.all([
     supabase.from('placements').select('package, created_at, companies(name, tier), students(passing_year, branches(name))'),
     supabase.from('companies').select('name, hired_count, avg_package, highest_package').is('deleted_at', null),
     supabase.from('students').select('created_at, passing_year, placement_status, branches(name)').is('deleted_at', null),
-  ]);
+  ]));
 
   // Monthly Placements Trend
   const monthlyMap = {};

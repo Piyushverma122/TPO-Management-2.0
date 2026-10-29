@@ -65,6 +65,16 @@ const server = app.listen(PORT, () => {
   logger.info(`🔗 Health Check URL: http://localhost:${PORT}/api/v1/health`);
 });
 
+// Fail loudly if the database client cannot reach Supabase: every data query would otherwise return empty errors.
+require('./config/supabase')
+  .from('users')
+  .select('id', { count: 'exact', head: true })
+  .then(({ error }) => {
+    if (error) {
+      logger.error(`Supabase data check FAILED (${error.code || error.message || 'unauthorized'}). Check SUPABASE_URL / SUPABASE_KEY, and SUPABASE_SERVICE_ROLE_KEY if SUPABASE_USE_SERVICE_ROLE=true.`);
+    }
+  });
+
 // Handle Unhandled Rejections & Exceptions
 process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Promise Rejection:', err.message || err);
