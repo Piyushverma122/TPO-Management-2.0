@@ -62,21 +62,21 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose })
     >
       <div className="space-y-2">
         {allowed.length === 0 ? (
-          <p className="text-sm text-[#94A3B8]">Your role cannot create new records.</p>
+          <p className="text-sm text-muted-foreground">Your role cannot create new records.</p>
         ) : (
           allowed.map(({ label, description, route, icon: Icon }) => (
             <button
               key={route}
               type="button"
               onClick={() => go(route)}
-              className="w-full flex items-center gap-3 text-left bg-[#101726] border border-[#202D42] hover:border-[#A3E635]/50 rounded-xl p-3 transition-colors"
+              className="w-full flex items-center gap-3 text-left bg-secondary hover:bg-accent rounded-2xl p-3 transition-colors"
             >
-              <span className="w-9 h-9 rounded-lg bg-[#A3E635]/15 text-[#A3E635] flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-full bg-background text-foreground flex items-center justify-center shrink-0">
                 <Icon className="w-4 h-4" />
               </span>
               <span>
-                <span className="block text-sm font-bold text-white">{label}</span>
-                <span className="block text-xs text-[#94A3B8]">{description}</span>
+                <span className="block text-sm font-bold text-foreground">{label}</span>
+                <span className="block text-xs text-muted-foreground">{description}</span>
               </span>
             </button>
           ))

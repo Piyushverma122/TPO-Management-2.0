@@ -26,16 +26,16 @@ import {
   X,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Pagination } from '../components/ui/Pagination';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Pagination } from '../components/app/Pagination';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { useAuth } from '../context/AuthContext';
 import {
   getNotifications,
@@ -47,6 +47,8 @@ import {
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
 import supabase from '../config/supabase';
+import { Button as ShadButton } from '@/components/ui/button';
+import { Tabs } from '../components/app/Tabs';
 
 export interface StudentNotification {
   id: string;
@@ -232,8 +234,8 @@ export const Notifications: React.FC = () => {
   // Icon Helper for Notification Types
   const renderNotificationIcon = (type: string) => {
     const lower = type.toLowerCase();
-    if (lower.includes('drive')) return <Briefcase className="w-5 h-5 text-[#A3E635]" />;
-    if (lower.includes('application')) return <FileText className="w-5 h-5 text-[#A3E635]" />;
+    if (lower.includes('drive')) return <Briefcase className="w-5 h-5 text-primary" />;
+    if (lower.includes('application')) return <FileText className="w-5 h-5 text-primary" />;
     if (lower.includes('interview')) return <Calendar className="w-5 h-5 text-sky-400" />;
     if (lower.includes('offer')) return <Award className="w-5 h-5 text-emerald-400" />;
     if (lower.includes('training') || lower.includes('cert')) return <GraduationCap className="w-5 h-5 text-purple-400" />;
@@ -270,41 +272,37 @@ export const Notifications: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-16 font-sans">
-      
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Notifications' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
-            Notification Center
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {unreadCount} Unread Alerts
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Stay updated with recruitment drive deadlines, interview call schedules, and offer letters.
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">Notifications</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up'}. Drive deadlines, interviews and offer letters.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchNotificationsData}
             disabled={loading}
+            className="text-xs"
           >
-            Refresh Alerts
+            Refresh
           </Button>
 
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
-            leftIcon={<Check className="w-4 h-4 text-[#A3E635]" />}
+            leftIcon={<Check className="w-4 h-4" />}
             onClick={handleMarkAllRead}
             disabled={unreadCount === 0}
+            className="text-xs"
           >
-            Mark All Read
+            Mark all read
           </Button>
 
           <PermissionGuard module={Module.NOTIFICATIONS} action={Action.CREATE}>
@@ -313,7 +311,7 @@ export const Notifications: React.FC = () => {
               size="md"
               leftIcon={<Send className="w-4 h-4" />}
               onClick={() => setIsBroadcastModalOpen(true)}
-              className="font-extrabold text-xs"
+              className="text-xs"
             >
               Broadcast
             </Button>
@@ -321,31 +319,33 @@ export const Notifications: React.FC = () => {
         </div>
       </div>
 
-      {/* SEARCH & FILTERS BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="flex-1 w-full min-w-0">
+      {/* INBOX CARD */}
+      <Card className="overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4 border-b border-border">
+          <Tabs
+            variant="neon"
+            activeTab={selectedReadFilter}
+            onChange={setSelectedReadFilter}
+            tabs={[
+              { id: 'All', label: 'All' },
+              { id: 'Unread', label: 'Unread', count: unreadCount },
+              { id: 'Read', label: 'Read' },
+            ]}
+            className="w-auto shrink-0"
+          />
+
+          <div className="flex-1 min-w-0">
             <SearchInput
-              placeholder="Search notifications by title, content, or type..."
+              placeholder="Search by title, content or type..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Dropdown
               className="w-full sm:w-44 shrink-0"
-              options={[
-                { label: 'All Notifications', value: 'All' },
-                { label: 'Unread Only', value: 'Unread' },
-                { label: 'Read Only', value: 'Read' },
-              ]}
-              value={selectedReadFilter}
-              onChange={setSelectedReadFilter}
-            />
-
-            <Dropdown
-              className="w-full sm:w-40 shrink-0"
               options={[
                 { label: 'All Priorities', value: 'All' },
                 { label: 'High Priority', value: 'HIGH' },
@@ -357,153 +357,138 @@ export const Notifications: React.FC = () => {
             />
 
             {(selectedReadFilter !== 'All' || selectedPriority !== 'All' || searchQuery !== '') && (
-              <button
+              <ShadButton
+                variant="ghost"
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedReadFilter('All');
                   setSelectedPriority('All');
                 }}
-                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                className="h-10 rounded-full px-4 text-xs text-muted-foreground hover:text-foreground shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </button>
+                Reset
+              </ShadButton>
             )}
           </div>
         </div>
-      </Card>
 
-      {/* ERROR STATE */}
-      {errorMsg ? (
-        <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
-          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Notifications</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
-          <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchNotificationsData}>
-            Retry Loading Stream
-          </Button>
-        </Card>
-      ) : loading ? (
-        /* LOADING SKELETON STATE */
-        <div className="space-y-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="p-5 border-[#202D42] animate-pulse space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#162032] rounded-xl" />
-                <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-[#162032] rounded w-48" />
-                  <div className="h-3 bg-[#162032] rounded w-3/4" />
+        {/* List */}
+        {errorMsg ? (
+          <div className="p-12 text-center space-y-4">
+            <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
+            <h3 className="text-lg font-semibold text-foreground">Error loading notifications</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
+            <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchNotificationsData}>
+              Retry
+            </Button>
+          </div>
+        ) : loading ? (
+          <ul className="divide-y divide-border">
+            {[1, 2, 3, 4].map((i) => (
+              <li key={i} className="flex items-center gap-4 p-5 animate-pulse">
+                <div className="h-11 w-11 rounded-full bg-secondary" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-48 rounded bg-secondary" />
+                  <div className="h-3 w-3/4 rounded bg-secondary" />
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : processedNotifications.length === 0 ? (
-        /* EMPTY STATE */
-        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
-          <Bell className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
-          <h3 className="text-xl font-extrabold text-white">No notifications available.</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
-            You do not have any new or unread system notifications right now.
-          </p>
-        </Card>
-      ) : (
-        /* LIVE NOTIFICATIONS STREAM LIST */
-        <div className="space-y-4">
-          {processedNotifications.map((notif) => (
-            <motion.div
-              key={notif.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card
+              </li>
+            ))}
+          </ul>
+        ) : processedNotifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+              <Bell className="w-6 h-6" />
+            </span>
+            <h3 className="text-lg font-semibold text-foreground">Nothing here yet</h3>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              New drive alerts, interview schedules and offers will show up in this inbox.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {processedNotifications.map((notif) => (
+              <motion.li
+                key={notif.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
                 onClick={() => !notif.isRead && handleMarkSingleRead(notif.id)}
-                className={`p-5 border transition-all duration-300 relative group cursor-pointer ${
-                  notif.isRead
-                    ? 'bg-[#101726]/80 border-[#202D42]'
-                    : 'bg-[#162032] border-[#A3E635]/40 shadow-[0_0_15px_rgba(163,230,53,0.12)]'
+                className={`group flex cursor-pointer items-start gap-4 p-5 transition-colors hover:bg-accent/40 ${
+                  notif.isRead ? '' : 'bg-secondary/40'
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  
-                  {/* Left: Icon + Text Content */}
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-11 h-11 rounded-2xl bg-[#101726] border border-[#202D42] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                      {renderNotificationIcon(notif.type)}
-                    </div>
-
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-extrabold text-white group-hover:text-[#A3E635] transition-colors">
-                          {notif.title}
-                        </span>
-
-                        <Badge
-                          variant={notif.priority === 'HIGH' ? 'alert' : notif.priority === 'MEDIUM' ? 'warning' : 'neutral'}
-                          size="sm"
-                        >
-                          {notif.priority} Priority
-                        </Badge>
-
-                        {!notif.isRead && (
-                          <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-ping" title="Unread" />
-                        )}
-                      </div>
-
-                      <p className="text-xs text-[#94A3B8] leading-relaxed">{notif.message}</p>
-
-                      <div className="flex items-center gap-4 text-[10px] text-[#64748B] pt-1">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-[#64748B]" /> {notif.createdAt}
-                        </span>
-                        <span>Category: <strong className="text-white">{notif.type}</strong></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Actions: Open Module & Delete */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    {notif.relatedRoute && (
-                      <Button
-                        variant="tertiary"
-                        size="sm"
-                        leftIcon={<ArrowRight className="w-3.5 h-3.5 text-[#A3E635]" />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (notif.relatedRoute) navigate(notif.relatedRoute);
-                        }}
-                      >
-                        {notif.actionLabel || 'View Module'}
-                      </Button>
-                    )}
-
-                    <button
-                      onClick={(e) => handleDeleteNotification(notif.id, e)}
-                      className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-                      title="Delete Notification"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
+                {/* Unread dot + icon */}
+                <div className="relative shrink-0">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-foreground">
+                    {renderNotificationIcon(notif.type)}
+                  </span>
+                  {!notif.isRead && (
+                    <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-card bg-primary" title="Unread" />
+                  )}
                 </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
 
-      {/* FOOTER BAR & PAGINATION */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
-          onPageChange={setCurrentPage}
-          totalEntries={totalRecords}
-        />
-      </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className={`text-sm ${notif.isRead ? 'font-medium text-foreground' : 'font-semibold text-foreground'}`}>
+                      {notif.title}
+                    </h4>
+                    <Badge
+                      variant={notif.priority === 'HIGH' ? 'alert' : notif.priority === 'MEDIUM' ? 'warning' : 'neutral'}
+                      size="sm"
+                    >
+                      {notif.priority}
+                    </Badge>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{notif.message}</p>
+                  <p className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {notif.createdAt}
+                    </span>
+                    <span>&middot;</span>
+                    <span>{notif.type}</span>
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  {notif.relatedRoute && (
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (notif.relatedRoute) navigate(notif.relatedRoute);
+                      }}
+                    >
+                      {notif.actionLabel || 'View'}
+                    </Button>
+                  )}
+                  <button
+                    onClick={(e) => handleDeleteNotification(notif.id, e)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400"
+                    title="Delete notification"
+                    aria-label="Delete notification"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        )}
+
+        {/* Pagination */}
+        <div className="border-t border-border px-4 py-2">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
+            onPageChange={setCurrentPage}
+            totalEntries={totalRecords}
+          />
+        </div>
+      </Card>
 
       {/* BROADCAST ANNOUNCEMENT MODAL */}
       <Modal

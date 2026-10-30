@@ -19,15 +19,17 @@ import {
   Underline,
   Link2,
   List,
-  ListOrdered
+  ListOrdered,
+  Mail,
+  FileText,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Input, Textarea } from '../components/ui/Input';
-import { Dropdown, MultiSelect } from '../components/ui/Dropdown';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Input, Textarea } from '../components/app/Input';
+import { Dropdown, MultiSelect } from '../components/app/Dropdown';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { createCompany } from '../api/company.api';
 
 export interface AddCompanyFormValues {
@@ -130,351 +132,243 @@ export const AddCompany: React.FC = () => {
     }
   };
 
+  const watchName = watch('companyName');
+  const watchRole = watch('jobRole');
+  const watchLocation = watch('location');
+  const watchDeadline = watch('deadline');
+  const watchDepartments = watch('departments') || [];
+  const watchMinCgpa = watch('minCgpa');
+  const watchBond = watch('bond');
+
   return (
-    <div className="space-y-6 pb-16 max-w-5xl mx-auto">
-      
+    <div className="space-y-6 pb-16 max-w-7xl mx-auto">
       {/* Top Header & Breadcrumb */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Breadcrumb
           items={[
             { label: 'Companies', path: '/companies' },
             { label: 'Add New Company' },
           ]}
         />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/companies"
-              className="p-2 bg-[#162032] border border-[#202D42] rounded-xl text-[#94A3B8] hover:text-white hover:border-[#A3E635]/40 transition-all"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                Add New Company
-                <Sparkles className="w-5 h-5 text-[#A3E635] animate-pulse" />
-              </h1>
-              <p className="text-xs sm:text-sm text-[#94A3B8]">
-                Onboard a corporate recruitment partner and configure drive details matching exact specifications.
-              </p>
-            </div>
+        <div className="flex items-start gap-3">
+          <Link
+            to="/companies"
+            aria-label="Back to companies"
+            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">Add New Company</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Onboard a recruitment partner and configure the drive details.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Main Glassmorphic Form Card matching Design Add Company page..jpg */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
+      <motion.form
+        onSubmit={handleSubmit(onSubmit)}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.35 }}
+        className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
       >
-        <Card className="p-6 sm:p-8 space-y-8 border-[#202D42]">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            
-            {/* SECTION 1: LOGO UPLOAD & BASIC DETAILS */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              {/* Logo Drag & Drop Upload Zone strictly matching image */}
-              <div className="lg:col-span-4 relative group">
-                <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-2">
-                  Company Logo
-                </label>
-                <div className="border-2 border-dashed border-[#A3E635]/60 bg-[#101726] hover:border-[#A3E635] rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-3 transition-all duration-300 cursor-pointer shadow-[0_0_15px_rgba(163,230,53,0.1)] group-hover:shadow-[0_0_25px_rgba(163,230,53,0.25)] min-h-[220px]">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="sr-only"
-                    id="logo-upload"
-                  />
-                  <label htmlFor="logo-upload" className="cursor-pointer flex flex-col items-center space-y-2">
-                    {logoPreview ? (
-                      <img src={logoPreview} alt="Logo" className="w-20 h-20 rounded-2xl object-cover border-2 border-[#A3E635]" />
-                    ) : (
-                      <div className="w-14 h-14 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center">
-                        <Upload className="w-7 h-7" />
-                      </div>
-                    )}
-                    <span className="text-sm font-bold text-white">Upload Logo</span>
-                    <span className="text-xs text-[#64748B]">(Drag & Drop or Click)</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Main Fields Grid */}
-              <div className="lg:col-span-8 space-y-4">
-                
-                {/* Row 1: Company Name & Job Role */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Company Name"
-                    placeholder="e.g. Amazon / Microsoft"
-                    leftIcon={<Building2 className="w-4 h-4 text-[#64748B]" />}
-                    error={errors.companyName?.message}
-                    {...register('companyName', {
-                      required: 'Company name is required',
-                      minLength: { value: 2, message: 'Name must be at least 2 characters' },
-                    })}
-                  />
-
-                  <Controller
-                    name="jobRole"
-                    control={control}
-                    render={({ field }) => (
-                      <Dropdown
-                        label="Job Role"
-                        options={[
-                          { label: 'Software Engineer I', value: 'Software Engineer I' },
-                          { label: 'Data Engineer', value: 'Data Engineer' },
-                          { label: 'Full Stack Developer', value: 'Full Stack Developer' },
-                          { label: 'DevOps & Cloud Engineer', value: 'DevOps Engineer' },
-                          { label: 'Product Analyst', value: 'Product Analyst' },
-                        ]}
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Row 2: Website & CTC Offered */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Official Website"
-                    placeholder="www.example.com"
-                    leftIcon={<Globe className="w-4 h-4 text-[#64748B]" />}
-                    error={errors.website?.message}
-                    {...register('website', {
-                      required: 'Website URL is required',
-                    })}
-                  />
-
-                  {/* CTC Package Range Fields matching CTC (Cost to Company) ₹20-₹28 LPA */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">
-                        CTC (Cost to Company)
-                      </label>
-                      <span className="text-xs font-extrabold text-[#A3E635]">
-                        ₹{watchCtcMin || '20'} - ₹{watchCtcMax || '28'} LPA
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Min (e.g. 20)"
-                        {...register('ctcMin', { required: true })}
-                      />
-                      <span className="text-[#64748B] font-bold">-</span>
-                      <Input
-                        type="number"
-                        placeholder="Max (e.g. 28)"
-                        {...register('ctcMax', { required: true })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 3: Location & Bond */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Location"
-                    placeholder="Bengaluru, India"
-                    leftIcon={<MapPin className="w-4 h-4 text-[#64748B]" />}
-                    {...register('location', { required: 'Location is required' })}
-                  />
-
-                  <Controller
-                    name="bond"
-                    control={control}
-                    render={({ field }) => (
-                      <Dropdown
-                        label="Bond Requirement"
-                        options={[
-                          { label: 'None', value: 'None' },
-                          { label: '1 Year', value: '1 Year' },
-                          { label: '2 Years', value: '2 Years' },
-                          { label: '3 Years', value: '3 Years' },
-                        ]}
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Row 4: Primary HR Recruiter Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#202D42]">
-                  <Input
-                    label="HR Recruiter Name"
-                    placeholder="e.g. Rahul Sharma"
-                    {...register('hrName')}
-                  />
-                  <Input
-                    label="HR Recruiter Email"
-                    placeholder="e.g. hr@company.com"
-                    type="email"
-                    {...register('hrEmail')}
-                  />
-                  <Input
-                    label="HR Recruiter Phone"
-                    placeholder="e.g. +91 98765 43210"
-                    {...register('hrPhone')}
-                  />
-                </div>
-
-                {/* Application Deadline */}
+        {/* ============ LEFT: FORM SECTIONS ============ */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Company details */}
+          <FormSection icon={<Building2 className="w-4 h-4" />} title="Company details" desc="Who is recruiting and where they are based.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Company Name"
+                placeholder="e.g. Amazon / Microsoft"
+                leftIcon={<Building2 className="w-4 h-4 text-muted-foreground" />}
+                error={errors.companyName?.message}
+                {...register('companyName', {
+                  required: 'Company name is required',
+                  minLength: { value: 2, message: 'Name must be at least 2 characters' },
+                })}
+              />
+              <Input
+                label="Official Website"
+                placeholder="www.example.com"
+                leftIcon={<Globe className="w-4 h-4 text-muted-foreground" />}
+                error={errors.website?.message}
+                {...register('website', {
+                  required: 'Website URL is required',
+                })}
+              />
+              <div className="sm:col-span-2">
                 <Input
-                  label="Application Deadline"
-                  type="date"
-                  leftIcon={<Calendar className="w-4 h-4 text-[#64748B]" />}
-                  {...register('deadline', { required: 'Deadline date is required' })}
+                  label="Location"
+                  placeholder="Bengaluru, India"
+                  leftIcon={<MapPin className="w-4 h-4 text-muted-foreground" />}
+                  {...register('location', { required: 'Location is required' })}
                 />
-
               </div>
             </div>
+          </FormSection>
 
-            {/* SECTION 2: ELIGIBILITY CRITERIA SUBPANEL strictly matching design */}
-            <div className="bg-[#101726] border border-[#202D42] rounded-3xl p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
-                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Award className="w-4 h-4 text-[#A3E635]" />
-                  Eligibility Criteria
-                </h3>
-                <span className="text-xs text-[#94A3B8]">Configured academic cut-offs</span>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-                {/* Branches / Departments Multi-Select Tag Selector */}
-                <div className="lg:col-span-6">
-                  <Controller
-                    name="departments"
-                    control={control}
-                    render={({ field }) => (
-                      <MultiSelect
-                        label="Eligible Branches / Departments"
-                        options={[
-                          { label: 'Computer Science', value: 'Computer Science' },
-                          { label: 'Information Tech (IT)', value: 'IT' },
-                          { label: 'Electrical Eng (EE)', value: 'EE' },
-                          { label: 'Electronics (ECE)', value: 'Electronics' },
-                          { label: 'Mechanical Eng', value: 'Mechanical' },
-                          { label: 'Civil Eng', value: 'Civil' },
-                        ]}
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    )}
+          {/* Role & compensation */}
+          <FormSection icon={<Briefcase className="w-4 h-4" />} title="Role & compensation" desc="Position, package range, bond and last date to apply.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Controller
+                name="jobRole"
+                control={control}
+                render={({ field }) => (
+                  <Dropdown
+                    label="Job Role"
+                    options={[
+                      { label: 'Software Engineer I', value: 'Software Engineer I' },
+                      { label: 'Data Engineer', value: 'Data Engineer' },
+                      { label: 'Full Stack Developer', value: 'Full Stack Developer' },
+                      { label: 'DevOps & Cloud Engineer', value: 'DevOps Engineer' },
+                      { label: 'Product Analyst', value: 'Product Analyst' },
+                    ]}
+                    value={field.value}
+                    onChange={field.onChange}
                   />
+                )}
+              />
+              <Controller
+                name="bond"
+                control={control}
+                render={({ field }) => (
+                  <Dropdown
+                    label="Bond Requirement"
+                    options={[
+                      { label: 'None', value: 'None' },
+                      { label: '1 Year', value: '1 Year' },
+                      { label: '2 Years', value: '2 Years' },
+                      { label: '3 Years', value: '3 Years' },
+                    ]}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+
+              {/* CTC Package Range */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    CTC (Cost to Company)
+                  </label>
+                  <span className="text-xs font-medium text-foreground">
+                    ₹{watchCtcMin || '20'} - ₹{watchCtcMax || '28'} LPA
+                  </span>
                 </div>
-
-                {/* Min CGPA */}
-                <div className="lg:col-span-3">
-                  <Controller
-                    name="minCgpa"
-                    control={control}
-                    render={({ field }) => (
-                      <Dropdown
-                        label="Min. CGPA Cut-off"
-                        options={[
-                          { label: '> 6.0 CGPA', value: '6.0' },
-                          { label: '> 7.0 CGPA', value: '7.0' },
-                          { label: '> 7.5 CGPA', value: '7.5' },
-                          { label: '> 8.0 CGPA', value: '8.0' },
-                          { label: '> 8.5 CGPA', value: '8.5' },
-                        ]}
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Backlogs Allowed */}
-                <div className="lg:col-span-3">
-                  <Controller
-                    name="maxBacklogs"
-                    control={control}
-                    render={({ field }) => (
-                      <Dropdown
-                        label="Backlogs Allowed"
-                        options={[
-                          { label: '0 (No Backlogs)', value: '0' },
-                          { label: '<= 1 Active Backlog', value: '1' },
-                          { label: '<= 2 Active Backlogs', value: '2' },
-                        ]}
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
+                <div className="flex items-center gap-2">
+                  <Input type="number" placeholder="Min (e.g. 20)" {...register('ctcMin', { required: true })} />
+                  <span className="text-muted-foreground">to</span>
+                  <Input type="number" placeholder="Max (e.g. 28)" {...register('ctcMax', { required: true })} />
                 </div>
               </div>
+
+              <Input
+                label="Application Deadline"
+                type="date"
+                leftIcon={<Calendar className="w-4 h-4 text-muted-foreground" />}
+                {...register('deadline', { required: 'Deadline date is required' })}
+              />
             </div>
+          </FormSection>
 
-            {/* SECTION 3: DESCRIPTION WITH RICH TOOLBAR matching Design Add Company page..jpg */}
+          {/* HR contact */}
+          <FormSection icon={<Mail className="w-4 h-4" />} title="HR contact" desc="Primary recruiter for this drive (optional).">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Input label="HR Recruiter Name" placeholder="e.g. Rahul Sharma" {...register('hrName')} />
+              <Input label="HR Recruiter Email" placeholder="e.g. hr@company.com" type="email" {...register('hrEmail')} />
+              <Input label="HR Recruiter Phone" placeholder="e.g. +91 98765 43210" {...register('hrPhone')} />
+            </div>
+          </FormSection>
+
+          {/* Eligibility */}
+          <FormSection icon={<Award className="w-4 h-4" />} title="Eligibility criteria" desc="Academic cut-offs students must meet to apply.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Controller
+                  name="departments"
+                  control={control}
+                  render={({ field }) => (
+                    <MultiSelect
+                      label="Eligible Branches / Departments"
+                      options={[
+                        { label: 'Computer Science', value: 'Computer Science' },
+                        { label: 'Information Tech (IT)', value: 'IT' },
+                        { label: 'Electrical Eng (EE)', value: 'EE' },
+                        { label: 'Electronics (ECE)', value: 'Electronics' },
+                        { label: 'Mechanical Eng', value: 'Mechanical' },
+                        { label: 'Civil Eng', value: 'Civil' },
+                      ]}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+              <Controller
+                name="minCgpa"
+                control={control}
+                render={({ field }) => (
+                  <Dropdown
+                    label="Min. CGPA Cut-off"
+                    options={[
+                      { label: '> 6.0 CGPA', value: '6.0' },
+                      { label: '> 7.0 CGPA', value: '7.0' },
+                      { label: '> 7.5 CGPA', value: '7.5' },
+                      { label: '> 8.0 CGPA', value: '8.0' },
+                      { label: '> 8.5 CGPA', value: '8.5' },
+                    ]}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <Controller
+                name="maxBacklogs"
+                control={control}
+                render={({ field }) => (
+                  <Dropdown
+                    label="Backlogs Allowed"
+                    options={[
+                      { label: '0 (No Backlogs)', value: '0' },
+                      { label: '<= 1 Active Backlog', value: '1' },
+                      { label: '<= 2 Active Backlogs', value: '2' },
+                    ]}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+          </FormSection>
+
+          {/* Description */}
+          <FormSection icon={<FileText className="w-4 h-4" />} title="Job description" desc="Responsibilities, skills and requirements.">
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">
-                Detailed Job Description & Requirements
-              </label>
-
-              {/* Rich Text Editor Simulation Toolbar */}
-              <div className="bg-[#101726] border border-[#202D42] rounded-t-2xl px-4 py-2 flex items-center gap-1 border-b-0">
-                <button
-                  type="button"
-                  onClick={() => info('Rich Format', 'Bold formatting applied.')}
-                  className="p-1.5 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#162032]"
-                  title="Bold"
-                >
-                  <Bold className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => info('Rich Format', 'Italic formatting applied.')}
-                  className="p-1.5 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#162032]"
-                  title="Italic"
-                >
-                  <Italic className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => info('Rich Format', 'Underline formatting applied.')}
-                  className="p-1.5 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#162032]"
-                  title="Underline"
-                >
-                  <Underline className="w-4 h-4" />
-                </button>
-                <div className="h-4 w-px bg-[#202D42] mx-1" />
-                <button
-                  type="button"
-                  onClick={() => info('Rich Format', 'Link added.')}
-                  className="p-1.5 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#162032]"
-                  title="Insert Link"
-                >
-                  <Link2 className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => info('Rich Format', 'Bullet list created.')}
-                  className="p-1.5 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#162032]"
-                  title="Bullet List"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => info('Rich Format', 'Numbered list created.')}
-                  className="p-1.5 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#162032]"
-                  title="Numbered List"
-                >
-                  <ListOrdered className="w-4 h-4" />
-                </button>
+              <div className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 w-fit">
+                {[
+                  { icon: Bold, label: 'Bold', msg: 'Bold formatting applied.' },
+                  { icon: Italic, label: 'Italic', msg: 'Italic formatting applied.' },
+                  { icon: Underline, label: 'Underline', msg: 'Underline formatting applied.' },
+                  { icon: Link2, label: 'Insert Link', msg: 'Link added.' },
+                  { icon: List, label: 'Bullet List', msg: 'Bullet list created.' },
+                  { icon: ListOrdered, label: 'Numbered List', msg: 'Numbered list created.' },
+                ].map(({ icon: Icon, label, msg }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => info('Rich Format', msg)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                    title={label}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </button>
+                ))}
               </div>
-
-              {/* Textarea Input */}
               <Textarea
-                rows={5}
-                className="rounded-t-none border-t-0"
+                rows={6}
                 error={errors.description?.message}
                 {...register('description', {
                   required: 'Job description is required',
@@ -482,36 +376,105 @@ export const AddCompany: React.FC = () => {
                 })}
               />
             </div>
+          </FormSection>
+        </div>
 
-            {/* FORM FOOTER ACTIONS strictly matching image Save Draft & Publish */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#202D42]">
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                onClick={() => {
-                  info('Draft Saved', 'Draft saved locally.');
-                  navigate('/companies');
-                }}
-              >
-                Save Draft
-              </Button>
+        {/* ============ RIGHT: LOGO + PREVIEW + ACTIONS ============ */}
+        <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
+          <Card className="p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Company logo</h3>
+            <input type="file" accept="image/*" onChange={handleLogoUpload} className="sr-only" id="logo-upload" />
+            <label
+              htmlFor="logo-upload"
+              className="flex min-h-[170px] cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border border-dashed border-input bg-muted p-6 text-center transition-colors hover:bg-accent"
+            >
+              {logoPreview ? (
+                <img src={logoPreview} alt="Logo" className="h-20 w-20 rounded-2xl object-cover" />
+              ) : (
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-foreground">
+                  <Upload className="w-5 h-5" />
+                </span>
+              )}
+              <span className="text-sm font-medium text-foreground">{logoPreview ? 'Change logo' : 'Upload logo'}</span>
+              <span className="text-xs text-muted-foreground">PNG or JPG, drag & drop or click</span>
+            </label>
+          </Card>
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="px-8 font-extrabold"
-              >
-                Publish
-              </Button>
+          <Card className="p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Live preview</h3>
+            <div className="flex items-center gap-3">
+              {logoPreview ? (
+                <img src={logoPreview} alt="" className="h-12 w-12 rounded-full object-cover" />
+              ) : (
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-foreground">
+                  {(watchName || 'C').slice(0, 2).toUpperCase()}
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">{watchName || 'Company name'}</p>
+                <p className="truncate text-xs text-muted-foreground">{watchRole}</p>
+              </div>
             </div>
+            <dl className="space-y-2 text-xs">
+              {[
+                ['Package', `₹${watchCtcMin || '-'} - ₹${watchCtcMax || '-'} LPA`],
+                ['Location', watchLocation || '-'],
+                ['Deadline', watchDeadline || '-'],
+                ['Min CGPA', `> ${watchMinCgpa}`],
+                ['Bond', watchBond],
+              ].map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between gap-3 border-t border-border pt-2">
+                  <dt className="text-muted-foreground">{k}</dt>
+                  <dd className="truncate font-medium text-foreground">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="flex flex-wrap gap-1.5">
+              {watchDepartments.map((d) => (
+                <span key={d} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-foreground">
+                  {d}
+                </span>
+              ))}
+            </div>
+          </Card>
 
-          </form>
-        </Card>
-      </motion.div>
-
+          <div className="flex flex-col gap-2">
+            <Button type="submit" variant="primary" size="lg" isLoading={isLoading} fullWidth>
+              Publish Company
+            </Button>
+            <Button
+              type="button"
+              variant="tertiary"
+              size="lg"
+              fullWidth
+              onClick={() => {
+                info('Draft Saved', 'Draft saved locally.');
+                navigate('/companies');
+              }}
+            >
+              Save Draft
+            </Button>
+          </div>
+        </aside>
+      </motion.form>
     </div>
   );
 };
+
+const FormSection: React.FC<{ icon: React.ReactNode; title: string; desc: string; children: React.ReactNode }> = ({
+  icon,
+  title,
+  desc,
+  children,
+}) => (
+  <Card className="p-6 space-y-5">
+    <div className="flex items-start gap-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">{icon}</span>
+      <div>
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+      </div>
+    </div>
+    {children}
+  </Card>
+);

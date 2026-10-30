@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
-import { QuickAddModal } from '../ui/QuickAddModal';
+import { QuickAddModal } from '../app/QuickAddModal';
 
 export const MainLayout: React.FC = () => {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-white flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Navigation Sidebar (Desktop + Mobile Slide-over) */}
       <Sidebar
         isMobileOpen={isMobileSidebarOpen}

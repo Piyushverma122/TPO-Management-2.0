@@ -24,19 +24,19 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input } from '../components/ui/Input';
-import { Checkbox } from '../components/ui/Checkbox';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Avatar } from '../components/ui/Avatar';
-import { Modal } from '../components/ui/Modal';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { Pagination } from '../components/ui/Pagination';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input } from '../components/app/Input';
+import { Checkbox } from '../components/app/Checkbox';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Avatar } from '../components/app/Avatar';
+import { Modal } from '../components/app/Modal';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { Pagination } from '../components/app/Pagination';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../components/ui/Toast';
+import { useToast } from '../components/app/Toast';
 import {
   getAdminSettings,
   updateAdminSettings,
@@ -46,6 +46,8 @@ import {
 } from '../api/admin.api';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
+import { Switch } from '@/components/ui/switch';
+import { applyTheme, getStoredTheme } from '@/lib/theme';
 
 // Audit Logs Item
 interface AuditLogItem {
@@ -67,7 +69,7 @@ export const SettingsPage: React.FC = () => {
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
 
   // Settings State
-  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>(getStoredTheme());
   const [accentColor, setAccentColor] = useState('lime');
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [inAppBadges, setInAppBadges] = useState(true);
@@ -182,6 +184,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleResetDefaults = () => {
     setThemeMode('dark');
+    applyTheme('dark');
     setAccentColor('lime');
     setEmailAlerts(true);
     setInAppBadges(true);
@@ -193,26 +196,22 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-16 font-sans">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <Breadcrumb items={[{ label: 'Settings Page' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-1">
-            Settings & System Preferences
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              System Admin
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Manage your personal profile, theme accents, notification alerts, user permissions, and security policies.
+          <Breadcrumb items={[{ label: 'Settings' }]} />
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your profile, appearance, notifications and security.
           </p>
         </div>
 
         <Button
-          variant="secondary"
+          variant="tertiary"
           size="md"
           leftIcon={<RefreshCw className={`w-4 h-4 ${loadingSettings ? 'animate-spin' : ''}`} />}
           onClick={fetchSettingsAndLogs}
           disabled={loadingSettings}
+          className="text-xs"
         >
           Refresh
         </Button>
@@ -220,201 +219,180 @@ export const SettingsPage: React.FC = () => {
 
       {/* Mandatory Password Change Warning Banner */}
       {(user?.must_change_password || (location.state as any)?.forcePasswordChange) && (
-        <div className="bg-amber-500/15 border-2 border-amber-500/40 rounded-2xl p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+        <div className="flex flex-col gap-4 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-400">
               <Lock className="w-5 h-5" />
-            </div>
+            </span>
             <div>
-              <h3 className="text-white font-extrabold text-sm">Action Required: Change Initial Password</h3>
-              <p className="text-amber-300 text-xs mt-0.5">
-                This is your first login with an administrative temporary password. Please click <strong>Edit Profile</strong> below and update your password to secure your account.
+              <h3 className="text-sm font-semibold text-foreground">Action required: change your initial password</h3>
+              <p className="mt-0.5 text-xs text-amber-200/80">
+                This is your first login with a temporary administrative password. Update it to secure your account.
               </p>
             </div>
           </div>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsEditProfileOpen(true)}
-            className="shrink-0"
-          >
-            Change Password Now
+          <Button variant="primary" size="sm" onClick={() => setIsEditProfileOpen(true)} className="shrink-0">
+            Change password
           </Button>
         </div>
       )}
 
-      {/* ROW 1: PROFILE CARD, THEME CARD, NOTIFICATIONS CARD */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 1. My Profile Card */}
-        <Card className="p-6 space-y-4 border-[#202D42] flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
-            <h3 className="text-sm font-extrabold text-white">My Profile</h3>
-            <button
-              onClick={() => setIsEditProfileOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-[#101726] border border-[#202D42] text-xs font-semibold text-[#A3E635] hover:border-[#A3E635]/40 transition-all"
-            >
-              Edit
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Avatar src={user?.avatar} name={profileName} size="lg" border borderColor="border-[#A3E635]" />
-            <div className="truncate">
-              <h4 className="text-base font-extrabold text-white truncate">{profileName}</h4>
-              <p className="text-xs text-[#A3E635] font-semibold">Role: Senior Admin</p>
-              <p className="text-[11px] text-[#94A3B8] truncate">{profileEmail}</p>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#202D42]">
-            <Button variant="secondary" size="sm" fullWidth onClick={() => setIsEditProfileOpen(true)}>
-              Manage Profile
-            </Button>
-          </div>
-        </Card>
-
-        {/* 2. Theme Card */}
-        <Card className="p-6 space-y-4 border-[#202D42] flex flex-col justify-between">
-          <div className="border-b border-[#202D42] pb-3">
-            <h3 className="text-sm font-extrabold text-white">Theme & Visual Accents</h3>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setThemeMode('dark')}
-              className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-2 transition-all cursor-pointer ${
-                themeMode === 'dark'
-                  ? 'bg-[#162032] border-[#A3E635] text-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]'
-                  : 'bg-[#101726] border-[#202D42] text-[#94A3B8] hover:text-white hover:border-[#2A3B57]'
-              }`}
-            >
-              <Moon className="w-5 h-5" />
-              Dark Mode
-            </button>
-
-            <button
-              onClick={() => setThemeMode('light')}
-              className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-2 transition-all cursor-pointer ${
-                themeMode === 'light'
-                  ? 'bg-[#162032] border-[#A3E635] text-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]'
-                  : 'bg-[#101726] border-[#202D42] text-[#94A3B8] hover:text-white hover:border-[#2A3B57]'
-              }`}
-            >
-              <Sun className="w-5 h-5" />
-              Light Mode
-            </button>
-          </div>
-
-          <div className="pt-2 border-t border-[#202D42] flex justify-between items-center text-xs">
-            <span className="text-[#94A3B8]">Primary Accent:</span>
-            <span className="text-[#A3E635] font-extrabold uppercase">Neon Lime</span>
-          </div>
-        </Card>
-
-        {/* 3. Notifications Preference Card */}
-        <Card className="p-6 space-y-3 border-[#202D42] flex flex-col justify-between">
-          <div className="border-b border-[#202D42] pb-3">
-            <h3 className="text-sm font-extrabold text-white">System Alerts Preferences</h3>
-          </div>
-
-          <div className="space-y-2.5 text-xs font-semibold">
-            <Checkbox
-              label="Email Notifications for Placement Drives"
-              checked={emailAlerts}
-              onChange={(e) => setEmailAlerts(e.target.checked)}
-            />
-            <Checkbox
-              label="In-App Activity Badges & Counters"
-              checked={inAppBadges}
-              onChange={(e) => setInAppBadges(e.target.checked)}
-            />
-            <Checkbox
-              label="SMS Alerts for Emergency Announcements"
-              checked={smsAlerts}
-              onChange={(e) => setSmsAlerts(e.target.checked)}
-            />
-          </div>
-
-          <div className="pt-2 border-t border-[#202D42]">
-            <Button
-              variant="primary"
-              size="sm"
-              fullWidth
-              leftIcon={<Save className="w-3.5 h-3.5" />}
-              isLoading={savingSettings}
-              onClick={handleSaveSettings}
-            >
-              Save Preferences
-            </Button>
-          </div>
-        </Card>
-      </div>
-
-      {/* AUDIT LOGS SECTION */}
-      <Card className="p-6 space-y-4 border-[#202D42]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#202D42] pb-4">
+      {/* SETTINGS SECTIONS */}
+      <Card className="divide-y divide-border">
+        {/* Profile */}
+        <section className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3 lg:p-8">
           <div>
-            <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-              <Shield className="w-4 h-4 text-[#A3E635]" />
-              System Audit Logs & Security History
-            </h3>
-            <p className="text-xs text-[#94A3B8] mt-0.5">
-              Comprehensive log of user activities, profile changes, drive publications, and report exports.
-            </p>
+            <h3 className="text-base font-semibold text-foreground">Profile</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Your account identity across the portal.</p>
           </div>
+          <div className="lg:col-span-2 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-4">
+              <Avatar src={user?.avatar} name={profileName} size="lg" />
+              <div className="min-w-0">
+                <h4 className="truncate text-base font-semibold text-foreground">{profileName}</h4>
+                <p className="truncate text-sm text-muted-foreground">{profileEmail}</p>
+                <Badge variant="neutral" size="sm" className="mt-2">Senior Admin</Badge>
+              </div>
+            </div>
+            <Button variant="tertiary" size="md" leftIcon={<Edit className="w-4 h-4" />} onClick={() => setIsEditProfileOpen(true)} className="text-xs">
+              Edit profile
+            </Button>
+          </div>
+        </section>
 
-          <Button variant="secondary" size="sm" onClick={handleResetDefaults}>
-            Reset Defaults
+        {/* Appearance */}
+        <section className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3 lg:p-8">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Appearance</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Choose how the portal looks for you.</p>
+          </div>
+          <div className="lg:col-span-2 grid grid-cols-2 gap-3 max-w-md">
+            {[
+              { id: 'dark', label: 'Dark', icon: Moon },
+              { id: 'light', label: 'Light', icon: Sun },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setThemeMode(id as 'dark' | 'light');
+                  applyTheme(id as 'dark' | 'light');
+                }}
+                className={`flex cursor-pointer flex-col items-start gap-6 rounded-2xl border p-4 text-left transition-colors ${
+                  themeMode === id
+                    ? 'border-foreground/60 bg-secondary text-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/25 hover:text-foreground'
+                }`}
+              >
+                <span className="flex w-full items-center justify-between">
+                  <Icon className="w-5 h-5" />
+                  {themeMode === id && <Check className="w-4 h-4" />}
+                </span>
+                <span className="text-sm font-medium">{label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Notifications */}
+        <section className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3 lg:p-8">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Notifications</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Decide which alerts reach you.</p>
+          </div>
+          <ul className="lg:col-span-2 max-w-xl divide-y divide-border">
+            {[
+              { label: 'Email notifications', desc: 'Placement drive announcements by email.', checked: emailAlerts, set: setEmailAlerts },
+              { label: 'In-app badges', desc: 'Activity badges and unread counters.', checked: inAppBadges, set: setInAppBadges },
+              { label: 'SMS alerts', desc: 'Emergency announcements by text message.', checked: smsAlerts, set: setSmsAlerts },
+            ].map(({ label, desc, checked, set }) => (
+              <li key={label} className="flex items-center justify-between gap-6 py-4 first:pt-0 last:pb-0">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{label}</p>
+                  <p className="text-xs text-muted-foreground">{desc}</p>
+                </div>
+                <Switch checked={checked} onCheckedChange={set} aria-label={label} />
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Save bar */}
+        <div className="flex flex-wrap items-center justify-end gap-2 bg-muted px-6 py-4 lg:px-8">
+          <Button variant="tertiary" size="md" onClick={handleResetDefaults} className="text-xs">
+            Reset defaults
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Save className="w-4 h-4" />}
+            isLoading={savingSettings}
+            onClick={handleSaveSettings}
+            className="text-xs"
+          >
+            Save preferences
           </Button>
         </div>
+      </Card>
 
-        <Table>
+      {/* AUDIT LOGS */}
+      <Card className="overflow-hidden">
+        <div className="flex items-start gap-3 p-6">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
+            <Shield className="w-4 h-4" />
+          </span>
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Audit log</h3>
+            <p className="text-xs text-muted-foreground">Activity, profile changes, drive publications and report exports.</p>
+          </div>
+        </div>
+
+        <Table bare>
           <TableHeader>
             <TableRow>
               <TableHead>Timestamp</TableHead>
-              <TableHead>Actor User</TableHead>
-              <TableHead>Target Module</TableHead>
-              <TableHead>Activity Log Description</TableHead>
+              <TableHead>Actor</TableHead>
+              <TableHead>Module</TableHead>
+              <TableHead>Activity</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loadingLogs ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-6 text-[#94A3B8]">
+                <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
                   Loading security audit trail...
                 </TableCell>
               </TableRow>
             ) : auditLogsList.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-6 text-[#94A3B8]">
+                <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
                   No audit log entries recorded.
                 </TableCell>
               </TableRow>
             ) : (
               auditLogsList.map((log) => (
                 <TableRow key={log.id}>
-                  <TableCell className="text-xs text-[#94A3B8] font-mono">{log.timestamp}</TableCell>
-                  <TableCell className="font-bold text-white text-xs">{log.actor}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{log.timestamp}</TableCell>
+                  <TableCell className="text-sm text-foreground">{log.actor}</TableCell>
                   <TableCell>
-                    <Badge variant="accent" size="sm">
+                    <Badge variant="neutral" size="sm">
                       {log.userAffected}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-white">{log.action}</TableCell>
+                  <TableCell className="text-sm text-foreground">{log.action}</TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
 
-        <div className="pt-2 flex items-center justify-between border-t border-[#202D42]">
-          <span className="text-xs text-[#94A3B8]">
-            Page {currentPage} of {Math.ceil(totalLogs / itemsPerPage) || 1} ({totalLogs} audit records)
-          </span>
+        <div className="border-t border-border px-4 py-2">
           <Pagination
             currentPage={currentPage}
             totalPages={Math.ceil(totalLogs / itemsPerPage) || 1}
             onPageChange={setCurrentPage}
+            totalEntries={totalLogs}
+            pageSize={itemsPerPage}
           />
         </div>
       </Card>
@@ -441,8 +419,8 @@ export const SettingsPage: React.FC = () => {
             required
           />
 
-          <div className="pt-2 border-t border-[#202D42] space-y-3">
-            <span className="text-xs font-bold text-white uppercase block">Change Password (Optional)</span>
+          <div className="pt-2 border-t border-border space-y-3">
+            <span className="text-xs font-semibold text-foreground uppercase block">Change Password (Optional)</span>
             <Input
               label="Current Password"
               type="password"

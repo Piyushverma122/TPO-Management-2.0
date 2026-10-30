@@ -27,18 +27,19 @@ import {
   Share2,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { useAuth } from '../context/AuthContext';
 import { getEvents } from '../api/calendar.api';
+import { Button as ShadButton } from '@/components/ui/button';
 
 export interface StudentInterviewItem {
   id: string;
@@ -125,17 +126,17 @@ export const Interviews: React.FC = () => {
   const renderStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'scheduled':
-        return <span className="bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Scheduled</span>;
+        return <span className="bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-semibold">Scheduled</span>;
       case 'ongoing':
-        return <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Ongoing</span>;
+        return <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold">Ongoing</span>;
       case 'completed':
-        return <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Completed</span>;
+        return <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold">Completed</span>;
       case 'cancelled':
-        return <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Cancelled</span>;
+        return <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-semibold">Cancelled</span>;
       case 'rescheduled':
-        return <span className="bg-purple-500/15 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Rescheduled</span>;
+        return <span className="bg-purple-500/15 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full text-xs font-semibold">Rescheduled</span>;
       default:
-        return <span className="bg-[#162032] text-[#94A3B8] border border-[#202D42] px-3 py-1 rounded-full text-xs font-extrabold">{status}</span>;
+        return <span className="bg-card text-muted-foreground border border-border px-3 py-1 rounded-full text-xs font-semibold">{status}</span>;
     }
   };
 
@@ -215,13 +216,13 @@ END:VCALENDAR`;
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Calendar & Interviews' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight flex items-center gap-3 mt-1">
             Interview Schedule
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
               {interviews.length} Sessions Scheduled
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Track interview slots, join meeting links, export calendar events, and review recruiter feedback.
           </p>
         </div>
@@ -238,7 +239,7 @@ END:VCALENDAR`;
       </div>
 
       {/* SEARCH & FILTERS BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
+      <Card className="p-3 relative z-30 bg-muted border-border shadow-xl">
         <div className="flex flex-col md:flex-row items-center gap-3">
           <div className="flex-1 w-full min-w-0">
             <SearchInput
@@ -275,18 +276,18 @@ END:VCALENDAR`;
             />
 
             {(selectedStatus !== 'All' || selectedMode !== 'All' || searchQuery !== '') && (
-              <button
+              <ShadButton variant="outline"
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedStatus('All');
                   setSelectedMode('All');
                 }}
-                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                className="[&_svg:not([class*='size-'])]:size-3.5 h-10 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Reset</span>
-              </button>
+              </ShadButton>
             )}
           </div>
         </div>
@@ -296,8 +297,8 @@ END:VCALENDAR`;
       {errorMsg ? (
         <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
           <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Interview Schedule</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+          <h3 className="text-lg font-semibold text-foreground">Error Loading Interview Schedule</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchCalendarEventsData}>
             Retry Loading Schedule
           </Button>
@@ -306,26 +307,26 @@ END:VCALENDAR`;
         /* LOADING SKELETON STATE */
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-5 border-[#202D42] animate-pulse space-y-3">
+            <Card key={i} className="p-5 border-border animate-pulse space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-[#162032] rounded-xl" />
+                  <div className="w-12 h-12 bg-card rounded-xl" />
                   <div className="space-y-2">
-                    <div className="h-4 bg-[#162032] rounded w-48" />
-                    <div className="h-3 bg-[#162032] rounded w-32" />
+                    <div className="h-4 bg-card rounded w-48" />
+                    <div className="h-3 bg-card rounded w-32" />
                   </div>
                 </div>
-                <div className="h-8 bg-[#162032] rounded-xl w-24" />
+                <div className="h-8 bg-card rounded-xl w-24" />
               </div>
             </Card>
           ))}
         </div>
       ) : processedInterviews.length === 0 ? (
         /* EMPTY STATE */
-        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
-          <Calendar className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
-          <h3 className="text-xl font-extrabold text-white">No interviews scheduled.</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+        <Card className="p-12 text-center space-y-4 border-border bg-muted">
+          <Calendar className="w-12 h-12 text-muted-foreground mx-auto opacity-40" />
+          <h3 className="text-xl font-semibold text-foreground">No interviews scheduled.</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
             You do not have any active or upcoming recruiter interview sessions booked right now.
           </p>
           <Button variant="primary" size="md" leftIcon={<Send className="w-4 h-4" />} onClick={() => navigate('/drives')}>
@@ -342,21 +343,21 @@ END:VCALENDAR`;
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
             >
-              <Card className="p-5 border-[#202D42] space-y-4 hover:border-[#A3E635]/40 transition-colors">
+              <Card className="p-5 border-border space-y-4 hover:border-primary/40 transition-colors">
                 
                 {/* Top Row: Company & Status */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#202D42] pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
                   <div className="flex items-center gap-4">
-                    <Avatar src={item.companyLogo} name={item.companyName} size="md" className="border border-[#202D42]" />
+                    <Avatar src={item.companyLogo} name={item.companyName} size="md" className="border border-border" />
                     <div>
-                      <h3 className="text-base font-extrabold text-white leading-tight flex items-center gap-2">
+                      <h3 className="text-base font-semibold text-foreground leading-tight flex items-center gap-2">
                         {item.companyName}
-                        <span className="text-xs text-[#A3E635] font-semibold">({item.roundName})</span>
+                        <span className="text-xs text-primary font-semibold">({item.roundName})</span>
                       </h3>
-                      <p className="text-xs text-[#94A3B8] font-semibold">{item.roleTitle}</p>
-                      <p className="text-[11px] text-[#94A3B8] flex items-center gap-2 mt-0.5">
-                        <Clock className="w-3.5 h-3.5 text-[#A3E635]" /> {item.dateTime}
-                        <span className="text-[#64748B]">•</span>
+                      <p className="text-xs text-muted-foreground font-semibold">{item.roleTitle}</p>
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
+                        <Clock className="w-3.5 h-3.5 text-primary" /> {item.dateTime}
+                        <span className="text-muted-foreground">•</span>
                         <UserCheck className="w-3.5 h-3.5 text-sky-400" /> Panel: {item.interviewerName}
                       </p>
                     </div>
@@ -369,19 +370,19 @@ END:VCALENDAR`;
 
                 {/* INTERVIEW PROGRESS TIMELINE */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#94A3B8]">Interview Progress Timeline</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Interview Progress Timeline</span>
                   <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-[10px]">
-                    <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">1. Approved</div>
-                    <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">2. Scheduled</div>
-                    <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">3. Round 1</div>
-                    <div className="p-2 rounded-xl bg-[#101726] border border-[#202D42] text-[#64748B] font-bold">4. Round 2</div>
-                    <div className="p-2 rounded-xl bg-[#101726] border border-[#202D42] text-[#64748B] font-bold">5. HR Round</div>
-                    <div className="p-2 rounded-xl bg-[#101726] border border-[#202D42] text-[#64748B] font-bold">6. Result</div>
+                    <div className="p-2 rounded-xl bg-primary/15 border border-primary/40 text-foreground font-semibold">1. Approved</div>
+                    <div className="p-2 rounded-xl bg-primary/15 border border-primary/40 text-foreground font-semibold">2. Scheduled</div>
+                    <div className="p-2 rounded-xl bg-primary/15 border border-primary/40 text-foreground font-semibold">3. Round 1</div>
+                    <div className="p-2 rounded-xl bg-muted border border-border text-muted-foreground font-semibold">4. Round 2</div>
+                    <div className="p-2 rounded-xl bg-muted border border-border text-muted-foreground font-semibold">5. HR Round</div>
+                    <div className="p-2 rounded-xl bg-muted border border-border text-muted-foreground font-semibold">6. Result</div>
                   </div>
                 </div>
 
                 {/* ACTION BUTTONS ROW */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#202D42] text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border text-xs">
                   <div className="flex items-center gap-2">
                     <Button variant="secondary" size="sm" leftIcon={<Eye className="w-3.5 h-3.5 text-sky-400" />} onClick={() => setViewingInterview(item)}>
                       View Details
@@ -392,7 +393,7 @@ END:VCALENDAR`;
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <Button variant="secondary" size="sm" leftIcon={<Calendar className="w-3.5 h-3.5 text-[#A3E635]" />}>
+                      <Button variant="secondary" size="sm" leftIcon={<Calendar className="w-3.5 h-3.5 text-primary" />}>
                         Google Calendar
                       </Button>
                     </a>
@@ -419,7 +420,7 @@ END:VCALENDAR`;
 
                     {item.locationLink && (
                       <a href={item.locationLink} target="_blank" rel="noreferrer">
-                        <Button variant="primary" size="sm" leftIcon={<Video className="w-3.5 h-3.5" />} className="font-extrabold shadow-[0_0_12px_rgba(163,230,53,0.3)]">
+                        <Button variant="primary" size="sm" leftIcon={<Video className="w-3.5 h-3.5" />} className="font-semibold">
                           Join Meeting
                         </Button>
                       </a>
@@ -443,40 +444,40 @@ END:VCALENDAR`;
             subtitle={`${viewingInterview.roleTitle} • ${viewingInterview.roundName}`}
             maxWidth="xl"
           >
-            <div className="space-y-5 bg-[#101726] border border-[#202D42] p-6 rounded-2xl text-xs">
+            <div className="space-y-5 bg-muted border border-border p-6 rounded-2xl text-xs">
               
               {/* Header */}
-              <div className="border-b border-[#202D42] pb-4 flex items-center justify-between">
+              <div className="border-b border-border pb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar src={viewingInterview.companyLogo} name={viewingInterview.companyName} size="md" />
                   <div>
-                    <h2 className="text-xl font-extrabold text-white">{viewingInterview.companyName}</h2>
-                    <p className="text-xs text-[#A3E635] font-semibold">{viewingInterview.roundName}</p>
+                    <h2 className="text-xl font-semibold text-foreground">{viewingInterview.companyName}</h2>
+                    <p className="text-xs text-primary font-semibold">{viewingInterview.roundName}</p>
                   </div>
                 </div>
                 <div>{renderStatusBadge(viewingInterview.status)}</div>
               </div>
 
               {/* Specifications Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[#162032] p-3 rounded-xl border border-[#202D42]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-card p-3 rounded-xl border border-border">
                 <div>
-                  <span className="text-[10px] text-[#94A3B8] block">Date & Time</span>
-                  <span className="font-bold text-white text-xs">{viewingInterview.dateTime}</span>
+                  <span className="text-[10px] text-muted-foreground block">Date & Time</span>
+                  <span className="font-semibold text-foreground text-xs">{viewingInterview.dateTime}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#94A3B8] block">Interviewer / Panel</span>
-                  <span className="font-bold text-white text-xs">{viewingInterview.interviewerName}</span>
+                  <span className="text-[10px] text-muted-foreground block">Interviewer / Panel</span>
+                  <span className="font-semibold text-foreground text-xs">{viewingInterview.interviewerName}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#94A3B8] block">Session Mode</span>
-                  <span className="font-bold text-[#A3E635] text-xs">{viewingInterview.mode}</span>
+                  <span className="text-[10px] text-muted-foreground block">Session Mode</span>
+                  <span className="font-semibold text-primary text-xs">{viewingInterview.mode}</span>
                 </div>
               </div>
 
               {/* Instructions */}
               <div className="space-y-1">
-                <span className="font-extrabold text-white uppercase text-[11px]">Instructions & Preparation</span>
-                <p className="text-[#94A3B8] leading-relaxed p-3 bg-[#162032] rounded-xl border border-[#202D42]">
+                <span className="font-semibold text-foreground uppercase text-[11px]">Instructions & Preparation</span>
+                <p className="text-muted-foreground leading-relaxed p-3 bg-card rounded-xl border border-border">
                   {viewingInterview.instructions}
                 </p>
               </div>
@@ -484,15 +485,15 @@ END:VCALENDAR`;
               {/* Feedback (If Available) */}
               {viewingInterview.feedback && (
                 <div className="space-y-1">
-                  <span className="font-extrabold text-[#A3E635] uppercase text-[11px]">Recruiter Feedback</span>
-                  <p className="text-[#94A3B8] leading-relaxed p-3 bg-[#162032] rounded-xl border border-[#A3E635]/30">
+                  <span className="font-semibold text-primary uppercase text-[11px]">Recruiter Feedback</span>
+                  <p className="text-muted-foreground leading-relaxed p-3 bg-card rounded-xl border border-primary/30">
                     {viewingInterview.feedback}
                   </p>
                 </div>
               )}
 
               {/* Modal Actions */}
-              <div className="pt-4 border-t border-[#202D42] flex justify-end gap-3">
+              <div className="pt-4 border-t border-border flex justify-end gap-3">
                 <Button variant="secondary" size="md" onClick={() => setViewingInterview(null)}>
                   Close
                 </Button>

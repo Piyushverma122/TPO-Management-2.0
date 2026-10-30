@@ -1,5 +1,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
+import { Progress } from '@/components/ui/progress';
 
 export interface ProgressBarProps {
   value: number; // 0 to 100
@@ -28,27 +29,26 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     lg: 'h-4',
   };
 
-  const fillStyles = {
-    neon: 'bg-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.6)]',
-    cyan: 'bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.6)]',
-    purple: 'bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.6)]',
-    emerald: 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]',
-  };
 
   return (
     <div className={clsx('w-full space-y-1.5', className)}>
       {(label || showValue) && (
-        <div className="flex items-center justify-between text-xs font-semibold text-[#94A3B8]">
+        <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
           {label && <span>{label}</span>}
-          {showValue && <span className="text-white font-extrabold">{percentage}%</span>}
+          {showValue && <span className="text-foreground font-semibold">{percentage}%</span>}
         </div>
       )}
-      <div className={clsx('w-full bg-[#101726] border border-[#202D42] rounded-full overflow-hidden p-0.5', sizeStyles[size])}>
-        <div
-          className={clsx('h-full rounded-full transition-all duration-500 ease-out', fillStyles[variant])}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
+      <Progress
+        value={percentage}
+        className={clsx(
+          'w-full bg-muted border border-border rounded-full p-0.5',
+          sizeStyles[size],
+          variant === 'neon' && '[&>div]:bg-primary',
+          variant === 'cyan' && '[&>div]:bg-sky-400',
+          variant === 'purple' && '[&>div]:bg-purple-500',
+          variant === 'emerald' && '[&>div]:bg-emerald-400'
+        )}
+      />
     </div>
   );
 };
@@ -82,7 +82,7 @@ export const RadialProgress: React.FC<RadialProgressProps> = ({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#202D42"
+          stroke="var(--secondary)"
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -91,18 +91,18 @@ export const RadialProgress: React.FC<RadialProgressProps> = ({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#A3E635"
+          stroke="var(--primary)"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           fill="none"
-          className="transition-all duration-700 ease-out filter drop-shadow-[0_0_8px_rgba(163,230,53,0.8)]"
+          className="transition-all duration-700 ease-out filter"
         />
       </svg>
       <div className="absolute flex flex-col items-center justify-center text-center">
-        <span className="text-2xl font-extrabold text-white tracking-tight">{percentage}%</span>
-        {label && <span className="text-[10px] font-bold uppercase text-[#94A3B8] tracking-wider mt-0.5">{label}</span>}
+        <span className="text-2xl font-semibold text-foreground tracking-tight">{percentage}%</span>
+        {label && <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mt-0.5">{label}</span>}
       </div>
     </div>
   );

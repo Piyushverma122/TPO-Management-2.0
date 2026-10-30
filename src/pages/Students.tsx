@@ -30,22 +30,29 @@ import {
   ShieldCheck,
   Lock,
   Check,
+  MapPin,
+  Link2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, ResponsiveContainer } from 'recharts';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Pagination } from '../components/ui/Pagination';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Pagination } from '../components/app/Pagination';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { useToast } from '../components/app/Toast';
 import { Student } from '../types';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
+import { Input as ShadInput } from '@/components/ui/input';
+import { Textarea as ShadTextarea } from '@/components/ui/textarea';
+import { Button as ShadButton } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   getStudents,
   createStudent,
@@ -61,6 +68,15 @@ const totalSparkline = [{ v: 40 }, { v: 55 }, { v: 65 }, { v: 91 }];
 const eligibleSparkline = [{ v: 30 }, { v: 70 }, { v: 90 }, { v: 81 }];
 const placedSparkline = [{ v: 20 }, { v: 45 }, { v: 60 }, { v: 78 }];
 const notEligibleSparkline = [{ v: 80 }, { v: 60 }, { v: 90 }, { v: 40 }];
+
+type EnrollStep = 'basic' | 'account' | 'academic' | 'address' | 'social';
+const ENROLL_STEPS: { id: EnrollStep; title: string; desc: string; icon: React.ElementType }[] = [
+  { id: 'basic', title: 'Basic Info', desc: 'Name, contact and personal details', icon: Users },
+  { id: 'account', title: 'Account Credentials', desc: 'Login password for the student', icon: Key },
+  { id: 'academic', title: 'Academic Info', desc: 'Branch, batch, CGPA and status', icon: GraduationCap },
+  { id: 'address', title: 'Address', desc: 'Current and permanent address', icon: MapPin },
+  { id: 'social', title: 'Links & Bio', desc: 'Profiles, portfolio and summary', icon: Link2 },
+];
 
 export const Students: React.FC = () => {
   const { success, error: toastError, info } = useToast();
@@ -440,27 +456,23 @@ export const Students: React.FC = () => {
       className="space-y-6 pb-12 relative font-sans"
     >
       {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            Student Directory
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 shadow-[0_0_10px_rgba(163,230,53,0.2)]">
-              {totalRecords} Total Registered
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Manage student academic profiles, placement status, eligibility criteria, and resumes.
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">Students</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {totalRecords} registered candidates. Manage profiles, placement status, eligibility and resumes.
           </p>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchStudentsData}
             disabled={loading}
+            className="text-xs"
           >
             Refresh
           </Button>
@@ -471,86 +483,48 @@ export const Students: React.FC = () => {
               size="md"
               leftIcon={<Plus className="w-4 h-4" />}
               onClick={() => setIsAddModalOpen(true)}
-              className="font-extrabold text-xs shrink-0"
+              className="text-xs shrink-0"
             >
-              Add New Student
+              Add Student
             </Button>
           </PermissionGuard>
         </div>
       </div>
 
-      {/* TOP 4 STATISTIC METRIC CARDS ROW */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
-      >
-        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
-          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Total Enrolled</span>
-              <span className="text-2xl font-extrabold text-white mt-1 block">{totalRecords}</span>
-              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">+12% batch growth</span>
+      {/* STATS STRIP */}
+      <Card className="overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-border [&>div]:border-border max-lg:[&>div:nth-child(n+3)]:border-t lg:[&>div+div]:border-l max-lg:[&>div:nth-child(even)]:border-l">
+          {[
+            { label: 'Total enrolled', value: totalRecords, note: '+12% batch growth', icon: Users },
+            { label: 'Eligible candidates', value: Math.round(totalRecords * 0.85), note: '85% meet 7.0+ CGPA', icon: CheckCircle2 },
+            { label: 'Placed', value: Math.round(totalRecords * 0.72), note: '72% placement rate', icon: Trophy },
+            { label: 'Opted out / unplaced', value: Math.round(totalRecords * 0.15), note: 'Higher studies / prep', icon: XCircle },
+          ].map(({ label, value, note, icon: Icon }) => (
+            <div key={label} className="p-6">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-sm">{label}</span>
+                <Icon className="w-4 h-4" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{note}</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <Users className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
+          ))}
+        </div>
+      </Card>
 
-        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
-          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-sky-500/40 transition-all duration-300 shadow-xl group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Eligible Candidates</span>
-              <span className="text-2xl font-extrabold text-white mt-1 block">{Math.round(totalRecords * 0.85)}</span>
-              <span className="text-[11px] text-[#38BDF8] font-semibold mt-1 block">85% meets 7.0+ CGPA</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
-          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Successfully Placed</span>
-              <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">{Math.round(totalRecords * 0.72)}</span>
-              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">72% placement rate</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/20 text-[#A3E635] border border-[#A3E635]/40 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <Trophy className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={cardItemVariants} whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 280, damping: 22 }}>
-          <Card className="p-5 flex items-center justify-between border-[#202D42] hover:border-rose-500/40 transition-all duration-300 shadow-xl group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Opted Out / Unplaced</span>
-              <span className="text-2xl font-extrabold text-rose-400 mt-1 block">{Math.round(totalRecords * 0.15)}</span>
-              <span className="text-[11px] text-rose-400 font-semibold mt-1 block">Higher Studies / Prep</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <XCircle className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-      </motion.div>
-
-      {/* FILTER & SEARCH CONTROL BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="flex-1 w-full min-w-0">
+      {/* DIRECTORY CARD: toolbar + table + pagination */}
+      <Card className="overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4 border-b border-border">
+          <div className="flex-1 min-w-0">
             <SearchInput
-              placeholder="Search student by name, roll number, department, or skills..."
+              placeholder="Search by name, roll number, department or skills..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
             <Dropdown
               className="w-full sm:w-44 shrink-0"
               options={[
@@ -576,7 +550,7 @@ export const Students: React.FC = () => {
             />
 
             <Dropdown
-              className="w-full sm:w-40 shrink-0"
+              className="w-full sm:w-44 shrink-0"
               options={[
                 { label: 'All Statuses', value: 'All' },
                 { label: 'Placed Only', value: 'Placed' },
@@ -588,7 +562,8 @@ export const Students: React.FC = () => {
             />
 
             {(selectedDept !== 'All' || selectedYear !== 'All' || selectedStatus !== 'All' || searchQuery !== '') && (
-              <button
+              <ShadButton
+                variant="ghost"
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
@@ -596,24 +571,22 @@ export const Students: React.FC = () => {
                   setSelectedYear('All');
                   setSelectedStatus('All');
                 }}
-                className="text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 py-2 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                className="h-10 rounded-full px-4 text-xs text-muted-foreground hover:text-foreground shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </button>
+                Reset
+              </ShadButton>
             )}
           </div>
         </div>
-      </Card>
 
-      {/* MAIN STUDENTS DIRECTORY TABLE */}
-      <Card className="p-0 overflow-hidden">
-        <Table>
+        {/* Table */}
+        <Table bare>
           <TableHeader>
             <TableRow>
-              <TableHead>Student Info</TableHead>
-              <TableHead>Roll Number</TableHead>
-              <TableHead>Branch & Batch</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Roll number</TableHead>
+              <TableHead>Branch & batch</TableHead>
               <TableHead>CGPA</TableHead>
               <TableHead>Backlogs</TableHead>
               <TableHead>Status</TableHead>
@@ -623,16 +596,13 @@ export const Students: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-[#94A3B8]">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
-                    <span>Loading student records from server...</span>
-                  </div>
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  Loading student records...
                 </TableCell>
               </TableRow>
             ) : students.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-[#94A3B8]">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   No matching student records found.
                 </TableCell>
               </TableRow>
@@ -640,35 +610,36 @@ export const Students: React.FC = () => {
               students.map((student) => (
                 <TableRow
                   key={student.id}
-                  className="hover:bg-[#1C293F]/50 transition-colors cursor-pointer"
+                  className="cursor-pointer"
                   onClick={() => handleOpenDrawer(student)}
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar src={student.avatar} name={student.name} size="md" />
-                      <div>
-                        <span className="font-bold text-white block leading-tight hover:text-[#A3E635] transition-colors">
-                          {student.name}
-                        </span>
-                        <span className="text-xs text-[#94A3B8]">{student.email}</span>
+                      <div className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-foreground">{student.name}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{student.email}</span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono font-semibold text-xs text-[#A3E635]">
-                    {student.rollNumber}
+                  <TableCell className="font-mono text-xs text-muted-foreground">{student.rollNumber}</TableCell>
+                  <TableCell>
+                    <span className="block text-sm text-foreground">{student.branch}</span>
+                    <span className="block text-xs text-muted-foreground">Batch of {student.passingYear}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs font-semibold text-white block">{student.branch}</span>
-                    <span className="text-[11px] text-[#64748B]">Batch of {student.passingYear}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-bold text-white text-sm">{student.cgpa.toFixed(1)}</span>
+                    <div className="flex w-24 flex-col gap-1.5">
+                      <span className="text-sm font-medium text-foreground">{student.cgpa.toFixed(1)}</span>
+                      <div className="h-1 w-full overflow-hidden rounded-full bg-secondary">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (student.cgpa / 10) * 100)}%` }} />
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {student.backlogs === 0 ? (
-                      <span className="text-xs font-semibold text-emerald-400">0 Clear</span>
+                      <Badge variant="neutral" size="sm">Clear</Badge>
                     ) : (
-                      <span className="text-xs font-semibold text-rose-400">{student.backlogs} Active</span>
+                      <Badge variant="alert" size="sm">{student.backlogs} active</Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -681,38 +652,35 @@ export const Students: React.FC = () => {
                           : 'neutral'
                       }
                       size="sm"
+                      dot
                     >
                       {student.placementStatus}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="relative inline-block text-left">
-                      <button
-                        onClick={() => setActionMenuOpenId(actionMenuOpenId === student.id ? null : student.id)}
-                        className="text-[#94A3B8] hover:text-white p-1.5 rounded-lg hover:bg-[#202D42] transition-colors"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-
-                      {actionMenuOpenId === student.id && (
-                        <div className="absolute right-0 mt-1 w-44 bg-[#162032] border border-[#202D42] rounded-xl shadow-2xl z-30 py-1 space-y-0.5 text-xs text-left">
-                          <button
-                            onClick={() => handleOpenDrawer(student)}
-                            className="w-full px-3 py-2 text-white hover:bg-[#202D42] flex items-center gap-2 font-medium"
-                          >
-                            <FileText className="w-3.5 h-3.5 text-[#A3E635]" />
-                            View Profile
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStudentAction(student.id)}
-                            className="w-full px-3 py-2 text-rose-400 hover:bg-rose-500/10 flex items-center gap-2 font-medium"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete Student
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          aria-label="Student actions"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44 rounded-2xl">
+                        <DropdownMenuItem onClick={() => handleOpenDrawer(student)}>
+                          <FileText className="w-4 h-4" />
+                          View profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteStudentAction(student.id)}
+                          className="text-red-400 focus:text-red-400"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete student
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
@@ -721,14 +689,13 @@ export const Students: React.FC = () => {
         </Table>
 
         {/* Server Pagination Controls */}
-        <div className="p-4 border-t border-[#202D42] flex items-center justify-between">
-          <span className="text-xs text-[#94A3B8]">
-            Showing Page {currentPage} of {Math.ceil(totalRecords / itemsPerPage) || 1} ({totalRecords} records)
-          </span>
+        <div className="px-4 py-2 border-t border-border">
           <Pagination
             currentPage={currentPage}
             totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
             onPageChange={setCurrentPage}
+            totalEntries={totalRecords}
+            pageSize={itemsPerPage}
           />
         </div>
       </Card>
@@ -741,7 +708,7 @@ export const Students: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[#0B0F17]/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setIsDrawerOpen(false)}
             />
 
@@ -751,36 +718,36 @@ export const Students: React.FC = () => {
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="w-screen max-w-md bg-[#162032] border-l border-[#202D42] p-6 overflow-y-auto space-y-6 shadow-2xl relative text-white"
+                className="w-screen max-w-md bg-card border-l border-border p-6 overflow-y-auto space-y-6  relative text-foreground"
               >
                 {/* Drawer Header */}
-                <div className="flex items-center justify-between border-b border-[#202D42] pb-4">
-                  <span className="text-xs font-extrabold text-[#A3E635] tracking-wider uppercase">
+                <div className="flex items-center justify-between border-b border-border pb-4">
+                  <span className="text-xs font-semibold text-primary tracking-wider uppercase">
                     Student Master Profile
                   </span>
                   <button
                     onClick={() => setIsDrawerOpen(false)}
-                    className="p-1 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#202D42]"
+                    className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 {/* Candidate Main Profile Banner Card */}
-                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-3">
+                <div className="bg-muted border border-border rounded-2xl p-4 space-y-3">
                   <div className="flex items-start gap-4">
                     <Avatar src={selectedStudent.avatar} name={selectedStudent.name} size="lg" />
                     <div className="space-y-1 overflow-hidden">
-                      <h3 className="text-lg font-extrabold text-white leading-tight">{selectedStudent.name}</h3>
+                      <h3 className="text-lg font-semibold text-foreground leading-tight">{selectedStudent.name}</h3>
                       {selectedStudent.resumeHeadline && (
-                        <p className="text-xs text-[#A3E635] font-semibold truncate">{selectedStudent.resumeHeadline}</p>
+                        <p className="text-xs text-primary font-semibold truncate">{selectedStudent.resumeHeadline}</p>
                       )}
-                      <div className="flex flex-wrap gap-2 text-xs font-mono font-bold pt-1">
-                        <span className="text-[#A3E635] bg-[#A3E635]/10 px-2 py-0.5 rounded border border-[#A3E635]/20">
+                      <div className="flex flex-wrap gap-2 text-xs font-mono font-semibold pt-1">
+                        <span className="text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                           Roll: {selectedStudent.rollNumber}
                         </span>
                         {selectedStudent.enrollmentNumber && (
-                          <span className="text-[#94A3B8] bg-[#1C293F] px-2 py-0.5 rounded">
+                          <span className="text-muted-foreground bg-accent px-2 py-0.5 rounded">
                             EN: {selectedStudent.enrollmentNumber}
                           </span>
                         )}
@@ -789,25 +756,25 @@ export const Students: React.FC = () => {
                   </div>
 
                   {/* Contact & Personal details */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#202D42] text-xs">
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-xs">
                     <div>
-                      <span className="text-[10px] text-[#64748B] uppercase font-bold block">Email</span>
-                      <span className="text-white font-medium truncate block">{selectedStudent.email}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Email</span>
+                      <span className="text-foreground font-medium truncate block">{selectedStudent.email}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[#64748B] uppercase font-bold block">Phone</span>
-                      <span className="text-white font-medium">{selectedStudent.phone || 'N/A'}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Phone</span>
+                      <span className="text-foreground font-medium">{selectedStudent.phone || 'N/A'}</span>
                     </div>
                     {selectedStudent.gender && (
                       <div>
-                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">Gender</span>
-                        <span className="text-white font-medium">{selectedStudent.gender}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Gender</span>
+                        <span className="text-foreground font-medium">{selectedStudent.gender}</span>
                       </div>
                     )}
                     {selectedStudent.dateOfBirth && (
                       <div>
-                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">DOB</span>
-                        <span className="text-white font-medium">{selectedStudent.dateOfBirth}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">DOB</span>
+                        <span className="text-foreground font-medium">{selectedStudent.dateOfBirth}</span>
                       </div>
                     )}
                   </div>
@@ -815,56 +782,56 @@ export const Students: React.FC = () => {
 
                 {/* Academic Highlights Grid */}
                 <div className="space-y-2">
-                  <span className="text-xs font-extrabold text-[#A3E635] uppercase tracking-wider block">
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
                     Academic Record
                   </span>
                   <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">CGPA</span>
-                      <span className="text-base font-extrabold text-white">{selectedStudent.cgpa.toFixed(2)}</span>
+                    <div className="bg-muted border border-border rounded-xl p-2.5">
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">CGPA</span>
+                      <span className="text-base font-semibold text-foreground">{selectedStudent.cgpa.toFixed(2)}</span>
                     </div>
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Branch</span>
-                      <span className="text-xs font-bold text-white truncate block">{selectedStudent.branch}</span>
+                    <div className="bg-muted border border-border rounded-xl p-2.5">
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Branch</span>
+                      <span className="text-xs font-semibold text-foreground truncate block">{selectedStudent.branch}</span>
                     </div>
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Placement</span>
+                    <div className="bg-muted border border-border rounded-xl p-2.5">
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Placement</span>
                       <Badge variant={selectedStudent.placementStatus === 'Placed' ? 'success' : 'neutral'} size="sm">
                         {selectedStudent.placementStatus}
                       </Badge>
                     </div>
 
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Semester</span>
-                      <span className="text-xs font-bold text-white">Sem {selectedStudent.currentSemester || 1}</span>
+                    <div className="bg-muted border border-border rounded-xl p-2.5">
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Semester</span>
+                      <span className="text-xs font-semibold text-foreground">Sem {selectedStudent.currentSemester || 1}</span>
                     </div>
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Passing Year</span>
-                      <span className="text-xs font-bold text-white">{selectedStudent.passingYear}</span>
+                    <div className="bg-muted border border-border rounded-xl p-2.5">
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Passing Year</span>
+                      <span className="text-xs font-semibold text-foreground">{selectedStudent.passingYear}</span>
                     </div>
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                      <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Backlogs</span>
-                      <span className={`text-xs font-bold ${selectedStudent.backlogs > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    <div className="bg-muted border border-border rounded-xl p-2.5">
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Backlogs</span>
+                      <span className={`text-xs font-semibold ${selectedStudent.backlogs > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                         {selectedStudent.backlogs} Active
                       </span>
                     </div>
 
                     {selectedStudent.tenthPercentage !== undefined && (
-                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">10th %</span>
-                        <span className="text-xs font-bold text-white">{selectedStudent.tenthPercentage}%</span>
+                      <div className="bg-muted border border-border rounded-xl p-2.5">
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">10th %</span>
+                        <span className="text-xs font-semibold text-foreground">{selectedStudent.tenthPercentage}%</span>
                       </div>
                     )}
                     {selectedStudent.twelfthPercentage !== undefined && (
-                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">12th %</span>
-                        <span className="text-xs font-bold text-white">{selectedStudent.twelfthPercentage}%</span>
+                      <div className="bg-muted border border-border rounded-xl p-2.5">
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">12th %</span>
+                        <span className="text-xs font-semibold text-foreground">{selectedStudent.twelfthPercentage}%</span>
                       </div>
                     )}
                     {selectedStudent.diplomaPercentage !== undefined && (
-                      <div className="bg-[#101726] border border-[#202D42] rounded-xl p-2.5">
-                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Diploma %</span>
-                        <span className="text-xs font-bold text-white">{selectedStudent.diplomaPercentage}%</span>
+                      <div className="bg-muted border border-border rounded-xl p-2.5">
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Diploma %</span>
+                        <span className="text-xs font-semibold text-foreground">{selectedStudent.diplomaPercentage}%</span>
                       </div>
                     )}
                   </div>
@@ -872,17 +839,17 @@ export const Students: React.FC = () => {
 
                 {/* Candidate Bio & Address section */}
                 {(selectedStudent.bio || selectedStudent.address || selectedStudent.city) && (
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3 space-y-2 text-xs">
+                  <div className="bg-muted border border-border rounded-xl p-3 space-y-2 text-xs">
                     {selectedStudent.bio && (
                       <div>
-                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">Summary / Bio</span>
-                        <p className="text-white/90 text-xs leading-relaxed">{selectedStudent.bio}</p>
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Summary / Bio</span>
+                        <p className="text-foreground/90 text-xs leading-relaxed">{selectedStudent.bio}</p>
                       </div>
                     )}
                     {(selectedStudent.address || selectedStudent.city) && (
-                      <div className="pt-2 border-t border-[#202D42]">
-                        <span className="text-[10px] text-[#64748B] uppercase font-bold block">Address</span>
-                        <p className="text-white/90 text-xs">
+                      <div className="pt-2 border-t border-border">
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Address</span>
+                        <p className="text-foreground/90 text-xs">
                           {[selectedStudent.address, selectedStudent.city, selectedStudent.state, selectedStudent.country, selectedStudent.pincode].filter(Boolean).join(', ')}
                         </p>
                       </div>
@@ -893,32 +860,32 @@ export const Students: React.FC = () => {
                 {/* Professional & Social Profiles */}
                 {(selectedStudent.linkedinUrl || selectedStudent.githubUrl || selectedStudent.portfolioUrl || selectedStudent.leetcodeUrl || selectedStudent.hackerrankUrl) && (
                   <div className="space-y-2">
-                    <span className="text-xs font-extrabold text-[#A3E635] uppercase tracking-wider block">
+                    <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
                       Coding & Social Profiles
                     </span>
                     <div className="flex flex-wrap gap-2 text-xs">
                       {selectedStudent.linkedinUrl && (
-                        <a href={selectedStudent.linkedinUrl} target="_blank" rel="noreferrer" className="bg-[#0A66C2]/20 border border-[#0A66C2]/40 text-[#0A66C2] px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-[#0A66C2]/30">
+                        <a href={selectedStudent.linkedinUrl} target="_blank" rel="noreferrer" className="bg-[#0A66C2]/20 border border-[#0A66C2]/40 text-[#0A66C2] px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-[#0A66C2]/30">
                           LinkedIn <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
                       {selectedStudent.githubUrl && (
-                        <a href={selectedStudent.githubUrl} target="_blank" rel="noreferrer" className="bg-[#24292E]/60 border border-[#404448] text-white px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-[#24292E]">
+                        <a href={selectedStudent.githubUrl} target="_blank" rel="noreferrer" className="bg-[#24292E]/60 border border-[#404448] text-foreground px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-[#24292E]">
                           GitHub <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
                       {selectedStudent.portfolioUrl && (
-                        <a href={selectedStudent.portfolioUrl} target="_blank" rel="noreferrer" className="bg-[#A3E635]/15 border border-[#A3E635]/30 text-[#A3E635] px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-[#A3E635]/25">
+                        <a href={selectedStudent.portfolioUrl} target="_blank" rel="noreferrer" className="bg-primary/15 border border-primary/30 text-primary px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-primary/25">
                           Portfolio <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
                       {selectedStudent.leetcodeUrl && (
-                        <a href={selectedStudent.leetcodeUrl} target="_blank" rel="noreferrer" className="bg-amber-500/15 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-amber-500/25">
+                        <a href={selectedStudent.leetcodeUrl} target="_blank" rel="noreferrer" className="bg-amber-500/15 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-amber-500/25">
                           LeetCode <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
                       {selectedStudent.hackerrankUrl && (
-                        <a href={selectedStudent.hackerrankUrl} target="_blank" rel="noreferrer" className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-emerald-500/25">
+                        <a href={selectedStudent.hackerrankUrl} target="_blank" rel="noreferrer" className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-emerald-500/25">
                           HackerRank <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
@@ -927,12 +894,12 @@ export const Students: React.FC = () => {
                 )}
 
                 {/* Resume Upload & File List Section */}
-                <div className="space-y-3 pt-2 border-t border-[#202D42]">
+                <div className="space-y-3 pt-2 border-t border-border">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                       Resumes ({resumesList.length})
                     </span>
-                    <label className="cursor-pointer bg-[#A3E635]/15 hover:bg-[#A3E635]/25 border border-[#A3E635]/30 text-[#A3E635] px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors">
+                    <label className="cursor-pointer bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
                       <Upload className="w-3.5 h-3.5" />
                       Upload PDF
                       <input type="file" accept=".pdf" className="hidden" onChange={handleResumeFileUpload} />
@@ -940,28 +907,28 @@ export const Students: React.FC = () => {
                   </div>
 
                   {uploadingResume && (
-                    <div className="text-xs text-[#A3E635] flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+                    <div className="text-xs text-primary flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                       Uploading resume PDF to server storage...
                     </div>
                   )}
 
                   <div className="space-y-2">
                     {resumesList.length === 0 ? (
-                      <p className="text-xs text-[#94A3B8] italic">No active resumes uploaded for candidate.</p>
+                      <p className="text-xs text-muted-foreground italic">No active resumes uploaded for candidate.</p>
                     ) : (
                       resumesList.map((resItem) => (
-                        <div key={resItem.id} className="bg-[#101726] border border-[#202D42] rounded-xl p-3 flex items-center justify-between text-xs">
+                        <div key={resItem.id} className="bg-muted border border-border rounded-xl p-3 flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2 overflow-hidden">
-                            <FileText className="w-4 h-4 text-[#A3E635] shrink-0" />
-                            <span className="truncate font-semibold text-white">{resItem.file_name || resItem.version_title}</span>
+                            <FileText className="w-4 h-4 text-primary shrink-0" />
+                            <span className="truncate font-semibold text-foreground">{resItem.file_name || resItem.version_title}</span>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             <a
                               href={resItem.file_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-1 text-[#94A3B8] hover:text-white hover:bg-[#202D42] rounded-md"
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>
@@ -979,7 +946,7 @@ export const Students: React.FC = () => {
                 </div>
 
                 {/* Drawer Footer Actions */}
-                <div className="pt-4 border-t border-[#202D42] flex gap-2">
+                <div className="pt-4 border-t border-border flex gap-2">
                   <Button variant="secondary" size="md" fullWidth onClick={() => setIsDrawerOpen(false)}>
                     Close
                   </Button>
@@ -1004,72 +971,68 @@ export const Students: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         title="Enroll New Candidate"
         subtitle="Add a comprehensive student profile into the official TPO database."
-        maxWidth="3xl"
+        maxWidth="full"
       >
-        <form onSubmit={handleAddStudentSubmit} className="space-y-6 text-sm">
+        <form onSubmit={handleAddStudentSubmit} className="flex flex-col md:flex-row gap-10 text-sm md:h-[62vh] md:min-h-[480px]">
           
-          {/* Navigation Tabs Header */}
-          <div className="flex border-b border-[#202D42] gap-2 pb-3 overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => setFormTab('basic')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
-                formTab === 'basic'
-                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
-                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Basic Info
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormTab('account')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
-                formTab === 'account'
-                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
-                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
-              }`}
-            >
-              <Key className="w-4 h-4" />
-              Account Credentials
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormTab('academic')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
-                formTab === 'academic'
-                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
-                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" />
-              Academic Info
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormTab('address')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
-                formTab === 'address'
-                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
-                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
-              }`}
-            >
-              Address
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormTab('social')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 ${
-                formTab === 'social'
-                  ? 'bg-[#A3E635] text-[#0B0F17] shadow-lg shadow-[#A3E635]/20'
-                  : 'bg-[#101726] text-[#94A3B8] hover:text-white border border-[#202D42]'
-              }`}
-            >
-              Links &amp; Bio
-            </button>
+          {/* Step Sidebar */}
+          <nav className="md:w-72 shrink-0 space-y-1 md:overflow-y-auto" aria-label="Enrollment steps">
+            {ENROLL_STEPS.map((step, idx) => {
+              const current = ENROLL_STEPS.findIndex((x) => x.id === formTab);
+              const isActive = idx === current;
+              const isDone = idx < current;
+              const Icon = step.icon;
+              return (
+                <button
+                  key={step.id}
+                  type="button"
+                  onClick={() => setFormTab(step.id)}
+                  className={`w-full flex items-start gap-3 rounded-2xl p-3 text-left transition-colors ${
+                    isActive ? 'bg-secondary' : 'hover:bg-secondary/50'
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : isDone
+                        ? 'bg-secondary text-foreground border-transparent'
+                        : 'border-border text-muted-foreground'
+                    }`}
+                  >
+                    {isDone ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`block text-sm font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      {step.title}
+                    </span>
+                    <span className="block text-[11px] leading-snug text-muted-foreground">{step.desc}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          {/* Step Heading + Progress */}
+          <div className="space-y-3 mb-6 shrink-0">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                {ENROLL_STEPS.find((x) => x.id === formTab)?.title}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {ENROLL_STEPS.find((x) => x.id === formTab)?.desc}
+              </p>
+            </div>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-secondary">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${((ENROLL_STEPS.findIndex((x) => x.id === formTab) + 1) / ENROLL_STEPS.length) * 100}%` }}
+              />
+            </div>
           </div>
 
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-6">
           {/* TAB 1: BASIC INFO */}
           {formTab === 'basic' && (
             <div className="space-y-4">
@@ -1106,18 +1069,18 @@ export const Students: React.FC = () => {
                   onChange={(e) => setEnrollForm({ ...enrollForm, alternate_phone: e.target.value })}
                 />
                 <div>
-                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                     Gender
                   </label>
-                  <select
-                    className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
+                  <Dropdown
+                    options={[
+                      { label: 'Male', value: 'Male' },
+                      { label: 'Female', value: 'Female' },
+                      { label: 'Other', value: 'Other' },
+                    ]}
                     value={enrollForm.gender}
-                    onChange={(e) => setEnrollForm({ ...enrollForm, gender: e.target.value })}
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    onChange={(v) => setEnrollForm({ ...enrollForm, gender: v })}
+                  />
                 </div>
                 <Input
                   label="Date of Birth"
@@ -1132,33 +1095,33 @@ export const Students: React.FC = () => {
           {/* TAB 2: ACCOUNT CREDENTIALS */}
           {formTab === 'account' && (
             <div className="space-y-5">
-              <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 flex items-start gap-3.5">
-                <ShieldCheck className="w-6 h-6 text-[#A3E635] shrink-0 mt-0.5" />
+              <div className="bg-muted border border-border rounded-2xl p-4 flex items-start gap-3.5">
+                <ShieldCheck className="w-6 h-6 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-white font-bold text-sm">Initial Account Security &amp; Credentials</h4>
-                  <p className="text-[#94A3B8] text-xs leading-relaxed mt-1">
-                    Set an initial temporary password for the candidate account. An automated welcome email containing these login details will be dispatched to <strong className="text-white font-bold">{enrollForm.email || 'the student email address'}</strong> upon registration.
+                  <h4 className="text-foreground font-semibold text-sm">Initial Account Security &amp; Credentials</h4>
+                  <p className="text-muted-foreground text-xs leading-relaxed mt-1">
+                    Set an initial temporary password for the candidate account. An automated welcome email containing these login details will be dispatched to <strong className="text-foreground font-semibold">{enrollForm.email || 'the student email address'}</strong> upon registration.
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                     Initial Password *
                   </label>
                   <div className="relative">
-                    <input
+                    <ShadInput
                       type={showPassword ? 'text' : 'password'}
                       placeholder="e.g. Student@Pass2026"
-                      className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
+                      className="h-auto w-full bg-muted/80 dark:bg-muted/80 rounded-xl px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground"
                       value={enrollForm.password}
                       onChange={(e) => setEnrollForm({ ...enrollForm, password: e.target.value })}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-[#94A3B8] hover:text-white transition-colors"
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -1166,21 +1129,21 @@ export const Students: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                     Confirm Password *
                   </label>
                   <div className="relative">
-                    <input
+                    <ShadInput
                       type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="Re-enter password"
-                      className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
+                      className="h-auto w-full bg-muted/80 dark:bg-muted/80 rounded-xl px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground"
                       value={enrollForm.confirm_password}
                       onChange={(e) => setEnrollForm({ ...enrollForm, confirm_password: e.target.value })}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-3 text-[#94A3B8] hover:text-white transition-colors"
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -1190,11 +1153,11 @@ export const Students: React.FC = () => {
 
               {/* Password Strength Indicator */}
               {enrollForm.password && (
-                <div className="bg-[#101726]/60 border border-[#202D42] rounded-2xl p-4 space-y-3">
+                <div className="bg-muted/60 border border-border rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#94A3B8] font-semibold">Password Security Level:</span>
-                    <span className={`font-bold ${
-                      passwordScore <= 2 ? 'text-rose-400' : passwordScore <= 4 ? 'text-amber-400' : 'text-[#A3E635]'
+                    <span className="text-muted-foreground font-semibold">Password Security Level:</span>
+                    <span className={`font-semibold ${
+                      passwordScore <= 2 ? 'text-rose-400' : passwordScore <= 4 ? 'text-amber-400' : 'text-primary'
                     }`}>
                       {passwordScore <= 2 ? 'Weak' : passwordScore <= 4 ? 'Moderate' : 'Strong'}
                     </span>
@@ -1202,29 +1165,29 @@ export const Students: React.FC = () => {
 
                   {/* Visual Bar */}
                   <div className="w-full h-2 bg-[#1E293B] rounded-full overflow-hidden flex gap-1.5">
-                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 1 ? (passwordScore <= 2 ? 'bg-rose-500' : passwordScore <= 4 ? 'bg-amber-500' : 'bg-[#A3E635]') : 'bg-transparent'}`} />
-                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 2 ? (passwordScore <= 2 ? 'bg-rose-500' : passwordScore <= 4 ? 'bg-amber-500' : 'bg-[#A3E635]') : 'bg-transparent'}`} />
-                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 3 ? (passwordScore <= 4 ? 'bg-amber-500' : 'bg-[#A3E635]') : 'bg-transparent'}`} />
-                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 4 ? 'bg-[#A3E635]' : 'bg-transparent'}`} />
-                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 5 ? 'bg-[#A3E635]' : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 1 ? (passwordScore <= 2 ? 'bg-rose-500' : passwordScore <= 4 ? 'bg-amber-500' : 'bg-primary') : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 2 ? (passwordScore <= 2 ? 'bg-rose-500' : passwordScore <= 4 ? 'bg-amber-500' : 'bg-primary') : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 3 ? (passwordScore <= 4 ? 'bg-amber-500' : 'bg-primary') : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 4 ? 'bg-primary' : 'bg-transparent'}`} />
+                    <div className={`h-full flex-1 transition-all rounded-full ${passwordScore >= 5 ? 'bg-primary' : 'bg-transparent'}`} />
                   </div>
 
                   {/* Checklist */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-                    <div className={`flex items-center gap-2 ${passwordCriteria.minLength ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
-                      {passwordCriteria.minLength ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                    <div className={`flex items-center gap-2 ${passwordCriteria.minLength ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {passwordCriteria.minLength ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-muted-foreground rounded-full" />}
                       At least 8 characters
                     </div>
-                    <div className={`flex items-center gap-2 ${passwordCriteria.hasUpper ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
-                      {passwordCriteria.hasUpper ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                    <div className={`flex items-center gap-2 ${passwordCriteria.hasUpper ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {passwordCriteria.hasUpper ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-muted-foreground rounded-full" />}
                       Uppercase letter (A-Z)
                     </div>
-                    <div className={`flex items-center gap-2 ${passwordCriteria.hasLower ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
-                      {passwordCriteria.hasLower ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                    <div className={`flex items-center gap-2 ${passwordCriteria.hasLower ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {passwordCriteria.hasLower ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-muted-foreground rounded-full" />}
                       Lowercase letter (a-z)
                     </div>
-                    <div className={`flex items-center gap-2 ${passwordCriteria.hasNumber ? 'text-[#A3E635]' : 'text-[#64748B]'}`}>
-                      {passwordCriteria.hasNumber ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-[#64748B] rounded-full" />}
+                    <div className={`flex items-center gap-2 ${passwordCriteria.hasNumber ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {passwordCriteria.hasNumber ? <Check className="w-4 h-4" /> : <span className="w-3.5 h-3.5 block border border-muted-foreground rounded-full" />}
                       Number (0-9)
                     </div>
                   </div>
@@ -1321,19 +1284,19 @@ export const Students: React.FC = () => {
                   onChange={(e) => setEnrollForm({ ...enrollForm, history_backlogs: e.target.value })}
                 />
                 <div>
-                  <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                     Placement Status
                   </label>
-                  <select
-                    className="w-full bg-[#101726]/80 border border-[#202D42] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all"
+                  <Dropdown
+                    options={[
+                      { label: 'Unplaced', value: 'Unplaced' },
+                      { label: 'Placed', value: 'Placed' },
+                      { label: 'In Process', value: 'In Process' },
+                      { label: 'Opted Out', value: 'Opted Out' },
+                    ]}
                     value={enrollForm.placement_status}
-                    onChange={(e) => setEnrollForm({ ...enrollForm, placement_status: e.target.value })}
-                  >
-                    <option value="Unplaced">Unplaced</option>
-                    <option value="Placed">Placed</option>
-                    <option value="In Process">In Process</option>
-                    <option value="Opted Out">Opted Out</option>
-                  </select>
+                    onChange={(v) => setEnrollForm({ ...enrollForm, placement_status: v })}
+                  />
                 </div>
               </div>
             </div>
@@ -1389,11 +1352,11 @@ export const Students: React.FC = () => {
                 onChange={(e) => setEnrollForm({ ...enrollForm, resume_headline: e.target.value })}
               />
               <div>
-                <label className="block text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-1.5">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                   Candidate Bio / Summary
                 </label>
-                <textarea
-                  className="w-full h-24 bg-[#101726]/80 border border-[#202D42] rounded-xl p-3.5 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#A3E635] focus:ring-1 focus:ring-[#A3E635] transition-all resize-none"
+                <ShadTextarea
+                  className="w-full h-24 bg-muted/80 dark:bg-muted/80 rounded-xl p-3.5 text-sm text-foreground placeholder:text-muted-foreground resize-none"
                   placeholder="Brief overview of technical background, project experience, and career aspirations..."
                   value={enrollForm.bio}
                   onChange={(e) => setEnrollForm({ ...enrollForm, bio: e.target.value })}
@@ -1436,20 +1399,42 @@ export const Students: React.FC = () => {
             </div>
           )}
 
-          {/* Form Action Footer */}
-          <div className="flex justify-between items-center pt-4 border-t border-[#202D42]">
-            <div className="text-xs font-semibold text-[#94A3B8]">
-              Step {formTab === 'basic' ? '1' : formTab === 'account' ? '2' : formTab === 'academic' ? '3' : formTab === 'address' ? '4' : '5'} of 5
-            </div>
+          </div>
 
-            <div className="flex gap-3">
-              <Button type="button" variant="secondary" size="md" onClick={() => setIsAddModalOpen(false)}>
-                Cancel
-              </Button>
+          {/* Form Action Footer */}
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 mt-4 border-t border-border shrink-0">
+            <Button type="button" variant="ghost" size="md" onClick={() => setIsAddModalOpen(false)}>
+              Cancel
+            </Button>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {formTab !== 'basic' && (
+                <Button
+                  type="button"
+                  variant="tertiary"
+                  size="md"
+                  leftIcon={<ChevronLeft className="w-4 h-4" />}
+                  onClick={() => setFormTab(ENROLL_STEPS[ENROLL_STEPS.findIndex((x) => x.id === formTab) - 1].id)}
+                >
+                  Back
+                </Button>
+              )}
+              {formTab !== 'social' && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  rightIcon={<ChevronRight className="w-4 h-4" />}
+                  onClick={() => setFormTab(ENROLL_STEPS[ENROLL_STEPS.findIndex((x) => x.id === formTab) + 1].id)}
+                >
+                  Next
+                </Button>
+              )}
               <Button type="submit" variant="primary" size="md" className="px-6">
                 Enroll Candidate
               </Button>
             </div>
+          </div>
           </div>
         </form>
       </Modal>
@@ -1463,41 +1448,41 @@ export const Students: React.FC = () => {
         maxWidth="2xl"
       >
         <div className="space-y-5 text-sm">
-          <div className="bg-[#A3E635]/10 border border-[#A3E635]/30 rounded-2xl p-4 flex items-start gap-3.5">
-            <CheckCircle2 className="w-6 h-6 text-[#A3E635] shrink-0 mt-0.5" />
+          <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 flex items-start gap-3.5">
+            <CheckCircle2 className="w-6 h-6 text-primary shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-[#A3E635] font-bold text-sm">Account Provisioned &amp; Welcome Email Dispatched</h4>
-              <p className="text-[#94A3B8] text-xs mt-1 leading-relaxed">
-                The student account was created with role <strong className="text-white font-bold">STUDENT</strong>. An automated welcome email containing login credentials has been sent to candidate email.
+              <h4 className="text-primary font-semibold text-sm">Account Provisioned &amp; Welcome Email Dispatched</h4>
+              <p className="text-muted-foreground text-xs mt-1 leading-relaxed">
+                The student account was created with role <strong className="text-foreground font-semibold">STUDENT</strong>. An automated welcome email containing login credentials has been sent to candidate email.
               </p>
             </div>
           </div>
 
           {createdStudentInfo && (
-            <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-5 space-y-4">
-              <h4 className="text-[#A3E635] font-extrabold text-xs uppercase tracking-wider">
+            <div className="bg-muted border border-border rounded-2xl p-5 space-y-4">
+              <h4 className="text-primary font-semibold text-xs uppercase tracking-wider">
                 Candidate Account Summary
               </h4>
 
               <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
                 <div>
-                  <span className="text-[#94A3B8] text-xs font-medium block">Candidate Name</span>
-                  <p className="font-bold text-white mt-0.5 text-base">{createdStudentInfo.full_name}</p>
+                  <span className="text-muted-foreground text-xs font-medium block">Candidate Name</span>
+                  <p className="font-semibold text-foreground mt-0.5 text-base">{createdStudentInfo.full_name}</p>
                 </div>
                 <div>
-                  <span className="text-[#94A3B8] text-xs font-medium block">Roll Number</span>
-                  <p className="font-bold text-white mt-0.5 text-base">{createdStudentInfo.roll_number}</p>
+                  <span className="text-muted-foreground text-xs font-medium block">Roll Number</span>
+                  <p className="font-semibold text-foreground mt-0.5 text-base">{createdStudentInfo.roll_number}</p>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-[#94A3B8] text-xs font-medium block">Email Address</span>
-                  <p className="font-bold text-white mt-0.5 text-base">{createdStudentInfo.email}</p>
+                  <span className="text-muted-foreground text-xs font-medium block">Email Address</span>
+                  <p className="font-semibold text-foreground mt-0.5 text-base">{createdStudentInfo.email}</p>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#202D42]">
-                <span className="text-[#94A3B8] text-xs font-bold block mb-1.5">Temporary Initial Password</span>
-                <div className="bg-[#0B0F17] border border-[#A3E635]/40 rounded-xl p-3 flex items-center justify-between">
-                  <code className="text-[#A3E635] font-mono text-base font-extrabold tracking-wider">
+              <div className="pt-3 border-t border-border">
+                <span className="text-muted-foreground text-xs font-semibold block mb-1.5">Temporary Initial Password</span>
+                <div className="bg-background border border-primary/40 rounded-xl p-3 flex items-center justify-between">
+                  <code className="text-primary font-mono text-base font-semibold tracking-wider">
                     {createdStudentInfo.tempPassword}
                   </code>
                   <button
@@ -1509,7 +1494,7 @@ export const Students: React.FC = () => {
                       setCopiedPassword(true);
                       setTimeout(() => setCopiedPassword(false), 2500);
                     }}
-                    className="bg-[#A3E635]/15 hover:bg-[#A3E635]/25 border border-[#A3E635]/30 text-[#A3E635] px-4 py-1.5 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors"
+                    className="bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary px-4 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-2 transition-colors"
                   >
                     {copiedPassword ? (
                       <>
@@ -1531,7 +1516,7 @@ export const Students: React.FC = () => {
             <span>Candidate will be prompted to change password upon initial portal login.</span>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#202D42]">
+          <div className="flex justify-end gap-3 pt-3 border-t border-border">
             <Button
               variant="primary"
               size="md"

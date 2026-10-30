@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ArrowLeft, ShieldAlert, KeyRound } from 'lucide-react';
-import { useToast } from '../components/ui/Toast';
+import { useToast } from '../components/app/Toast';
 import { resetPasswordApi } from '../api/auth.api';
+import { Input as ShadInput } from '@/components/ui/input';
+import { Button as ShadButton } from '@/components/ui/button';
 
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -66,7 +68,7 @@ export const ResetPasswordPage: React.FC = () => {
 
   // Calculate Password Strength in Realtime (Score 0 to 4)
   const calculateStrength = (pass: string) => {
-    if (!pass) return { score: 0, label: '', color: 'bg-[#202D42]', textColor: 'text-gray-500' };
+    if (!pass) return { score: 0, label: '', color: 'bg-secondary', textColor: 'text-gray-500' };
 
     let score = 0;
     if (pass.length >= 8) score += 1;
@@ -159,32 +161,32 @@ export const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-white flex items-center justify-center p-4 sm:p-6 font-sans selection:bg-[#A3E635] selection:text-black relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 sm:p-6 font-sans selection:bg-primary selection:text-black relative overflow-hidden">
       {/* Background Decorative Radial Glows */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#A3E635]/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#38BDF8]/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-sky-400/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="w-full max-w-md bg-[#101726]/90 border border-[#202D42] backdrop-blur-xl rounded-2xl p-6 sm:p-8 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-muted/90 border border-border rounded-2xl p-6 sm:p-8  relative z-10">
         {checkingSession ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Loader2 className="w-10 h-10 text-[#A3E635] animate-spin mb-4" />
-            <p className="text-xs text-[#94A3B8] font-semibold">Verifying password recovery link...</p>
+            <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+            <p className="text-xs text-muted-foreground font-semibold">Verifying password recovery link...</p>
           </div>
         ) : !isValidToken ? (
           <div className="text-center py-4 space-y-6">
-            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-white">Invalid or Expired Link</h2>
-              <p className="text-xs text-[#94A3B8] mt-2 leading-relaxed">
+              <h2 className="text-xl font-semibold text-foreground">Invalid or Expired Link</h2>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 Reset link is invalid or has expired. Password recovery tokens are valid for a single request.
               </p>
             </div>
-            <div className="pt-4 border-t border-[#202D42]">
+            <div className="pt-4 border-t border-border">
               <Link
                 to="/forgot-password"
-                className="w-full inline-flex items-center justify-center gap-2 bg-[#162032] hover:bg-[#202D42] border border-[#202D42] text-[#A3E635] font-bold py-3 rounded-xl text-xs transition-colors"
+                className="w-full inline-flex items-center justify-center gap-2 bg-card hover:bg-secondary border border-border text-primary font-semibold py-3 rounded-xl text-xs transition-colors"
               >
                 <span>Request New Reset Link</span>
               </Link>
@@ -193,11 +195,11 @@ export const ResetPasswordPage: React.FC = () => {
         ) : (
           <>
             <div className="flex flex-col items-center text-center mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-[#162032] border border-[#A3E635]/30 text-[#A3E635] flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(163,230,53,0.15)]">
+              <div className="w-14 h-14 rounded-2xl bg-card border border-primary/30 text-primary flex items-center justify-center mb-4">
                 <KeyRound className="w-7 h-7" />
               </div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-white">Reset Password</h1>
-              <p className="text-xs text-[#94A3B8] mt-2 leading-relaxed">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Reset Password</h1>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 Enter your new secure password below to update your account credentials.
               </p>
             </div>
@@ -205,13 +207,13 @@ export const ResetPasswordPage: React.FC = () => {
             {/* Success Banner */}
             {successMessage && (
               <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex flex-col gap-2 text-emerald-400 text-xs font-medium">
-                <div className="flex items-center gap-2 font-bold">
+                <div className="flex items-center gap-2 font-semibold">
                   <CheckCircle2 className="w-5 h-5 shrink-0" />
                   <span>{successMessage}</span>
                 </div>
                 {countdown !== null && (
                   <p className="text-[11px] text-emerald-300/80 pl-7">
-                    Redirecting to login in <span className="font-extrabold">{countdown}</span> seconds...
+                    Redirecting to login in <span className="font-semibold">{countdown}</span> seconds...
                   </p>
                 )}
               </div>
@@ -228,12 +230,12 @@ export const ResetPasswordPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* New Password */}
               <div>
-                <label htmlFor="new-password-input" className="block text-xs font-bold uppercase tracking-wider text-[#94A3B8] mb-2">
+                <label htmlFor="new-password-input" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                   New Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B]" />
-                  <input
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <ShadInput
                     id="new-password-input"
                     type={showNewPassword ? 'text' : 'password'}
                     value={newPassword}
@@ -242,12 +244,12 @@ export const ResetPasswordPage: React.FC = () => {
                     maxLength={128}
                     disabled={submitting || !!successMessage}
                     aria-label="New Password"
-                    className="w-full bg-[#162032] border border-[#202D42] focus:border-[#A3E635] rounded-xl pl-10 pr-10 py-3 text-xs text-white placeholder-[#64748B] focus:outline-none transition-all duration-200"
+                    className="h-auto w-full bg-card dark:bg-card rounded-xl pl-10 pr-10 py-3 text-xs text-foreground placeholder:text-muted-foreground"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-white transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -257,15 +259,15 @@ export const ResetPasswordPage: React.FC = () => {
                 {newPassword && (
                   <div className="mt-2 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-[#64748B]">Password Strength:</span>
-                      <span className={`font-bold ${strength.textColor}`}>{strength.label}</span>
+                      <span className="text-muted-foreground">Password Strength:</span>
+                      <span className={`font-semibold ${strength.textColor}`}>{strength.label}</span>
                     </div>
-                    <div className="h-1.5 w-full bg-[#162032] rounded-full overflow-hidden flex gap-1 p-0.5">
+                    <div className="h-1.5 w-full bg-card rounded-full overflow-hidden flex gap-1 p-0.5">
                       {[1, 2, 3, 4].map((step) => (
                         <div
                           key={step}
                           className={`h-full flex-1 rounded-full transition-all duration-300 ${
-                            step <= strength.score ? strength.color : 'bg-[#202D42]'
+                            step <= strength.score ? strength.color : 'bg-secondary'
                           }`}
                         />
                       ))}
@@ -276,12 +278,12 @@ export const ResetPasswordPage: React.FC = () => {
 
               {/* Confirm Password */}
               <div>
-                <label htmlFor="confirm-password-input" className="block text-xs font-bold uppercase tracking-wider text-[#94A3B8] mb-2">
+                <label htmlFor="confirm-password-input" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B]" />
-                  <input
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <ShadInput
                     id="confirm-password-input"
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
@@ -290,12 +292,12 @@ export const ResetPasswordPage: React.FC = () => {
                     maxLength={128}
                     disabled={submitting || !!successMessage}
                     aria-label="Confirm Password"
-                    className="w-full bg-[#162032] border border-[#202D42] focus:border-[#A3E635] rounded-xl pl-10 pr-10 py-3 text-xs text-white placeholder-[#64748B] focus:outline-none transition-all duration-200"
+                    className="h-auto w-full bg-card dark:bg-card rounded-xl pl-10 pr-10 py-3 text-xs text-foreground placeholder:text-muted-foreground"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-white transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -303,10 +305,10 @@ export const ResetPasswordPage: React.FC = () => {
               </div>
 
               {/* Submit Button */}
-              <button
+              <ShadButton
                 type="submit"
                 disabled={submitting || !!successMessage}
-                className="w-full bg-[#A3E635] hover:bg-[#b4f046] text-[#0B0F17] font-bold py-3 rounded-xl transition-all shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:shadow-[0_0_25px_rgba(163,230,53,0.5)] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer text-xs"
+                className="w-full bg-primary hover:bg-primary text-primary-foreground font-semibold py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer text-xs"
               >
                 {submitting ? (
                   <>
@@ -316,13 +318,13 @@ export const ResetPasswordPage: React.FC = () => {
                 ) : (
                   <span>Reset Password</span>
                 )}
-              </button>
+              </ShadButton>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-[#202D42] text-center">
+            <div className="mt-8 pt-6 border-t border-border text-center">
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-[#94A3B8] hover:text-[#A3E635] transition-colors"
+                className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Login</span>

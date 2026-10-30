@@ -24,17 +24,18 @@ import {
   Send,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { useAuth } from '../context/AuthContext';
 import { getApplications, updateApplication } from '../api/application.api';
+import { Button as ShadButton } from '@/components/ui/button';
 
 export interface OfferItem {
   id: string;
@@ -218,14 +219,14 @@ export const Offers: React.FC = () => {
   const renderOfferBadge = (status: string) => {
     switch (status) {
       case 'Accepted':
-        return <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-extrabold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Accepted</span>;
+        return <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Accepted</span>;
       case 'Rejected':
-        return <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-extrabold flex items-center gap-1"><X className="w-3.5 h-3.5" /> Declined</span>;
+        return <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"><X className="w-3.5 h-3.5" /> Declined</span>;
       case 'Offer Released':
       case 'Pending':
-        return <span className="bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 px-3 py-1 rounded-full text-xs font-extrabold flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Offer Released</span>;
+        return <span className="bg-primary/15 text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Offer Released</span>;
       default:
-        return <span className="bg-[#162032] text-[#94A3B8] border border-[#202D42] px-3 py-1 rounded-full text-xs font-extrabold">{status}</span>;
+        return <span className="bg-card text-muted-foreground border border-border px-3 py-1 rounded-full text-xs font-semibold">{status}</span>;
     }
   };
 
@@ -236,13 +237,13 @@ export const Offers: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Offer Letters' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight flex items-center gap-3 mt-1">
             Student Offer Letters
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
               {offers.length} Offers Released
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Review official corporate job offers, inspect PDF documents, and record your formal decision.
           </p>
         </div>
@@ -259,7 +260,7 @@ export const Offers: React.FC = () => {
       </div>
 
       {/* SEARCH & FILTERS BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
+      <Card className="p-3 relative z-30 bg-muted border-border shadow-xl">
         <div className="flex flex-col md:flex-row items-center gap-3">
           <div className="flex-1 w-full min-w-0">
             <SearchInput
@@ -293,18 +294,18 @@ export const Offers: React.FC = () => {
             />
 
             {(selectedStatus !== 'All' || selectedSort !== 'Latest Offer' || searchQuery !== '') && (
-              <button
+              <ShadButton variant="outline"
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedStatus('All');
                   setSelectedSort('Latest Offer');
                 }}
-                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                className="[&_svg:not([class*='size-'])]:size-3.5 h-10 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Reset</span>
-              </button>
+              </ShadButton>
             )}
           </div>
         </div>
@@ -314,8 +315,8 @@ export const Offers: React.FC = () => {
       {errorMsg ? (
         <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
           <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Offer Letters</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+          <h3 className="text-lg font-semibold text-foreground">Error Loading Offer Letters</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchOfferData}>
             Retry Loading Offers
           </Button>
@@ -324,26 +325,26 @@ export const Offers: React.FC = () => {
         /* LOADING SKELETON STATE */
         <div className="space-y-4">
           {[1, 2].map((i) => (
-            <Card key={i} className="p-6 border-[#202D42] animate-pulse space-y-4">
+            <Card key={i} className="p-6 border-border animate-pulse space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-[#162032] rounded-2xl" />
+                  <div className="w-14 h-14 bg-card rounded-2xl" />
                   <div className="space-y-2">
-                    <div className="h-5 bg-[#162032] rounded w-48" />
-                    <div className="h-3 bg-[#162032] rounded w-32" />
+                    <div className="h-5 bg-card rounded w-48" />
+                    <div className="h-3 bg-card rounded w-32" />
                   </div>
                 </div>
-                <div className="h-8 bg-[#162032] rounded-xl w-28" />
+                <div className="h-8 bg-card rounded-xl w-28" />
               </div>
             </Card>
           ))}
         </div>
       ) : processedOffers.length === 0 ? (
         /* EMPTY STATE */
-        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
-          <Award className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
-          <h3 className="text-xl font-extrabold text-white">No offer letters available.</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+        <Card className="p-12 text-center space-y-4 border-border bg-muted">
+          <Award className="w-12 h-12 text-muted-foreground mx-auto opacity-40" />
+          <h3 className="text-xl font-semibold text-foreground">No offer letters available.</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
             You do not currently have any official job offer letters issued by recruitment partners.
           </p>
           <Button variant="primary" size="md" leftIcon={<Send className="w-4 h-4" />} onClick={() => navigate('/drives')}>
@@ -363,24 +364,24 @@ export const Offers: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
               >
-                <Card className="p-6 border-[#202D42] space-y-5 hover:border-[#A3E635]/40 transition-colors relative overflow-hidden">
+                <Card className="p-6 border-border space-y-5 hover:border-primary/40 transition-colors relative overflow-hidden">
                   
                   {/* Header: Company Info + Package + Status */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#202D42] pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
                     <div className="flex items-center gap-4">
-                      <Avatar src={offer.companyLogo} name={offer.companyName} size="lg" className="border-2 border-[#202D42]" />
+                      <Avatar src={offer.companyLogo} name={offer.companyName} size="lg" className="border-2 border-border" />
                       <div className="space-y-1">
-                        <h2 className="text-2xl font-extrabold text-white leading-tight flex items-center gap-3">
+                        <h2 className="text-2xl font-semibold text-foreground leading-tight flex items-center gap-3">
                           {offer.companyName}
-                          <span className="text-xs text-[#A3E635] font-extrabold px-2.5 py-0.5 rounded-md bg-[#A3E635]/15 border border-[#A3E635]/30">
+                          <span className="text-xs text-primary font-semibold px-2.5 py-0.5 rounded-md bg-primary/15 border border-primary/30">
                             {offer.ctc}
                           </span>
                         </h2>
                         <p className="text-xs text-sky-400 font-semibold">{offer.roleTitle}</p>
-                        <p className="text-[11px] text-[#94A3B8] flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-[#64748B]" /> Offer Issued: {offer.offerDate}
-                          <span className="text-[#64748B]">•</span>
-                          <MapPin className="w-3.5 h-3.5 text-[#64748B]" /> Joining: {offer.joiningDate} ({offer.location})
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> Offer Issued: {offer.offerDate}
+                          <span className="text-muted-foreground">•</span>
+                          <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Joining: {offer.joiningDate} ({offer.location})
                         </p>
                       </div>
                     </div>
@@ -392,20 +393,20 @@ export const Offers: React.FC = () => {
 
                   {/* OFFER TIMELINE JOURNEY STEPS */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#94A3B8]">Offer Progression Timeline</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Offer Progression Timeline</span>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-[10px]">
-                      <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">1. Applied</div>
-                      <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">2. Interview Cleared</div>
-                      <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">3. Candidate Selected</div>
-                      <div className="p-2 rounded-xl bg-[#A3E635]/15 border border-[#A3E635]/40 text-white font-bold">4. Offer Released</div>
-                      <div className={`p-2 rounded-xl border font-bold ${offer.status === 'Accepted' ? 'bg-emerald-500/20 border-emerald-500/40 text-white' : offer.status === 'Rejected' ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-[#101726] border-[#202D42] text-[#64748B]'}`}>
+                      <div className="p-2 rounded-xl bg-primary/15 border border-primary/40 text-foreground font-semibold">1. Applied</div>
+                      <div className="p-2 rounded-xl bg-primary/15 border border-primary/40 text-foreground font-semibold">2. Interview Cleared</div>
+                      <div className="p-2 rounded-xl bg-primary/15 border border-primary/40 text-foreground font-semibold">3. Candidate Selected</div>
+                      <div className="p-2 rounded-xl bg-primary/15 border border-primary/40 text-foreground font-semibold">4. Offer Released</div>
+                      <div className={`p-2 rounded-xl border font-semibold ${offer.status === 'Accepted' ? 'bg-emerald-500/20 border-emerald-500/40 text-foreground' : offer.status === 'Rejected' ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-muted border-border text-muted-foreground'}`}>
                         {offer.status === 'Accepted' ? '5. Accepted' : offer.status === 'Rejected' ? '5. Declined' : '5. Action Pending'}
                       </div>
                     </div>
                   </div>
 
                   {/* ACTION BUTTONS ROW */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#202D42] text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border text-xs">
                     
                     {/* Document View / Print / Download Controls */}
                     <div className="flex items-center gap-2">
@@ -421,7 +422,7 @@ export const Offers: React.FC = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        leftIcon={<Download className="w-3.5 h-3.5 text-[#A3E635]" />}
+                        leftIcon={<Download className="w-3.5 h-3.5 text-primary" />}
                         onClick={() => handleDownloadPdf(offer.companyName, offer.pdfUrl)}
                       >
                         Download PDF
@@ -430,7 +431,7 @@ export const Offers: React.FC = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        leftIcon={<Printer className="w-3.5 h-3.5 text-[#94A3B8]" />}
+                        leftIcon={<Printer className="w-3.5 h-3.5 text-muted-foreground" />}
                         onClick={handlePrintPdf}
                       >
                         Print Offer
@@ -457,13 +458,13 @@ export const Offers: React.FC = () => {
                             isLoading={respondingId === offer.id}
                             leftIcon={<Check className="w-3.5 h-3.5" />}
                             onClick={() => handleAcceptOffer(offer)}
-                            className="font-extrabold px-5 shadow-[0_0_15px_rgba(163,230,53,0.3)]"
+                            className="font-semibold px-5"
                           >
                             Accept Offer
                           </Button>
                         </>
                       ) : (
-                        <span className="text-xs font-extrabold text-[#94A3B8] italic">
+                        <span className="text-xs font-semibold text-muted-foreground italic">
                           Formal decision recorded: {offer.status}
                         </span>
                       )}
@@ -488,13 +489,13 @@ export const Offers: React.FC = () => {
             subtitle={`Role: ${previewPdfOffer.roleTitle} • CTC: ${previewPdfOffer.ctc}`}
             maxWidth="xl"
           >
-            <div className="space-y-5 bg-[#101726] border border-[#202D42] p-6 rounded-2xl text-xs">
+            <div className="space-y-5 bg-muted border border-border p-6 rounded-2xl text-xs">
               
               {/* Document Header */}
-              <div className="border-b border-[#202D42] pb-4 flex items-center justify-between">
+              <div className="border-b border-border pb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-extrabold text-white">{previewPdfOffer.companyName}</h2>
-                  <p className="text-xs text-[#A3E635] font-semibold">Official Employment Letter</p>
+                  <h2 className="text-xl font-semibold text-foreground">{previewPdfOffer.companyName}</h2>
+                  <p className="text-xs text-primary font-semibold">Official Employment Letter</p>
                 </div>
                 <div>{renderOfferBadge(previewPdfOffer.status)}</div>
               </div>
@@ -503,7 +504,7 @@ export const Offers: React.FC = () => {
               <div className="p-6 bg-white text-slate-900 rounded-xl space-y-4 font-serif leading-relaxed shadow-inner">
                 <div className="flex justify-between items-start border-b border-slate-200 pb-3">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">{previewPdfOffer.companyName}</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">{previewPdfOffer.companyName}</h3>
                     <p className="text-xs text-slate-600">Corporate Human Resources</p>
                   </div>
                   <p className="text-xs font-sans text-slate-500">Date: {previewPdfOffer.offerDate}</p>
@@ -517,7 +518,7 @@ export const Offers: React.FC = () => {
               </div>
 
               {/* Actions */}
-              <div className="pt-4 border-t border-[#202D42] flex justify-end gap-3">
+              <div className="pt-4 border-t border-border flex justify-end gap-3">
                 <Button variant="secondary" size="md" onClick={() => setPreviewPdfOffer(null)}>
                   Close Preview
                 </Button>
@@ -547,10 +548,10 @@ export const Offers: React.FC = () => {
             maxWidth="md"
           >
             <div className="space-y-4 text-xs">
-              <p className="text-[#94A3B8] leading-relaxed">
+              <p className="text-muted-foreground leading-relaxed">
                 Declining this employment offer is irreversible. Your decision will be communicated to the corporate recruiting team.
               </p>
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#202D42]">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button variant="secondary" size="md" onClick={() => setConfirmRejectId(null)}>
                   Cancel
                 </Button>
@@ -559,7 +560,7 @@ export const Offers: React.FC = () => {
                   size="md"
                   isLoading={!!respondingId}
                   onClick={handleRejectOfferConfirm}
-                  className="bg-rose-500 hover:bg-rose-600 border-none text-white font-extrabold"
+                  className="bg-rose-500 hover:bg-rose-600 border-none text-white font-semibold"
                 >
                   Confirm Decline
                 </Button>

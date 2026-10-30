@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Avatar } from '../ui/Avatar';
+import { Avatar } from '../app/Avatar';
 import { useNavigate } from 'react-router-dom';
-import { Search, Globe, Lock, Smartphone, Bell, Plus, ChevronDown, Menu } from 'lucide-react';
+import { Search, Globe, Lock, Smartphone, Bell, Plus, ChevronDown, Menu, LayoutGrid, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../ui/Button';
-import { useToast } from '../ui/Toast';
+import { Button } from '../app/Button';
+import { useToast } from '../app/Toast';
 import { getNotifications } from '../../api/notification.api';
+import { Input as ShadInput } from '@/components/ui/input';
+import { applyTheme, getStoredTheme, type ThemeMode } from '@/lib/theme';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export interface NavbarProps {
   onQuickAdd?: () => void;
@@ -13,11 +23,18 @@ export interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onQuickAdd, onToggleSidebar }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { info } = useToast();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [theme, setTheme] = useState<ThemeMode>(getStoredTheme());
+
+  useEffect(() => {
+    const sync = (e: Event) => setTheme((e as CustomEvent<ThemeMode>).detail);
+    window.addEventListener('tpo-theme-change', sync);
+    return () => window.removeEventListener('tpo-theme-change', sync);
+  }, []);
 
   useEffect(() => {
     const fetchUnreadCount = async () => {
@@ -40,105 +57,129 @@ export const Navbar: React.FC<NavbarProps> = ({ onQuickAdd, onToggleSidebar }) =
     }
   };
 
+  const iconBtn =
+    'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer';
+
   return (
-    <header className="h-16 bg-[#101726]/80 backdrop-blur-xl border-b border-[#202D42] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {/* Mobile Hamburger Drawer Toggle */}
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          className="lg:hidden h-10 w-10 flex items-center justify-center text-[#94A3B8] hover:text-white rounded-xl hover:bg-[#162032] border border-[#202D42] transition-colors shrink-0 cursor-pointer"
-          aria-label="Toggle navigation drawer"
-        >
+        <button type="button" onClick={onToggleSidebar} className={`${iconBtn} lg:hidden`} aria-label="Toggle navigation drawer">
           <Menu className="w-5 h-5" />
         </button>
 
         {/* Global Search Input */}
-        <form onSubmit={handleSearchSubmit} className="relative w-48 sm:w-80 md:w-96">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B]" />
-          <input
+        <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <ShadInput
             type="text"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Global Search (Drive, Student, Company...)"
+            placeholder="Search drives, students, companies..."
             aria-label="Global Search"
-            className="w-full h-10 bg-[#162032] border border-[#202D42] focus:border-[#A3E635] rounded-xl pl-10 pr-4 text-xs text-white placeholder-[#64748B] focus:outline-none transition-all duration-200"
+            className="h-10 w-full rounded-full border-transparent bg-secondary pl-11 pr-4 text-sm dark:bg-secondary"
           />
         </form>
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
-        {/* Quick Add Button */}
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <Button
           variant="primary"
           size="sm"
           leftIcon={<Plus className="w-4 h-4" />}
           onClick={onQuickAdd}
-          className="h-10 px-4 font-bold text-xs shrink-0 rounded-xl"
+          className="h-10 shrink-0 px-4 text-xs"
         >
-          <span className="hidden sm:inline">Quick Add: Drive/Student</span>
-          <span className="sm:hidden">+ Quick Add</span>
+          <span className="hidden sm:inline">Quick add</span>
         </Button>
 
-        {/* Utility Icon Group */}
-        <div className="hidden md:flex items-center gap-0.5 bg-[#162032] border border-[#202D42] rounded-xl h-10 px-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => info('Language Selector', 'English (US) selected.')}
-            className="h-8 w-8 flex items-center justify-center text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#202D42] transition-colors cursor-pointer"
-            title="Language"
-            aria-label="Change language"
-          >
-            <Globe className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => info('Security Portal', 'Portal role: TPO Admin (Active Session)')}
-            className="h-8 w-8 flex items-center justify-center text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#202D42] transition-colors cursor-pointer"
-            title="Security & Permissions"
-            aria-label="View security settings"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => info('Mobile App Sync', 'TPO Mobile Companion App version 2.4.1')}
-            className="h-8 w-8 flex items-center justify-center text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#202D42] transition-colors cursor-pointer"
-            title="Mobile App Link"
-            aria-label="Mobile companion app link"
-          >
-            <Smartphone className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Utilities menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className={`${iconBtn} hidden md:flex`} aria-label="More options" title="More">
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 rounded-2xl">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Quick tools</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => info('Language Selector', 'English (US) selected.')}>
+              <Globe className="w-4 h-4" /> Language
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => info('Security Portal', 'Portal role: TPO Admin (Active Session)')}>
+              <Lock className="w-4 h-4" /> Security & permissions
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => info('Mobile App Sync', 'TPO Mobile Companion App version 2.4.1')}>
+              <Smartphone className="w-4 h-4" /> Mobile companion app
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Theme toggle */}
+        <button
+          type="button"
+          onClick={() => applyTheme(theme === 'dark' ? 'light' : 'dark')}
+          className={iconBtn}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
 
         {/* Notification Bell Badge */}
         <button
           type="button"
           onClick={() => navigate('/notifications')}
-          className="relative h-10 w-10 flex items-center justify-center bg-[#162032] border border-[#202D42] text-[#94A3B8] hover:text-[#A3E635] hover:border-[#A3E635]/40 rounded-xl transition-all shrink-0 cursor-pointer"
+          className={iconBtn}
           title="Notifications"
           aria-label="View notifications"
         >
           <Bell className="w-4 h-4" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-[#A3E635] text-[#0B0F17] text-[10px] font-extrabold rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(163,230,53,0.5)]">
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </button>
 
-        {/* User Pill Dropdown */}
-        <button
-          type="button"
-          onClick={() => navigate('/profile')}
-          className="h-10 px-3 flex items-center gap-2.5 bg-[#162032] border border-[#202D42] hover:border-[#A3E635]/40 rounded-xl cursor-pointer transition-all text-left shrink-0"
-          aria-label="User profile menu"
-        >
-          <Avatar src={user?.avatar} name={user?.name} size="xs" border />
-          <span className="text-xs font-bold text-white hidden sm:inline">{user?.name || 'Dr. James Anderson'}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-[#94A3B8] hidden sm:inline" />
-        </button>
+        <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+
+        {/* User menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex h-10 shrink-0 cursor-pointer items-center gap-2.5 rounded-full pl-1 pr-3 transition-colors hover:bg-secondary"
+              aria-label="User menu"
+            >
+              <Avatar src={user?.avatar} name={user?.name} size="sm" />
+              <span className="hidden text-left sm:block">
+                <span className="block text-xs font-medium leading-tight text-foreground">{user?.name || 'Admin'}</span>
+                <span className="block text-[10px] capitalize leading-tight text-muted-foreground">
+                  {user?.role?.replace('_', ' ') || 'admin'}
+                </span>
+              </span>
+              <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 rounded-2xl">
+            <DropdownMenuLabel>
+              <span className="block text-sm font-medium">{user?.name || 'Admin'}</span>
+              <span className="block truncate text-xs font-normal text-muted-foreground">{user?.email}</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <User className="w-4 h-4" /> Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
+              <Settings className="w-4 h-4" /> Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="text-red-400 focus:text-red-400">
+              <LogOut className="w-4 h-4" /> Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

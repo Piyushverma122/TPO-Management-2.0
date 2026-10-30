@@ -20,8 +20,7 @@ import {
   Area,
   XAxis,
   YAxis,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
+  CartesianGrid,
   BarChart,
   Bar,
   PieChart,
@@ -29,25 +28,27 @@ import {
   Cell,
 } from 'recharts';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Avatar } from '../components/ui/Avatar';
-import { RadialProgress } from '../components/ui/ProgressBar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Avatar } from '../components/app/Avatar';
+import { RadialProgress } from '../components/app/ProgressBar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { getPlacementStatistics, getPlacements } from '../api/placement.api';
 import { getDashboardReport, exportPDF, exportExcel, exportCSV } from '../api/report.api';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 // Analytics Dataset for Charts
 const departmentDistribution = [
-  { name: 'Computer Science', value: 42, color: '#A3E635' },
-  { name: 'Information Tech', value: 28, color: '#38BDF8' },
-  { name: 'Electronics (ECE)', value: 18, color: '#F59E0B' },
-  { name: 'Mechanical & Civil', value: 12, color: '#EC4899' },
+  { name: 'Computer Science', value: 42, color: 'var(--chart-1)' },
+  { name: 'Information Tech', value: 28, color: 'var(--chart-2)' },
+  { name: 'Electronics (ECE)', value: 18, color: 'var(--chart-5)' },
+  { name: 'Mechanical & Civil', value: 12, color: 'var(--chart-3)' },
 ];
 
 const topCompaniesData = [
@@ -70,6 +71,13 @@ const monthlyTrendData = [
 
 const sparklinePlacementData = [{ val: 40 }, { val: 65 }, { val: 78 }, { val: 88 }];
 const sparklineAvgData = [{ val: 8 }, { val: 10 }, { val: 11.5 }, { val: 12.5 }];
+
+const chartConfig = {
+  val: { label: 'Value', color: 'var(--chart-1)' },
+  count: { label: 'Count', color: 'var(--chart-1)' },
+  value: { label: 'Share', color: 'var(--chart-2)' },
+  placed: { label: 'Placed', color: 'var(--chart-1)' },
+} satisfies ChartConfig;
 
 export const Reports: React.FC = () => {
   const { success, error: toastError, info } = useToast();
@@ -188,296 +196,215 @@ export const Reports: React.FC = () => {
   return (
     <div className="space-y-6 pb-16 font-sans">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Reports & Export' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
-            Placement Reports Dashboard
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              Annual Analytics 2025
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Comprehensive placement performance, department distributions, salary packages, and exported file downloads.
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">Placement reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Annual analytics 2025: performance, department split, packages and exports.
           </p>
         </div>
 
-        {/* Action Export Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchPlacementReports}
             disabled={loading}
+            className="text-xs"
           >
             Refresh
           </Button>
 
           <PermissionGuard module={Module.REPORTS} action={Action.EXPORT}>
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={<FileSpreadsheet className="w-4 h-4 text-[#A3E635]" />}
-              isLoading={exportingType === 'csv'}
-              onClick={() => handleExportFile('csv')}
-            >
-              CSV
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
-              isLoading={exportingType === 'excel'}
-              onClick={() => handleExportFile('excel')}
-            >
-              Excel
-            </Button>
-
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={<Download className="w-4 h-4" />}
-              isLoading={exportingType === 'pdf'}
-              onClick={() => handleExportFile('pdf')}
-              className="font-extrabold text-xs"
-            >
-              Export PDF Report
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="primary"
+                  size="md"
+                  leftIcon={<Download className="w-4 h-4" />}
+                  isLoading={exportingType !== null}
+                  className="text-xs"
+                >
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+                <DropdownMenuItem onClick={() => handleExportFile('pdf')}>
+                  <FileText className="w-4 h-4" /> PDF report
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportFile('excel')}>
+                  <FileSpreadsheet className="w-4 h-4" /> Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportFile('csv')}>
+                  <FileSpreadsheet className="w-4 h-4" /> CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </PermissionGuard>
         </div>
       </div>
 
-      {/* TOP 3 METRIC CARDS ROW */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-3 gap-6"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.08 } },
-        }}
-      >
-        {/* Card 1: Placement Rate */}
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card glowOnHover className="p-6 space-y-2 border-[#202D42]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#94A3B8] uppercase tracking-wider">
-                Placement Rate 🎓
-              </span>
+      {/* KPI STRIP */}
+      <Card className="overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 [&>div]:border-border max-md:[&>div+div]:border-t md:[&>div+div]:border-l">
+          <div className="p-6">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-sm">Placement rate</span>
+              <Users className="w-4 h-4" />
             </div>
-            <div className="text-4xl font-extrabold text-[#A3E635]">
+            <p className="mt-3 text-4xl font-semibold tracking-tight text-foreground">
               {loading ? '...' : `${stats.placementPercentage}%`}
+            </p>
+            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, stats.placementPercentage)}%` }} />
             </div>
-            <p className="text-xs text-[#94A3B8] font-medium">Overall Placement Rate (CTC)</p>
-
-            <div className="h-12 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={sparklinePlacementData}>
-                  <Area type="monotone" dataKey="val" stroke="#A3E635" fill="#A3E635" fillOpacity={0.2} strokeWidth={2.5} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Card 2: Highest Package */}
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card glowOnHover className="p-6 space-y-2 border-[#A3E635]/50 bg-gradient-to-br from-[#162032] via-[#101726] to-[#162032] shadow-[0_0_25px_rgba(163,230,53,0.15)]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#A3E635] uppercase tracking-wider">
-                Highest Package 🤝
-              </span>
-            </div>
-            <div className="text-4xl font-extrabold text-white">
-              {loading ? '...' : stats.highestPackage}
-            </div>
-            <div className="flex items-center gap-2 pt-1">
-              <Avatar src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" name="Candidate" size="sm" border />
-              <div>
-                <p className="text-xs font-extrabold text-white leading-tight">Super Dream Record</p>
-                <p className="text-[10px] text-[#A3E635]">Highest Package Tier</p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Card 3: Average Package */}
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card glowOnHover className="p-6 space-y-2 border-[#202D42]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#94A3B8] uppercase tracking-wider">
-                Average Package 💰
-              </span>
-            </div>
-            <div className="text-4xl font-extrabold text-[#38BDF8]">
-              {loading ? '...' : stats.averagePackage}
-            </div>
-            <p className="text-xs text-[#94A3B8] font-medium">Average Package Across All Tiers</p>
-
-            <div className="h-12 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={sparklineAvgData}>
-                  <Area type="monotone" dataKey="val" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.2} strokeWidth={2.5} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </motion.div>
-      </motion.div>
-
-      {/* MAIN CHARTS SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT COLUMN (8 cols): Bar Chart + Donut Chart + Monthly Trend */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Top Company Wise Placements Horizontal Bar Chart */}
-            <Card className="p-5 space-y-3 border-[#202D42]">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-                Top Company Wise Placements (No. of Students)
-              </h3>
-              <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topCompaniesData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <XAxis type="number" stroke="#64748B" fontSize={10} hide />
-                    <YAxis dataKey="name" type="category" stroke="#94A3B8" fontSize={11} tickLine={false} />
-                    <Bar dataKey="count" fill="#A3E635" radius={[0, 6, 6, 0]} barSize={16} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
-            {/* Placement Distribution by Department Donut Chart */}
-            <Card className="p-5 space-y-3 border-[#202D42]">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-                Placement Distribution by Department (%)
-              </h3>
-              <div className="h-32 flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={departmentDistribution} innerRadius={28} outerRadius={48} paddingAngle={4} dataKey="value">
-                      {departmentDistribution.map((entry, idx) => (
-                        <Cell key={`cell-${idx}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#94A3B8]">
-                {departmentDistribution.map((d) => (
-                  <div key={d.name} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                    <span>{d.name}: {d.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            <p className="mt-2 text-xs text-muted-foreground">Overall placement rate</p>
           </div>
 
-          {/* Monthly Placement Progress Curve */}
-          <Card className="p-5 space-y-3 border-[#202D42]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
-                Monthly Placement Trend & Growth Curve
-              </h3>
-              <span className="text-xs text-[#A3E635] font-semibold flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" /> Live Data
-              </span>
+          <div className="p-6">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-sm">Highest package</span>
+              <Award className="w-4 h-4" />
             </div>
+            <p className="mt-3 text-4xl font-semibold tracking-tight text-foreground">
+              {loading ? '...' : stats.highestPackage}
+            </p>
+            <p className="mt-6 text-xs text-muted-foreground">Super Dream tier record</p>
+          </div>
 
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorPlacements" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#A3E635" stopOpacity={0.5} />
-                      <stop offset="95%" stopColor="#A3E635" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
-                  <RechartsTooltip
-                    contentStyle={{
-                      backgroundColor: '#101726',
-                      borderColor: '#202D42',
-                      borderRadius: '12px',
-                      color: '#FFFFFF',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="val"
-                    stroke="#A3E635"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorPlacements)"
-                  />
+          <div className="p-6">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-sm">Average package</span>
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <p className="mt-3 text-4xl font-semibold tracking-tight text-foreground">
+              {loading ? '...' : stats.averagePackage}
+            </p>
+            <div className="mt-2 h-10">
+              <ChartContainer config={chartConfig} className="aspect-auto h-full w-full">
+                <AreaChart data={sparklineAvgData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                  <Area type="monotone" dataKey="val" stroke="var(--color-val)" fill="var(--color-val)" fillOpacity={0.15} strokeWidth={2} />
                 </AreaChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </div>
-          </Card>
+            <p className="mt-1 text-xs text-muted-foreground">Average across all tiers</p>
+          </div>
         </div>
+      </Card>
 
-        {/* RIGHT COLUMN (4 cols): Radial Training Progress & Recent Placements Feed */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card className="p-5 space-y-4 border-[#202D42]">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
-              Training Completion Progress
-            </h3>
-
-            <div className="py-2 flex justify-center">
-              <RadialProgress value={88} size={140} strokeWidth={12} label="Complete" />
+      {/* TREND + DEPARTMENT */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <Card className="lg:col-span-8 p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Monthly placement trend</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Cumulative placements, Jul to Jan</p>
             </div>
+            <span className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs text-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
+            </span>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto mt-6 h-72 w-full">
+            <AreaChart data={monthlyTrendData} margin={{ top: 10, right: 8, left: -16, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorPlacements" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-val)" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="var(--color-val)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="month" stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} />
+              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+              <Area type="monotone" dataKey="val" stroke="var(--color-val)" strokeWidth={2} fillOpacity={1} fill="url(#colorPlacements)" />
+            </AreaChart>
+          </ChartContainer>
+        </Card>
 
-            <div className="text-center space-y-1">
-              <p className="text-sm font-extrabold text-white">88% Students Completed</p>
-              <p className="text-xs text-[#94A3B8]">Full Stack & System Design Modules</p>
+        <Card className="lg:col-span-4 p-6">
+          <h3 className="text-base font-semibold text-foreground">Department split</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Share of placements by department</p>
+          <div className="relative mt-4">
+            <ChartContainer config={chartConfig} className="aspect-auto mx-auto h-48 w-full">
+              <PieChart>
+                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                <Pie data={departmentDistribution} innerRadius={58} outerRadius={80} paddingAngle={3} dataKey="value" nameKey="name" strokeWidth={0}>
+                  {departmentDistribution.map((entry, idx) => (
+                    <Cell key={`cell-${idx}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-semibold text-foreground">{stats.totalPlacements}</span>
+              <span className="text-xs text-muted-foreground">placed</span>
             </div>
-          </Card>
+          </div>
+          <ul className="mt-4 space-y-2">
+            {departmentDistribution.map((d) => (
+              <li key={d.name} className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                  {d.name}
+                </span>
+                <span className="font-medium text-foreground">{d.value}%</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
 
-          {/* Recent Placements Table */}
-          <Card className="p-5 space-y-3 border-[#202D42]">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
-              Live Placements Feed
-            </h3>
+      {/* COMPANIES + TRAINING + FEED */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="p-6">
+          <h3 className="text-base font-semibold text-foreground">Top recruiters</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Students placed per company</p>
+          <ChartContainer config={chartConfig} className="aspect-auto mt-4 h-56 w-full">
+            <BarChart data={topCompaniesData} layout="vertical" margin={{ left: 0, right: 12 }}>
+              <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+              <XAxis type="number" hide />
+              <YAxis dataKey="name" type="category" stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} width={80} />
+              <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} barSize={14} />
+            </BarChart>
+          </ChartContainer>
+        </Card>
 
-            <div className="space-y-3">
-              {placementsList.length === 0 ? (
-                <p className="text-xs text-[#94A3B8] italic">No recent placement records available.</p>
-              ) : (
-                placementsList.slice(0, 4).map((p: any, idx: number) => (
-                  <div key={p.id || idx} className="flex items-center justify-between text-xs bg-[#101726] border border-[#202D42] p-2.5 rounded-xl">
-                    <div>
-                      <p className="font-bold text-white leading-tight">{p.students?.users?.full_name || p.students?.name || 'Placed Student'}</p>
-                      <p className="text-[11px] text-[#94A3B8]">{p.companies?.name || 'Corporate Partner'}</p>
-                    </div>
-                    <span className="font-extrabold text-[#A3E635]">₹{p.ctc || 12} LPA</span>
+        <Card className="p-6">
+          <h3 className="text-base font-semibold text-foreground">Training completion</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Full Stack & System Design modules</p>
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <RadialProgress value={88} size={150} strokeWidth={12} label="Complete" />
+            <p className="text-sm text-foreground">88% of students completed</p>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <h3 className="text-base font-semibold text-foreground">Latest placements</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Most recent offers accepted</p>
+          <ul className="mt-4 space-y-4">
+            {placementsList.length === 0 ? (
+              <li className="text-sm text-muted-foreground">No recent placement records available.</li>
+            ) : (
+              placementsList.slice(0, 5).map((p: any, idx: number) => (
+                <li key={p.id || idx} className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
+                    {(p.students?.users?.full_name || p.students?.name || 'P').slice(0, 1)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {p.students?.users?.full_name || p.students?.name || 'Placed Student'}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">{p.companies?.name || 'Corporate Partner'}</p>
                   </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </div>
+                  <span className="shrink-0 text-sm font-semibold text-foreground">₹{p.ctc || 12} LPA</span>
+                </li>
+              ))
+            )}
+          </ul>
+        </Card>
       </div>
     </div>
   );

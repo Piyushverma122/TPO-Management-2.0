@@ -17,16 +17,16 @@ import {
   Check,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown, MultiSelect } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Pagination } from '../components/ui/Pagination';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown, MultiSelect } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Pagination } from '../components/app/Pagination';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { getStudents } from '../api/student.api';
 
 // Student Model for Eligibility Result
@@ -146,13 +146,13 @@ export const Eligibility: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Eligibility' }, { label: 'Checker' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight flex items-center gap-2 mt-1">
             Eligibility Checker
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
               Rule Evaluator
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Filter student pool against company CGPA cut-offs, backlogs, branch permissions, and skill tags.
           </p>
         </div>
@@ -169,7 +169,7 @@ export const Eligibility: React.FC = () => {
       </div>
 
       {/* TOP CRITERIA FORM PANEL */}
-      <Card className="p-6 space-y-5 border-[#A3E635]/40 shadow-[0_0_25px_rgba(163,230,53,0.15)] relative">
+      <Card className="p-6 space-y-5 border-primary/40 relative">
         
         {/* Row 1: Select Company & Select Branch */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -268,7 +268,7 @@ export const Eligibility: React.FC = () => {
               fullWidth
               isLoading={isGenerating}
               onClick={handleGenerate}
-              className="font-extrabold text-sm shadow-[0_0_20px_rgba(163,230,53,0.4)]"
+              className="font-semibold text-sm"
             >
               Generate Eligible Students
             </Button>
@@ -279,9 +279,9 @@ export const Eligibility: React.FC = () => {
 
       {/* RESULT TABLE PANEL */}
       <Card className="p-6 space-y-5">
-        <div className="flex items-center justify-between border-b border-[#202D42] pb-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-extrabold text-white">Result Table</h2>
+            <h2 className="text-lg font-semibold text-foreground">Result Table</h2>
             <Badge variant="active" dot>
               {filteredEligible.length} Qualified Students Found
             </Badge>
@@ -292,15 +292,15 @@ export const Eligibility: React.FC = () => {
         {loading ? (
           <div className="space-y-3 py-6">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-12 bg-[#162032] rounded-xl animate-pulse border border-[#202D42]" />
+              <div key={i} className="h-12 bg-card rounded-xl animate-pulse border border-border" />
             ))}
           </div>
         ) : filteredEligible.length === 0 ? (
           /* Empty State */
           <div className="py-12 text-center space-y-3">
-            <XCircle className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
-            <h3 className="text-lg font-bold text-white">No Eligible Candidates Found</h3>
-            <p className="text-xs text-[#94A3B8]">
+            <XCircle className="w-12 h-12 text-muted-foreground mx-auto opacity-40" />
+            <h3 className="text-lg font-semibold text-foreground">No Eligible Candidates Found</h3>
+            <p className="text-xs text-muted-foreground">
               No live database candidates currently satisfy the specified CGPA cut-off, backlogs limit, and branch criteria.
             </p>
           </div>
@@ -325,13 +325,13 @@ export const Eligibility: React.FC = () => {
                   <TableCell>
                     <Avatar src={student.photo} name={student.name} size="sm" />
                   </TableCell>
-                  <TableCell className="font-extrabold text-white hover:text-[#A3E635] transition-colors">
+                  <TableCell className="font-semibold text-foreground hover:text-primary transition-colors">
                     {student.name}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-[#94A3B8]">{student.rollNo}</TableCell>
-                  <TableCell className="font-bold text-white">{student.branch}</TableCell>
-                  <TableCell className="font-bold text-[#A3E635]">{student.cgpa.toFixed(2)}</TableCell>
-                  <TableCell className={`font-bold ${student.backlogs === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{student.rollNo}</TableCell>
+                  <TableCell className="font-semibold text-foreground">{student.branch}</TableCell>
+                  <TableCell className="font-semibold text-primary">{student.cgpa.toFixed(2)}</TableCell>
+                  <TableCell className={`font-semibold ${student.backlogs === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {student.backlogs}
                   </TableCell>
                   <TableCell>
@@ -339,7 +339,7 @@ export const Eligibility: React.FC = () => {
                       {student.skills.map((s, idx) => (
                         <span
                           key={idx}
-                          className="bg-[#101726] border border-[#202D42] text-[#A3E635] text-[10px] font-bold px-2 py-0.5 rounded-md"
+                          className="bg-muted border border-border text-primary text-[10px] font-semibold px-2 py-0.5 rounded-md"
                         >
                           {s}
                         </span>
@@ -355,7 +355,7 @@ export const Eligibility: React.FC = () => {
                       <Button
                         variant="tertiary"
                         size="sm"
-                        leftIcon={<Send className="w-3.5 h-3.5 text-[#A3E635]" />}
+                        leftIcon={<Send className="w-3.5 h-3.5 text-primary" />}
                         onClick={() => handleInviteStudent(student.id, student.name)}
                       >
                         Invite to Drive
@@ -369,7 +369,7 @@ export const Eligibility: React.FC = () => {
         )}
 
         {/* Footer Bar & Batch Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#202D42]">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
           <Pagination
             currentPage={currentPage}
             totalPages={Math.ceil(totalRecords / 10) || 1}
@@ -392,7 +392,7 @@ export const Eligibility: React.FC = () => {
               leftIcon={<Send className="w-4 h-4" />}
               onClick={handleBatchInvite}
               disabled={filteredEligible.length === 0}
-              className="px-6 font-extrabold shadow-[0_0_15px_rgba(163,230,53,0.3)]"
+              className="px-6 font-semibold"
             >
               Batch Invite to Drive
             </Button>

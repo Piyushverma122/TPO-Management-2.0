@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ToastProvider } from './components/ui/Toast';
+import { ToastProvider } from './components/app/Toast';
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword').then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPasswordPage })));
@@ -32,8 +32,8 @@ import { Module } from './config/rbac';
 const queryClient = new QueryClient();
 
 const PageFallback: React.FC = () => (
-  <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
-    <div className="w-12 h-12 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
   </div>
 );
 
@@ -44,8 +44,8 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -68,8 +68,8 @@ const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

@@ -33,17 +33,17 @@ import {
   Ban,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge, StatusBadge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Pagination } from '../components/ui/Pagination';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge, StatusBadge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Pagination } from '../components/app/Pagination';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { useAuth } from '../context/AuthContext';
 import {
   getApplications,
@@ -53,6 +53,8 @@ import {
 } from '../api/application.api';
 import { createNotification } from '../api/notification.api';
 import supabase from '../config/supabase';
+import { Button as ShadButton } from '@/components/ui/button';
+import { CompanyLogo } from '../components/app/CompanyLogo';
 
 export interface DetailedApplication {
   id: string;
@@ -313,27 +315,27 @@ export const Applications: React.FC = () => {
   const renderStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'applied':
-        return <span className="bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Applied</span>;
+        return <span className="bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-semibold">Applied</span>;
       case 'under review':
-        return <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Under Review</span>;
+        return <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold">Under Review</span>;
       case 'shortlisted':
-        return <span className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Shortlisted</span>;
+        return <span className="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 px-3 py-1 rounded-full text-xs font-semibold">Shortlisted</span>;
       case 'interview scheduled':
       case 'round 1':
       case 'round 2':
       case 'technical':
       case 'hr':
-        return <span className="bg-purple-500/15 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full text-xs font-extrabold">{status}</span>;
+        return <span className="bg-purple-500/15 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full text-xs font-semibold">{status}</span>;
       case 'selected':
       case 'placed':
-        return <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Selected / Placed</span>;
+        return <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold">Selected / Placed</span>;
       case 'offer':
       case 'offer released':
-        return <span className="bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 px-3 py-1 rounded-full text-xs font-extrabold">Offer Released</span>;
+        return <span className="bg-primary/15 text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-semibold">Offer Released</span>;
       case 'rejected':
-        return <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-extrabold">Rejected</span>;
+        return <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-semibold">Rejected</span>;
       default:
-        return <span className="bg-[#162032] text-[#94A3B8] border border-[#202D42] px-3 py-1 rounded-full text-xs font-extrabold">{status}</span>;
+        return <span className="bg-card text-muted-foreground border border-border px-3 py-1 rounded-full text-xs font-semibold">{status}</span>;
     }
   };
 
@@ -359,29 +361,25 @@ export const Applications: React.FC = () => {
     <div className="space-y-6 pb-16 font-sans">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'My Applications' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
-            My Drive Applications
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {totalRecords} Submissions
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Track your recruitment drive applications, interview progress timelines, and offer letters.
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">My applications</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {totalRecords} submissions. Track progress, interviews and offers for every drive.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchApplicationsData}
             disabled={loading}
+            className="text-xs"
           >
-            Refresh List
+            Refresh
           </Button>
 
           <Button
@@ -389,115 +387,123 @@ export const Applications: React.FC = () => {
             size="md"
             leftIcon={<Briefcase className="w-4 h-4" />}
             onClick={() => navigate('/drives')}
-            className="font-extrabold px-5 shadow-[0_0_15px_rgba(163,230,53,0.3)]"
+            className="text-xs"
           >
-            Browse Drives
+            Browse drives
           </Button>
         </div>
       </div>
 
-      {/* SEARCH & FILTERS BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="flex-1 w-full min-w-0">
-            <SearchInput
-              placeholder="Search by company, role title, or application ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
-            <Dropdown
-              className="w-full sm:w-44 shrink-0"
-              options={[
-                { label: 'All Statuses', value: 'All' },
-                { label: 'Applied', value: 'Applied' },
-                { label: 'Under Review', value: 'Under Review' },
-                { label: 'Shortlisted', value: 'Shortlisted' },
-                { label: 'Interview Scheduled', value: 'Interview Scheduled' },
-                { label: 'Offer Released', value: 'Offer Released' },
-                { label: 'Selected', value: 'Selected' },
-                { label: 'Rejected', value: 'Rejected' },
-              ]}
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-            />
-
-            <Dropdown
-              className="w-full sm:w-40 shrink-0"
-              options={[
-                { label: 'Latest Submissions', value: 'Latest' },
-                { label: 'Highest Package (CTC)', value: 'Highest Package' },
-              ]}
-              value={selectedSort}
-              onChange={setSelectedSort}
-            />
-
-            {(selectedStatus !== 'All' || selectedSort !== 'Latest' || searchQuery !== '') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedStatus('All');
-                  setSelectedSort('Latest');
-                }}
-                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </button>
-            )}
-          </div>
+      {/* TOOLBAR */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 relative z-30">
+        <div className="flex-1 min-w-0">
+          <SearchInput
+            placeholder="Search by company, role or application ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      </Card>
+
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+          <Dropdown
+            className="w-full sm:w-52 shrink-0"
+            options={[
+              { label: 'All Statuses', value: 'All' },
+              { label: 'Applied', value: 'Applied' },
+              { label: 'Under Review', value: 'Under Review' },
+              { label: 'Shortlisted', value: 'Shortlisted' },
+              { label: 'Interview Scheduled', value: 'Interview Scheduled' },
+              { label: 'Offer Released', value: 'Offer Released' },
+              { label: 'Selected', value: 'Selected' },
+              { label: 'Rejected', value: 'Rejected' },
+            ]}
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+          />
+
+          <Dropdown
+            className="w-full sm:w-56 shrink-0"
+            options={[
+              { label: 'Latest Submissions', value: 'Latest' },
+              { label: 'Highest Package (CTC)', value: 'Highest Package' },
+            ]}
+            value={selectedSort}
+            onChange={setSelectedSort}
+          />
+
+          {(selectedStatus !== 'All' || selectedSort !== 'Latest' || searchQuery !== '') && (
+            <ShadButton
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedStatus('All');
+                setSelectedSort('Latest');
+              }}
+              className="h-10 rounded-full px-4 text-xs text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+              Reset
+            </ShadButton>
+          )}
+        </div>
+      </div>
 
       {/* ERROR STATE */}
       {errorMsg ? (
-        <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
-          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Applications</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+        <Card className="p-10 text-center space-y-4">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
+          <h3 className="text-lg font-semibold text-foreground">Error loading applications</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchApplicationsData}>
-            Retry Loading Applications
+            Retry
           </Button>
         </Card>
       ) : loading ? (
         /* LOADING SKELETON STATE */
         <div className="space-y-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="p-5 border-[#202D42] animate-pulse space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-[#162032] rounded-xl" />
-                  <div className="space-y-2">
-                    <div className="h-4 bg-[#162032] rounded w-48" />
-                    <div className="h-3 bg-[#162032] rounded w-32" />
-                  </div>
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-6 animate-pulse space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-secondary rounded-2xl" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-secondary rounded w-48" />
+                  <div className="h-3 bg-secondary rounded w-32" />
                 </div>
-                <div className="h-8 bg-[#162032] rounded-xl w-24" />
               </div>
+              <div className="h-12 bg-secondary rounded-2xl" />
             </Card>
           ))}
         </div>
       ) : processedApplications.length === 0 ? (
         /* EMPTY STATE */
-        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
-          <Briefcase className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
-          <h3 className="text-xl font-extrabold text-white">You haven't applied to any placement drives yet.</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
-            Browse available campus recruitment drives matching your eligibility criteria and submit your application.
+        <Card className="p-14 text-center space-y-3">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <Briefcase className="w-6 h-6" />
+          </span>
+          <h3 className="text-lg font-semibold text-foreground">You have not applied to any drives yet</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Browse campus recruitment drives that match your eligibility and submit your application.
           </p>
           <Button variant="primary" size="md" leftIcon={<Send className="w-4 h-4" />} onClick={() => navigate('/drives')}>
-            Browse Drives
+            Browse drives
           </Button>
         </Card>
       ) : (
-        /* LIVE APPLICATIONS LIST WITH JOURNEY TIMELINES */
+        /* LIVE APPLICATIONS LIST WITH JOURNEY STEPPER */
         <div className="space-y-4">
           {processedApplications.map((app) => {
             const currentStepIndex = getTimelineStepIndex(app.status);
             const withdrawable = isWithdrawAllowed(app.status);
+            const rejected = app.status === 'Rejected';
+            const steps = [
+              { label: 'Applied', icon: CheckCircle2 },
+              { label: 'Review', icon: Clock },
+              { label: 'Shortlist', icon: UserCheck },
+              { label: 'Interview', icon: Calendar },
+              { label: 'Offer', icon: Award },
+              { label: rejected ? 'Rejected' : 'Placed', icon: rejected ? XCircle : CheckCircle2 },
+            ];
 
             return (
               <motion.div
@@ -506,99 +512,88 @@ export const Applications: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
               >
-                <Card className="p-5 border-[#202D42] space-y-5 hover:border-[#A3E635]/40 transition-colors">
-                  
-                  {/* Top Bar: Company Details + Status Badge */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#202D42] pb-4">
-                    <div className="flex items-center gap-4">
-                      <Avatar src={app.companyLogo} name={app.companyName} size="md" className="border border-[#202D42]" />
-                      <div>
-                        <h3 className="text-base font-extrabold text-white leading-tight flex items-center gap-2">
-                          {app.companyName}
-                          <span className="text-xs text-[#94A3B8] font-mono font-normal">ID: {app.id.slice(0, 8)}</span>
-                        </h3>
-                        <p className="text-xs text-[#A3E635] font-semibold">{app.roleTitle} • {app.ctc}</p>
-                        <p className="text-[11px] text-[#94A3B8] flex items-center gap-2 mt-0.5">
-                          <Calendar className="w-3 h-3 text-[#64748B]" /> Applied: {app.appliedDate}
-                          <span className="text-[#64748B]">•</span>
-                          <Building2 className="w-3 h-3 text-[#64748B]" /> {app.location}
+                <Card className="p-6 space-y-6">
+                  {/* Company + status */}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <CompanyLogo src={app.companyLogo} name={app.companyName} size="lg" />
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-semibold text-foreground">{app.companyName}</h3>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {app.roleTitle} &middot; {app.ctc}
+                        </p>
+                        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Applied {app.appliedDate}</span>
+                          <span className="flex items-center gap-1.5"><Building2 className="w-3 h-3" /> {app.location}</span>
+                          <span className="font-mono">#{app.id.slice(0, 8)}</span>
                         </p>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-3 self-start sm:self-center">
-                      {renderStatusBadge(app.status)}
-                    </div>
+                    <div className="shrink-0">{renderStatusBadge(app.status)}</div>
                   </div>
 
-                  {/* APPLICATION TIMELINE JOURNEY STEPS */}
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#94A3B8]">Application Journey Timeline</span>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-[11px]">
-                      
-                      {/* Step 1: Applied */}
-                      <div className={`p-2 rounded-xl border ${currentStepIndex >= 1 ? 'bg-[#A3E635]/15 border-[#A3E635]/40 text-white' : 'bg-[#101726] border-[#202D42] text-[#64748B]'}`}>
-                        <CheckCircle2 className={`w-3.5 h-3.5 mx-auto mb-1 ${currentStepIndex >= 1 ? 'text-[#A3E635]' : 'text-[#64748B]'}`} />
-                        <span className="font-bold block">1. Applied</span>
-                      </div>
+                  {/* Journey stepper */}
+                  <ol className="grid grid-cols-6 gap-0">
+                    {steps.map((step, i) => {
+                      const n = i + 1;
+                      const isLast = n === steps.length;
+                      const done = currentStepIndex > n || (isLast && currentStepIndex >= n);
+                      const current = currentStepIndex === n && !isLast;
+                      const failed = isLast && rejected;
+                      const Icon = step.icon;
+                      return (
+                        <li key={step.label} className="relative flex flex-col items-center text-center">
+                          {!isLast && (
+                            <span
+                              className={`absolute left-1/2 top-4 h-px w-full ${currentStepIndex > n ? 'bg-primary' : 'bg-border'}`}
+                              aria-hidden
+                            />
+                          )}
+                          <span
+                            className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border text-xs ${
+                              failed
+                                ? 'border-destructive bg-destructive/15 text-red-400'
+                                : done
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : current
+                                ? 'border-primary bg-card text-foreground ring-4 ring-primary/20'
+                                : 'border-border bg-card text-muted-foreground'
+                            }`}
+                          >
+                            {done && !failed ? <Check className="w-4 h-4" /> : <Icon className="w-3.5 h-3.5" />}
+                          </span>
+                          <span
+                            className={`mt-2 text-[11px] font-medium ${
+                              current || done || failed ? 'text-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            {step.label}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
 
-                      {/* Step 2: Under Review */}
-                      <div className={`p-2 rounded-xl border ${currentStepIndex >= 2 ? 'bg-[#A3E635]/15 border-[#A3E635]/40 text-white' : 'bg-[#101726] border-[#202D42] text-[#64748B]'}`}>
-                        <Clock className={`w-3.5 h-3.5 mx-auto mb-1 ${currentStepIndex >= 2 ? 'text-[#A3E635]' : 'text-[#64748B]'}`} />
-                        <span className="font-bold block">2. Review</span>
-                      </div>
-
-                      {/* Step 3: Shortlisted */}
-                      <div className={`p-2 rounded-xl border ${currentStepIndex >= 3 ? 'bg-[#A3E635]/15 border-[#A3E635]/40 text-white' : 'bg-[#101726] border-[#202D42] text-[#64748B]'}`}>
-                        <UserCheck className={`w-3.5 h-3.5 mx-auto mb-1 ${currentStepIndex >= 3 ? 'text-[#A3E635]' : 'text-[#64748B]'}`} />
-                        <span className="font-bold block">3. Shortlist</span>
-                      </div>
-
-                      {/* Step 4: Interview */}
-                      <div className={`p-2 rounded-xl border ${currentStepIndex >= 4 ? 'bg-[#A3E635]/15 border-[#A3E635]/40 text-white' : 'bg-[#101726] border-[#202D42] text-[#64748B]'}`}>
-                        <Calendar className={`w-3.5 h-3.5 mx-auto mb-1 ${currentStepIndex >= 4 ? 'text-[#A3E635]' : 'text-[#64748B]'}`} />
-                        <span className="font-bold block">4. Interview</span>
-                      </div>
-
-                      {/* Step 5: Offer Released */}
-                      <div className={`p-2 rounded-xl border ${currentStepIndex >= 5 ? 'bg-[#A3E635]/15 border-[#A3E635]/40 text-white' : 'bg-[#101726] border-[#202D42] text-[#64748B]'}`}>
-                        <Award className={`w-3.5 h-3.5 mx-auto mb-1 ${currentStepIndex >= 5 ? 'text-[#A3E635]' : 'text-[#64748B]'}`} />
-                        <span className="font-bold block">5. Offer</span>
-                      </div>
-
-                      {/* Step 6: Selected */}
-                      <div className={`p-2 rounded-xl border ${currentStepIndex >= 6 ? 'bg-emerald-500/20 border-emerald-500/40 text-white' : app.status === 'Rejected' ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-[#101726] border-[#202D42] text-[#64748B]'}`}>
-                        <CheckCircle2 className={`w-3.5 h-3.5 mx-auto mb-1 ${currentStepIndex >= 6 ? 'text-emerald-400' : app.status === 'Rejected' ? 'text-rose-400' : 'text-[#64748B]'}`} />
-                        <span className="font-bold block">{app.status === 'Rejected' ? 'Rejected' : '6. Placed'}</span>
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* ACTION BUTTONS ROW */}
-                  <div className="flex items-center justify-between pt-2 border-t border-[#202D42] text-xs">
-                    <Button variant="secondary" size="sm" leftIcon={<Eye className="w-3.5 h-3.5 text-sky-400" />} onClick={() => setViewingApp(app)}>
-                      View Application Specifications
+                  {/* Actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                    <Button variant="tertiary" size="sm" leftIcon={<Eye className="w-3.5 h-3.5" />} onClick={() => setViewingApp(app)}>
+                      View details
                     </Button>
 
                     {withdrawable ? (
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="sm"
-                        leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-400" />}
+                        leftIcon={<XCircle className="w-3.5 h-3.5" />}
                         onClick={() => setWithdrawAppId(app.id)}
-                        className="hover:border-rose-500/40 hover:text-rose-400"
+                        className="hover:text-red-400"
                       >
-                        Withdraw Application
+                        Withdraw
                       </Button>
                     ) : (
-                      <span className="text-[11px] text-[#64748B] font-bold italic">
-                        Withdrawal locked for {app.status} stage
-                      </span>
+                      <span className="text-xs text-muted-foreground">Withdrawal locked at {app.status} stage</span>
                     )}
                   </div>
-
                 </Card>
               </motion.div>
             );
@@ -606,15 +601,15 @@ export const Applications: React.FC = () => {
         </div>
       )}
 
-      {/* FOOTER BAR & PAGINATION */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+      {/* PAGINATION */}
+      <Card className="px-4 py-2">
         <Pagination
           currentPage={currentPage}
           totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
           onPageChange={setCurrentPage}
           totalEntries={totalRecords}
         />
-      </div>
+      </Card>
 
       {/* VIEW APPLICATION DETAILS MODAL */}
       <AnimatePresence>
@@ -622,59 +617,47 @@ export const Applications: React.FC = () => {
           <Modal
             isOpen={!!viewingApp}
             onClose={() => setViewingApp(null)}
-            title={`Application Details — ${viewingApp.companyName}`}
-            subtitle={`Role: ${viewingApp.roleTitle} • ID: ${viewingApp.id}`}
+            title="Application details"
+            subtitle={`ID: ${viewingApp.id}`}
             maxWidth="xl"
+            footer={
+              <Button variant="primary" size="md" onClick={() => setViewingApp(null)}>
+                Close
+              </Button>
+            }
           >
-            <div className="space-y-5 bg-[#101726] border border-[#202D42] p-6 rounded-2xl text-xs">
-              
-              {/* Header */}
-              <div className="border-b border-[#202D42] pb-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar src={viewingApp.companyLogo} name={viewingApp.companyName} size="md" />
-                  <div>
-                    <h2 className="text-xl font-extrabold text-white">{viewingApp.companyName}</h2>
-                    <p className="text-xs text-[#A3E635] font-semibold">{viewingApp.roleTitle}</p>
+            <div className="space-y-6 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <CompanyLogo src={viewingApp.companyLogo} name={viewingApp.companyName} size="lg" />
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-semibold text-foreground">{viewingApp.companyName}</h2>
+                    <p className="truncate text-sm text-muted-foreground">{viewingApp.roleTitle}</p>
                   </div>
                 </div>
-                <div>{renderStatusBadge(viewingApp.status)}</div>
+                <div className="shrink-0">{renderStatusBadge(viewingApp.status)}</div>
               </div>
 
-              {/* Specifications Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#162032] p-3 rounded-xl border border-[#202D42]">
-                <div>
-                  <span className="text-[10px] text-[#94A3B8] block">Applied Date</span>
-                  <span className="font-bold text-white text-xs">{viewingApp.appliedDate}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#94A3B8] block">Package CTC</span>
-                  <span className="font-bold text-[#A3E635] text-xs">{viewingApp.ctc}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#94A3B8] block">Location</span>
-                  <span className="font-bold text-white text-xs">{viewingApp.location}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#94A3B8] block">Branch</span>
-                  <span className="font-bold text-white text-xs">{viewingApp.branch}</span>
-                </div>
-              </div>
+              <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-secondary p-4">
+                {[
+                  ['Applied date', viewingApp.appliedDate],
+                  ['Package (CTC)', viewingApp.ctc],
+                  ['Location', viewingApp.location],
+                  ['Branch', viewingApp.branch],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="text-xs text-muted-foreground">{k}</dt>
+                    <dd className="mt-1 font-medium text-foreground">{v}</dd>
+                  </div>
+                ))}
+              </dl>
 
-              {/* Status Remarks */}
-              <div className="space-y-1">
-                <span className="font-extrabold text-white uppercase text-[11px]">Recruiter / System Remarks</span>
-                <p className="text-[#94A3B8] leading-relaxed p-3 bg-[#162032] rounded-xl border border-[#202D42]">
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-foreground">Recruiter / system remarks</h4>
+                <p className="rounded-2xl border border-border p-4 text-muted-foreground leading-relaxed">
                   {viewingApp.remarks}
                 </p>
               </div>
-
-              {/* Modal Actions */}
-              <div className="pt-4 border-t border-[#202D42] flex justify-end gap-3">
-                <Button variant="secondary" size="md" onClick={() => setViewingApp(null)}>
-                  Close
-                </Button>
-              </div>
-
             </div>
           </Modal>
         )}
@@ -691,10 +674,10 @@ export const Applications: React.FC = () => {
             maxWidth="md"
           >
             <div className="space-y-4 text-xs">
-              <p className="text-[#94A3B8] leading-relaxed">
+              <p className="text-muted-foreground leading-relaxed">
                 Withdrawing will remove your candidate profile from this recruitment drive's active pool. You will not be able to re-apply once the registration deadline passes.
               </p>
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#202D42]">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button variant="secondary" size="md" onClick={() => setWithdrawAppId(null)}>
                   Cancel
                 </Button>
@@ -703,7 +686,7 @@ export const Applications: React.FC = () => {
                   size="md"
                   isLoading={withdrawing}
                   onClick={handleWithdrawConfirm}
-                  className="bg-rose-500 hover:bg-rose-600 border-none text-white font-extrabold"
+                  className="bg-rose-500 hover:bg-rose-600 border-none text-white font-semibold"
                 >
                   Confirm Withdrawal
                 </Button>

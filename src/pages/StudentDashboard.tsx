@@ -23,12 +23,12 @@ import {
   Search,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Avatar } from '../components/ui/Avatar';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Avatar } from '../components/app/Avatar';
+import { useToast } from '../components/app/Toast';
 import { useAuth } from '../context/AuthContext';
 import { getStudentDashboard } from '../api/dashboard.api';
 import { getApplications } from '../api/application.api';
@@ -167,13 +167,13 @@ export const StudentDashboard: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight flex items-center gap-3">
             Welcome back, {user?.name || 'Candidate'}!
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
               Student Dashboard
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Track your recruitment drive applications, mock interviews, resume status, and training progress.
           </p>
         </div>
@@ -193,8 +193,8 @@ export const StudentDashboard: React.FC = () => {
       {errorMsg ? (
         <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
           <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Syncing Student Dashboard</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+          <h3 className="text-lg font-semibold text-foreground">Error Syncing Student Dashboard</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchDashboardData}>
             Retry Dashboard Sync
           </Button>
@@ -204,12 +204,12 @@ export const StudentDashboard: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-28 bg-[#162032] rounded-2xl animate-pulse border border-[#202D42]" />
+              <div key={i} className="h-28 bg-card rounded-2xl animate-pulse border border-border" />
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 h-96 bg-[#162032] rounded-2xl animate-pulse border border-[#202D42]" />
-            <div className="lg:col-span-4 h-96 bg-[#162032] rounded-2xl animate-pulse border border-[#202D42]" />
+            <div className="lg:col-span-8 h-96 bg-card rounded-2xl animate-pulse border border-border" />
+            <div className="lg:col-span-4 h-96 bg-card rounded-2xl animate-pulse border border-border" />
           </div>
         </div>
       ) : (
@@ -223,13 +223,13 @@ export const StudentDashboard: React.FC = () => {
           >
             {/* 1. Profile Completion % */}
             <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
-              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-colors shadow-lg group">
+              <Card className="p-4 flex items-center justify-between border-border hover:border-primary/40 transition-colors shadow-lg group">
                 <div>
-                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Profile Completion</span>
-                  <span className="text-2xl font-extrabold text-white mt-1 block">{profileCompletion}%</span>
-                  <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Live Profile Status</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Profile Completion</span>
+                  <span className="text-2xl font-semibold text-foreground mt-1 block">{profileCompletion}%</span>
+                  <span className="text-[11px] text-primary font-semibold mt-1 block">Live Profile Status</span>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                <div className="w-11 h-11 rounded-2xl bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-semibold text-lg group-hover:scale-110 transition-transform">
                   <UserCheck className="w-5 h-5" />
                 </div>
               </Card>
@@ -237,15 +237,15 @@ export const StudentDashboard: React.FC = () => {
 
             {/* 2. Resume Status */}
             <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
-              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-sky-500/40 transition-colors shadow-lg group">
+              <Card className="p-4 flex items-center justify-between border-border hover:border-sky-500/40 transition-colors shadow-lg group">
                 <div>
-                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Resume Status</span>
-                  <span className="text-lg font-extrabold text-white mt-1 block">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Resume Status</span>
+                  <span className="text-lg font-semibold text-foreground mt-1 block">
                     {studentMetrics?.activeResume ? 'Uploaded (Active)' : 'Action Needed'}
                   </span>
                   <span className="text-[11px] text-sky-400 font-semibold mt-1 block">ATS Optimized</span>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                <div className="w-11 h-11 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-semibold text-lg group-hover:scale-110 transition-transform">
                   <FileText className="w-5 h-5" />
                 </div>
               </Card>
@@ -253,13 +253,13 @@ export const StudentDashboard: React.FC = () => {
 
             {/* 3. My Applications */}
             <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
-              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-amber-500/40 transition-colors shadow-lg group">
+              <Card className="p-4 flex items-center justify-between border-border hover:border-amber-500/40 transition-colors shadow-lg group">
                 <div>
-                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">My Applications</span>
-                  <span className="text-2xl font-extrabold text-white mt-1 block">{applicationStats.total}</span>
-                  <span className="text-[11px] text-[#fbbf24] font-semibold mt-1 block">{applicationStats.pending} Pending Review</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">My Applications</span>
+                  <span className="text-2xl font-semibold text-foreground mt-1 block">{applicationStats.total}</span>
+                  <span className="text-[11px] text-amber-400 font-semibold mt-1 block">{applicationStats.pending} Pending Review</span>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center font-semibold text-lg group-hover:scale-110 transition-transform">
                   <Briefcase className="w-5 h-5" />
                 </div>
               </Card>
@@ -267,13 +267,13 @@ export const StudentDashboard: React.FC = () => {
 
             {/* 4. Offers Received */}
             <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring' as const, stiffness: 300, damping: 20 }}>
-              <Card className="p-4 flex items-center justify-between border-[#202D42] hover:border-[#A3E635]/40 transition-colors shadow-lg group">
+              <Card className="p-4 flex items-center justify-between border-border hover:border-primary/40 transition-colors shadow-lg group">
                 <div>
-                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">Offers Received</span>
-                  <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">{offerStats.totalOffers}</span>
-                  <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Highest: {offerStats.highestPackage}</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Offers Received</span>
+                  <span className="text-2xl font-semibold text-primary mt-1 block">{offerStats.totalOffers}</span>
+                  <span className="text-[11px] text-primary font-semibold mt-1 block">Highest: {offerStats.highestPackage}</span>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                <div className="w-11 h-11 rounded-2xl bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-semibold text-lg group-hover:scale-110 transition-transform">
                   <Award className="w-5 h-5" />
                 </div>
               </Card>
@@ -288,13 +288,13 @@ export const StudentDashboard: React.FC = () => {
               
               {/* Eligible Placement Drives Table Card */}
               <Card className="p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
+                <div className="flex items-center justify-between border-b border-border pb-3">
                   <div>
-                    <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                    <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                       Eligible Placement Drives
                       <Badge variant="active" size="sm">{drives.length} Available</Badge>
                     </h2>
-                    <p className="text-xs text-[#94A3B8] mt-0.5">Recruitment drives matching your academic criteria.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Recruitment drives matching your academic criteria.</p>
                   </div>
                   <Button variant="secondary" size="sm" onClick={() => navigate('/drives')}>
                     View All Drives
@@ -303,8 +303,8 @@ export const StudentDashboard: React.FC = () => {
 
                 {drives.length === 0 ? (
                   <div className="py-8 text-center space-y-2">
-                    <Briefcase className="w-10 h-10 text-[#94A3B8] mx-auto opacity-40" />
-                    <p className="text-xs text-[#94A3B8]">No active recruitment drives available at this time.</p>
+                    <Briefcase className="w-10 h-10 text-muted-foreground mx-auto opacity-40" />
+                    <p className="text-xs text-muted-foreground">No active recruitment drives available at this time.</p>
                   </div>
                 ) : (
                   <Table>
@@ -320,15 +320,15 @@ export const StudentDashboard: React.FC = () => {
                     <TableBody>
                       {drives.slice(0, 5).map((drive) => (
                         <TableRow key={drive.id}>
-                          <TableCell className="font-extrabold text-white flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-[#A3E635]/15 text-[#A3E635] flex items-center justify-center font-bold text-xs">
+                          <TableCell className="font-semibold text-foreground flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center font-semibold text-xs">
                               {drive.companies?.name ? drive.companies.name.charAt(0) : 'C'}
                             </div>
                             {drive.companies?.name || 'Partner Recruiter'}
                           </TableCell>
-                          <TableCell className="text-xs font-semibold text-[#94A3B8]">{drive.role_title}</TableCell>
-                          <TableCell className="font-mono text-xs font-bold text-[#A3E635]">₹{drive.ctc} LPA</TableCell>
-                          <TableCell className="text-xs text-[#94A3B8]">
+                          <TableCell className="text-xs font-semibold text-muted-foreground">{drive.role_title}</TableCell>
+                          <TableCell className="font-mono text-xs font-semibold text-primary">₹{drive.ctc} LPA</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
                             {drive.registration_deadline ? new Date(drive.registration_deadline).toLocaleDateString() : 'Open'}
                           </TableCell>
                           <TableCell className="text-right">
@@ -345,8 +345,8 @@ export const StudentDashboard: React.FC = () => {
 
               {/* Upcoming Interviews Schedule */}
               <Card className="p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
-                  <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-sky-400" />
                     Upcoming Interviews
                   </h2>
@@ -357,16 +357,16 @@ export const StudentDashboard: React.FC = () => {
 
                 {interviews.length === 0 ? (
                   <div className="py-8 text-center space-y-2">
-                    <Calendar className="w-10 h-10 text-[#94A3B8] mx-auto opacity-40" />
-                    <p className="text-xs text-[#94A3B8]">No upcoming mock or recruiter interviews scheduled.</p>
+                    <Calendar className="w-10 h-10 text-muted-foreground mx-auto opacity-40" />
+                    <p className="text-xs text-muted-foreground">No upcoming mock or recruiter interviews scheduled.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {interviews.slice(0, 3).map((item) => (
-                      <div key={item.id} className="bg-[#101726] border border-[#202D42] rounded-xl p-3.5 flex items-center justify-between text-xs">
+                      <div key={item.id} className="bg-muted border border-border rounded-xl p-3.5 flex items-center justify-between text-xs">
                         <div className="space-y-1">
-                          <span className="font-extrabold text-white text-sm block">{item.company}</span>
-                          <span className="text-[#94A3B8] font-semibold block">{item.round} • {item.dateTime}</span>
+                          <span className="font-semibold text-foreground text-sm block">{item.company}</span>
+                          <span className="text-muted-foreground font-semibold block">{item.round} • {item.dateTime}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="info">{item.status}</Badge>
@@ -389,12 +389,12 @@ export const StudentDashboard: React.FC = () => {
             <div className="lg:col-span-4 space-y-6">
               
               {/* STUDENT QUICK ACTIONS PANEL */}
-              <Card className="p-5 space-y-4 bg-[#101726] border-[#202D42]">
-                <h2 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
+              <Card className="p-5 space-y-4 bg-muted border-border">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground border-b border-border pb-3">
                   Student Quick Actions
                 </h2>
 
-                <div className="grid grid-cols-2 gap-2 text-xs font-extrabold">
+                <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
                   <Button variant="secondary" size="sm" onClick={() => navigate('/profile')}>
                     Complete Profile
                   </Button>
@@ -418,32 +418,32 @@ export const StudentDashboard: React.FC = () => {
 
               {/* LATEST NOTIFICATIONS PANEL */}
               <Card className="p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
+                <div className="flex items-center justify-between border-b border-border pb-3">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-[#A3E635]" />
-                    <h2 className="text-base font-extrabold text-white">Notifications</h2>
+                    <Bell className="w-4 h-4 text-primary" />
+                    <h2 className="text-base font-semibold text-foreground">Notifications</h2>
                   </div>
                   {unreadNotifCount > 0 && <Badge variant="warning">{unreadNotifCount} Unread</Badge>}
                 </div>
 
                 {notifications.length === 0 ? (
-                  <p className="text-xs text-[#94A3B8] text-center py-6">No new notifications.</p>
+                  <p className="text-xs text-muted-foreground text-center py-6">No new notifications.</p>
                 ) : (
                   <div className="space-y-3">
                     {notifications.slice(0, 5).map((n) => (
-                      <div key={n.id} className="bg-[#101726] border border-[#202D42] p-3 rounded-xl space-y-1 text-xs">
+                      <div key={n.id} className="bg-muted border border-border p-3 rounded-xl space-y-1 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-white">{n.title}</span>
+                          <span className="font-semibold text-foreground">{n.title}</span>
                           {!n.is_read && (
                             <button
                               onClick={() => handleMarkNotifRead(n.id)}
-                              className="text-[10px] text-[#A3E635] hover:underline font-semibold"
+                              className="text-[10px] text-primary hover:underline font-semibold"
                             >
                               Mark Read
                             </button>
                           )}
                         </div>
-                        <p className="text-[#94A3B8] leading-relaxed text-[11px]">{n.message}</p>
+                        <p className="text-muted-foreground leading-relaxed text-[11px]">{n.message}</p>
                       </div>
                     ))}
                   </div>

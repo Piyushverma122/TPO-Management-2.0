@@ -62,16 +62,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               exit={{ opacity: 0, x: 20, scale: 0.9 }}
               transition={{ duration: 0.25 }}
               className={clsx(
-                'pointer-events-auto p-4 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-start gap-3 relative overflow-hidden',
-                t.type === 'success' && 'bg-[#101726]/95 border-[#A3E635]/50 text-white shadow-[0_0_20px_rgba(163,230,53,0.2)]',
-                t.type === 'error' && 'bg-[#101726]/95 border-rose-500/50 text-white shadow-[0_0_20px_rgba(244,63,94,0.2)]',
-                t.type === 'warning' && 'bg-[#101726]/95 border-amber-500/50 text-white shadow-[0_0_20px_rgba(245,158,11,0.2)]',
-                t.type === 'info' && 'bg-[#101726]/95 border-sky-500/50 text-white shadow-[0_0_20px_rgba(56,189,248,0.2)]'
+                'pointer-events-auto p-4 rounded-2xl border  flex items-start gap-3 relative overflow-hidden',
+                t.type === 'success' && 'bg-muted/95 border-primary/50 text-foreground',
+                t.type === 'error' && 'bg-muted/95 border-rose-500/50 text-foreground',
+                t.type === 'warning' && 'bg-muted/95 border-amber-500/50 text-foreground',
+                t.type === 'info' && 'bg-muted/95 border-sky-500/50 text-foreground'
               )}
             >
               {/* Type Icon */}
               <div className="shrink-0 mt-0.5">
-                {t.type === 'success' && <CheckCircle2 className="w-5 h-5 text-[#A3E635]" />}
+                {t.type === 'success' && <CheckCircle2 className="w-5 h-5 text-primary" />}
                 {t.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-400" />}
                 {t.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-400" />}
                 {t.type === 'info' && <Info className="w-5 h-5 text-sky-400" />}
@@ -79,14 +79,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
               {/* Toast Text */}
               <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-bold text-white">{t.title}</h4>
-                {t.description && <p className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">{t.description}</p>}
+                <h4 className="text-xs font-bold text-foreground">{t.title}</h4>
+                {t.description && <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{t.description}</p>}
               </div>
 
               {/* Close X Button */}
               <button
                 onClick={() => removeToast(t.id)}
-                className="text-[#64748B] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

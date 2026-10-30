@@ -23,8 +23,7 @@ import {
   Area,
   XAxis,
   YAxis,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
+  CartesianGrid,
   BarChart,
   Bar,
   PieChart,
@@ -32,15 +31,16 @@ import {
   Cell,
 } from 'recharts';
 
-import { Card, CardHeader, CardTitle, CardContent, MetricCard } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge, StatusBadge } from '../components/ui/Badge';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
-import { Input } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { useToast } from '../components/ui/Toast';
-import { Avatar } from '../components/ui/Avatar';
+import { Card, CardHeader, CardTitle, CardContent, MetricCard } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge, StatusBadge } from '../components/app/Badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Modal } from '../components/app/Modal';
+import { Input } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { useToast } from '../components/app/Toast';
+import { ProgressBar } from '../components/app/ProgressBar';
+import { Tabs } from '../components/app/Tabs';
 import { useAuth } from '../context/AuthContext';
 import {
   getAdminDashboard,
@@ -56,6 +56,14 @@ import {
 } from '../api/dashboard.api';
 
 import { StudentDashboard } from './StudentDashboard';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+
+const CHART_PALETTE = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-5)', 'var(--chart-3)', 'var(--chart-4)'];
+
+const chartConfig = {
+  placed: { label: 'Placed', color: 'var(--chart-1)' },
+  value: { label: 'Placements', color: 'var(--chart-2)' },
+} satisfies ChartConfig;
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -170,6 +178,17 @@ const StaffDashboard: React.FC = () => {
     },
   };
 
+  const branchData: { name: string; value: number }[] = (adminData as any)?.branchDistribution || [];
+  const branchTotal = branchData.reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+  const placementRate = totalStudents > 0 ? Math.round((placedCount / totalStudents) * 100) : 0;
+  const firstName = (user?.name || 'Admin').split(' ')[0];
+  const roleTitle =
+    (user?.role as string) === 'recruiter'
+      ? 'Recruiter overview'
+      : (user?.role as string) === 'faculty'
+      ? 'Faculty overview'
+      : 'Placement overview';
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -177,468 +196,290 @@ const StaffDashboard: React.FC = () => {
       transition={{ duration: 0.3 }}
       className="space-y-6 pb-10"
     >
-      {/* Top Welcome Title Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            {(user?.role as string) === 'student'
-              ? 'Student Placement Portal'
-              : (user?.role as string) === 'recruiter'
-              ? 'Recruiter Portal Dashboard'
-              : (user?.role as string) === 'faculty'
-              ? 'Faculty Academic Dashboard'
-              : 'TPO Admin Dashboard'}
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 shadow-[0_0_10px_rgba(163,230,53,0.2)]">
-              Live Session
-            </span>
+          <p className="text-sm text-muted-foreground">{roleTitle}</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-1">
+            Welcome back, {firstName}
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Real-time analytics, upcoming recruitment drives, and student placement metrics.
+          <p className="text-sm text-muted-foreground mt-1">
+            Here is what is happening with drives and placements today.
           </p>
         </div>
-
-        {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchDashboardData}
             disabled={loading}
-            className="font-extrabold text-xs shrink-0"
+            className="text-xs shrink-0"
           >
             Refresh
           </Button>
-
           <Button
             variant="primary"
             size="md"
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={() => setQuickAddOpen(true)}
-            className="font-extrabold text-xs shrink-0"
+            className="text-xs shrink-0"
           >
-            Quick Add: Drive/Student
+            Quick Add
           </Button>
         </div>
       </div>
 
-      {/* Error Message Banner if API fails */}
+      {/* Error banner */}
       {errorMsg && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between text-rose-300 text-sm font-semibold"
-        >
+        <div className="flex items-center justify-between gap-3 rounded-3xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-red-300">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+            <AlertTriangle className="w-5 h-5 shrink-0" />
             <span>{errorMsg}</span>
           </div>
           <Button variant="secondary" size="sm" onClick={fetchDashboardData}>
             Retry
           </Button>
-        </motion.div>
+        </div>
       )}
 
-      {/* TOP 4 STATISTIC METRIC CARDS ROW */}
+      {/* KPI row */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+        className="grid grid-cols-2 xl:grid-cols-4 gap-4"
       >
-        {/* Stat 1: Total Students */}
-        <motion.div
-          variants={cardItemVariants}
-          whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
-          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl hover:shadow-[0_12px_25px_rgba(0,0,0,0.3)] group"
-        >
-          <div className="flex items-center justify-between text-[#94A3B8]">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider group-hover:text-white transition-colors">
-              <Users className="w-4 h-4 text-[#A3E635]" />
-              <span>Total Students</span>
-            </div>
-          </div>
-          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">
-            {loading ? <div className="h-8 w-24 bg-[#202D42] animate-pulse rounded-md" /> : totalStudents.toLocaleString()}
-          </div>
-
-          <div className="h-14 mt-3">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={(adminData as any)?.placementTrend || []}>
-                <defs>
-                  <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#A3E635" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#A3E635" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="placed" stroke="#A3E635" strokeWidth={2.5} fill="url(#grad1)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-between text-[10px] font-bold text-[#64748B] mt-1 uppercase tracking-wider">
-            <span>Jan</span>
-            <span>Jun</span>
-            <span>Dec</span>
-          </div>
-        </motion.div>
-
-        {/* Stat 2: Companies Visited */}
-        <motion.div
-          variants={cardItemVariants}
-          whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
-          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl hover:shadow-[0_12px_25px_rgba(0,0,0,0.3)] group"
-        >
-          <div className="flex items-center justify-between text-[#94A3B8]">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider group-hover:text-white transition-colors">
-              <Building2 className="w-4 h-4 text-sky-400" />
-              <span>Companies Visited</span>
-            </div>
-          </div>
-          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">
-            {loading ? <div className="h-8 w-20 bg-[#202D42] animate-pulse rounded-md" /> : companiesCount.toLocaleString()}
-          </div>
-
-          <div className="h-14 mt-3">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={(adminData as any)?.placementTrend || []}>
-                <Bar dataKey="placed" fill="#38BDF8" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-between text-[10px] font-bold text-[#64748B] mt-1 uppercase tracking-wider">
-            <span>Jan</span>
-            <span>Jun</span>
-            <span>Dec</span>
-          </div>
-        </motion.div>
-
-        {/* Stat 3: HIGHLIGHTED NEON GREEN CARD - Placed Students */}
-        <motion.div
-          variants={cardItemVariants}
-          whileHover={{ y: -5, scale: 1.02, transition: { duration: 0.2 } }}
-          className="bg-[#A3E635] text-[#0B0F17] rounded-2xl p-5 shadow-[0_0_30px_rgba(163,230,53,0.35)] relative overflow-hidden group cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#0B0F17]/80">
-              <Trophy className="w-4 h-4 text-[#0B0F17]" />
-              <span>Placed Students</span>
-            </div>
-          </div>
-          <div className="text-3xl font-extrabold text-[#0B0F17] mt-2 tracking-tight flex items-center justify-between">
-            <span>{loading ? <div className="h-8 w-24 bg-[#0B0F17]/20 animate-pulse rounded-md" /> : placedCount.toLocaleString()}</span>
-            <Trophy className="w-7 h-7 text-[#0B0F17]/30 group-hover:rotate-12 transition-transform duration-300" />
-          </div>
-
-          <div className="h-14 mt-3">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={(adminData as any)?.placementTrend || []}>
-                <Area type="monotone" dataKey="placed" stroke="#0B0F17" strokeWidth={3} fill="none" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-between text-[10px] font-extrabold text-[#0B0F17]/80 mt-1 uppercase tracking-wider">
-            <span>Jan</span>
-            <span>Jun</span>
-            <span>Dec</span>
-          </div>
-        </motion.div>
-
-        {/* Stat 4: Upcoming Drives */}
-        <motion.div
-          variants={cardItemVariants}
-          whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
-          className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl hover:shadow-[0_12px_25px_rgba(0,0,0,0.3)] group"
-        >
-          <div className="flex items-center justify-between text-[#94A3B8]">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider group-hover:text-white transition-colors">
-              <Calendar className="w-4 h-4 text-purple-400" />
-              <span>Upcoming Drives</span>
-            </div>
-          </div>
-          <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">
-            {loading ? <div className="h-8 w-16 bg-[#202D42] animate-pulse rounded-md" /> : upcomingCount}
-          </div>
-
-          <div className="mt-4 flex items-center gap-1.5 overflow-x-auto pt-1">
-            {(adminData?.upcomingDrives ?? []).slice(0, 5).map((d: any) => (
-              <Avatar
-                key={d.id}
-                src={d.companies?.logo_url}
-                name={d.companies?.name || 'Company'}
-                size="xs"
-                className="rounded-md shrink-0"
-              />
-            ))}
-          </div>
-        </motion.div>
+        {[
+          { title: 'Total students', value: totalStudents.toLocaleString(), note: 'Registered on the portal', icon: Users },
+          { title: 'Companies', value: companiesCount.toLocaleString(), note: 'Recruiting partners', icon: Building2 },
+          { title: 'Placed students', value: placedCount.toLocaleString(), note: `${placementRate}% placement rate`, icon: Trophy },
+          { title: 'Upcoming drives', value: String(upcomingCount), note: 'Scheduled recruitment drives', icon: Calendar },
+        ].map(({ title, value, note, icon: Icon }) => (
+          <motion.div key={title} variants={cardItemVariants}>
+            <Card className="p-5 h-full">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{title}</p>
+                  <div className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+                    {loading ? <div className="h-9 w-16 animate-pulse rounded-md bg-secondary" /> : value}
+                  </div>
+                </div>
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground">
+                  <Icon className="w-5 h-5" />
+                </span>
+              </div>
+              <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">{note}</p>
+            </Card>
+          </motion.div>
+        ))}
       </motion.div>
 
-      {/* MAIN TWO-COLUMN SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT MAIN COLUMN (7 cols): Drive Analytics & Records + Monthly Graph */}
-        <div className="lg:col-span-7 space-y-6">
-          <Card className="p-5 space-y-4 border-[#202D42] hover:border-[#A3E635]/30 transition-colors duration-300">
-            <div className="flex items-center justify-between border-b border-[#202D42] pb-4">
-              <h2 className="text-base font-extrabold text-white">Drive Analytics & Records</h2>
-              
-              {/* Smooth Sliding Pill Tab Switcher */}
-              <div className="flex items-center gap-1 bg-[#101726] border border-[#202D42] p-1 rounded-xl">
-                {(['Recent', 'All', 'Interviews'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setDriveFilter(filter)}
-                    className={`relative px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors duration-200 cursor-pointer ${
-                      driveFilter === filter ? 'text-[#0B0F17]' : 'text-[#94A3B8] hover:text-white'
-                    }`}
-                  >
-                    {driveFilter === filter && (
-                      <motion.div
-                        layoutId="activeDriveFilterTab"
-                        className="absolute inset-0 bg-[#A3E635] rounded-lg shadow-[0_0_12px_rgba(163,230,53,0.4)]"
-                        transition={{ type: 'spring' as const, stiffness: 380, damping: 28 }}
-                      />
-                    )}
-                    <span className="relative z-10">{filter}</span>
-                  </button>
-                ))}
-              </div>
+      {/* Trend + Branch split */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Placement trend</h2>
+              <p className="text-xs text-muted-foreground mt-1">Students placed per month</p>
             </div>
+            <div className="text-right">
+              <p className="text-2xl font-semibold tracking-tight text-foreground">{placedCount}</p>
+              <p className="text-xs text-muted-foreground">total placed</p>
+            </div>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto mt-6 h-72 w-full">
+            <AreaChart data={(adminData as any)?.placementTrend || []} margin={{ top: 10, right: 8, left: -16, bottom: 0 }}>
+              <defs>
+                <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-placed)" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="var(--color-placed)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="month" stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} />
+              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+              <Area type="monotone" dataKey="placed" stroke="var(--color-placed)" strokeWidth={2} fill="url(#trendFill)" />
+            </AreaChart>
+          </ChartContainer>
+        </Card>
 
-            {/* Drives Table */}
-            <Table>
-              <TableHeader>
+        <Card className="p-6">
+          <h2 className="text-base font-semibold text-foreground">Branch-wise placement</h2>
+          <p className="text-xs text-muted-foreground mt-1">Share of placed students by branch</p>
+          {branchData.length === 0 ? (
+            <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">No placement data yet</div>
+          ) : (
+            <>
+              <div className="relative mt-4">
+                <ChartContainer config={chartConfig} className="aspect-auto mx-auto h-48 w-full">
+                  <PieChart>
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                    <Pie data={branchData} innerRadius={58} outerRadius={80} paddingAngle={3} dataKey="value" nameKey="name" strokeWidth={0}>
+                      {branchData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-semibold text-foreground">{branchTotal}</span>
+                  <span className="text-xs text-muted-foreground">placed</span>
+                </div>
+              </div>
+              <ul className="mt-4 space-y-2">
+                {branchData.map((b, bi) => (
+                  <li key={b.name} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_PALETTE[bi % CHART_PALETTE.length] }} />
+                      {b.name}
+                    </span>
+                    <span className="font-medium text-foreground">{b.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </Card>
+      </div>
+
+      {/* Drives table + side widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 p-6 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Placement drives</h2>
+              <p className="text-xs text-muted-foreground mt-1">Latest drives and their package details</p>
+            </div>
+            <Tabs
+              variant="neon"
+              activeTab={driveFilter}
+              onChange={(id) => setDriveFilter(id as 'Recent' | 'All' | 'Interviews')}
+              tabs={[
+                { id: 'Recent', label: 'Recent' },
+                { id: 'All', label: 'All' },
+                { id: 'Interviews', label: 'Interviews' },
+              ]}
+              className="w-auto"
+            />
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Drive</TableHead>
+                <TableHead>Company & role</TableHead>
+                <TableHead>Deadline</TableHead>
+                <TableHead>CTC</TableHead>
+                <TableHead className="text-right">Options</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
                 <TableRow>
-                  <TableHead>Drive Code</TableHead>
-                  <TableHead>Company & Role</TableHead>
-                  <TableHead>Deadline</TableHead>
-                  <TableHead>CTC</TableHead>
-                  <TableHead className="text-right">Options</TableHead>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Loading live drive data...
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-[#94A3B8]">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-[#A3E635] border-t-transparent rounded-full animate-spin" />
-                        <span>Loading live drive data...</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : recentDrivesList.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-[#94A3B8]">
-                      No active drive records found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  recentDrivesList.map((drive: any, idx: number) => (
-                    <TableRow key={drive.id || idx} className="hover:bg-[#162032]/60 transition-colors">
-                      <TableCell className="font-bold text-[#A3E635]">{drive.drive_code || `D-${3101 + idx}`}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-6 h-6 rounded-md bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center font-bold text-xs shrink-0">
-                            {drive.companies?.name ? drive.companies.name.charAt(0) : 'C'}
-                          </div>
-                          <div>
-                            <span className="font-bold text-white block leading-tight">{drive.companies?.name || 'Partner Company'}</span>
-                            <span className="text-[11px] text-[#94A3B8]">{drive.role_title || 'Software Engineer'}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-[#94A3B8] text-xs">
-                        {drive.registration_deadline ? new Date(drive.registration_deadline).toLocaleDateString() : 'Active'}
-                      </TableCell>
-                      <TableCell className="text-xs font-bold text-white">
-                        {drive.ctc ? `₹${drive.ctc} LPA` : '₹12 LPA'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <button className="text-[#94A3B8] hover:text-white p-1.5 rounded-lg hover:bg-[#202D42] transition-colors cursor-pointer">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-
-            {/* Monthly Placement Graph Section */}
-            <div className="pt-4 border-t border-[#202D42]">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-white">Monthly Placement Graph</h3>
-              </div>
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={(adminData as any)?.placementTrend || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorPlaced" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#A3E635" stopOpacity={0.5} />
-                        <stop offset="95%" stopColor="#A3E635" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} />
-                    <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
-                    <RechartsTooltip
-                      contentStyle={{
-                        backgroundColor: '#101726',
-                        borderColor: '#202D42',
-                        borderRadius: '12px',
-                        color: '#FFFFFF',
-                        fontSize: '12px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="placed"
-                      stroke="#A3E635"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorPlaced)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* RIGHT COLUMN (5 cols): Insights & Top Recruiters + Recent Activity Timeline */}
-        <div className="lg:col-span-5 space-y-6">
-          <Card className="p-5 space-y-5 border-[#202D42] hover:border-[#A3E635]/30 transition-colors duration-300">
-            <h2 className="text-base font-extrabold text-white border-b border-[#202D42] pb-3">
-              Insights & Top Recruiters
-            </h2>
-
-            {/* Analytics Overview Cards */}
-            <div className="space-y-2">
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-                Analytics Overview
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                {/* Branch Wise Placement Donut Card */}
-                <motion.div
-                  whileHover={{ y: -2 }}
-                  className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2 hover:border-[#A3E635]/30 transition-all"
-                >
-                  <span className="text-[11px] font-bold text-white block">Branch Wise Placement</span>
-                  <div className="h-28 flex items-center justify-center relative">
-                    {((adminData as any)?.branchDistribution || []).length === 0 ? (
-                      <span className="text-[11px] text-[#94A3B8]">No placement data</span>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={(adminData as any)?.branchDistribution}
-                            innerRadius={25}
-                            outerRadius={40}
-                            paddingAngle={3}
-                            dataKey="value"
-                          >
-                            {((adminData as any)?.branchDistribution || []).map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-1 text-[10px] font-semibold text-[#94A3B8]">
-                    {((adminData as any)?.branchDistribution || []).map((b: any) => (
-                      <div key={b.name} className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: b.color }} />
-                        <span>{b.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-
-                {/* Highest Package Card */}
-                <motion.div
-                  whileHover={{ y: -2 }}
-                  className="bg-[#101726] border border-[#202D42] rounded-2xl p-3.5 space-y-2 flex flex-col justify-between hover:border-[#A3E635]/30 transition-all"
-                >
-                  <div>
-                    <span className="text-[11px] font-bold text-[#94A3B8] block">Highest Package</span>
-                    <span className="text-xl font-extrabold text-white">{highestPackage > 0 ? `₹${highestPackage} LPA` : 'N/A'}</span>
-                  </div>
-                  <div className="h-16">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={(adminData as any)?.placementTrend || []}>
-                        <Area type="monotone" dataKey="placed" stroke="#A3E635" strokeWidth={2} fill="#A3E635" fillOpacity={0.2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex justify-between text-[9px] font-bold text-[#64748B] uppercase">
-                    <span>Jan</span>
-                    <span>Jun</span>
-                    <span>Dec</span>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* Stat Summary Row */}
-            <div className="grid grid-cols-2 gap-3 bg-[#101726] border border-[#202D42] rounded-xl p-3 text-center">
-              <div>
-                <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Average Package</span>
-                <span className="text-base font-extrabold text-white">{averagePackage > 0 ? `₹${averagePackage} LPA` : 'N/A'}</span>
-              </div>
-              <div className="border-l border-[#202D42]">
-                <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Highest Package</span>
-                <span className="text-base font-extrabold text-[#A3E635]">{highestPackage > 0 ? `₹${highestPackage} LPA` : 'N/A'}</span>
-              </div>
-            </div>
-
-            {/* Top Recruiters Grid */}
-            <div className="space-y-2">
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">
-                Top Recruiters
-              </span>
-              <div className="grid grid-cols-4 gap-2">
-                {topRecruiters.length === 0 && (
-                  <p className="col-span-4 text-xs text-[#64748B]">No placements recorded yet.</p>
-                )}
-                {topRecruiters.map((rec, idx) => (
-                  <motion.div
-                    key={idx}
-                    whileHover={{ scale: 1.06, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ type: 'spring' as const, stiffness: 350, damping: 20 }}
-                    className={`bg-[#101726] border border-[#202D42] rounded-xl py-2 px-1 text-center font-bold text-xs text-white hover:border-[#A3E635]/40 hover:bg-[#162032] transition-colors cursor-pointer shadow-sm`}
-                  >
-                    {rec.name}
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recent Activity Timeline */}
-            <div className="space-y-3 pt-2 border-t border-[#202D42]">
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">
-                Recent Activity Timeline
-              </span>
-              <div className="space-y-3">
-                {recentActivitiesList.length === 0 ? (
-                  <p className="text-xs text-[#64748B]">No recent activity.</p>
-                ) : (
-                  recentActivitiesList.map((act: any, idx: number) => (
-                    <motion.div key={act.id || idx} whileHover={{ x: 3 }} className="flex items-start gap-3 text-xs cursor-pointer">
-                      <div className="w-6 h-6 rounded-full bg-[#A3E635]/20 text-[#A3E635] flex items-center justify-center shrink-0 mt-0.5">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-white leading-snug">{act.action || 'System Action Recorded'}</p>
-                        <span className="text-[10px] text-[#64748B]">
-                          {act.created_at ? new Date(act.created_at).toLocaleTimeString() : 'Recently'}
+              ) : recentDrivesList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No active drive records found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                recentDrivesList.map((drive: any, idx: number) => (
+                  <TableRow key={drive.id || idx}>
+                    <TableCell className="font-medium text-muted-foreground">{drive.drive_code || `D-${3101 + idx}`}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
+                          {drive.companies?.name ? drive.companies.name.charAt(0) : 'C'}
                         </span>
+                        <div className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-foreground">{drive.companies?.name || 'Partner Company'}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{drive.role_title || 'Software Engineer'}</span>
+                        </div>
                       </div>
-                    </motion.div>
-                  ))
-                )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {drive.registration_deadline ? new Date(drive.registration_deadline).toLocaleDateString() : 'Active'}
+                    </TableCell>
+                    <TableCell className="font-medium text-foreground">{drive.ctc ? `₹${drive.ctc} LPA` : '₹12 LPA'}</TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        aria-label="Drive options"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+
+        <div className="space-y-4">
+          {/* Package highlights */}
+          <Card className="p-6 space-y-4">
+            <h2 className="text-base font-semibold text-foreground">Package highlights</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-secondary p-4">
+                <p className="text-xs text-muted-foreground">Average</p>
+                <p className="mt-1 text-xl font-semibold text-foreground">{averagePackage > 0 ? `₹${averagePackage} LPA` : 'N/A'}</p>
+              </div>
+              <div className="rounded-2xl bg-secondary p-4">
+                <p className="text-xs text-muted-foreground">Highest</p>
+                <p className="mt-1 text-xl font-semibold text-foreground">{highestPackage > 0 ? `₹${highestPackage} LPA` : 'N/A'}</p>
               </div>
             </div>
+            <ProgressBar value={placementRate} label="Placement rate" size="sm" />
+          </Card>
+
+          {/* Top recruiters */}
+          <Card className="p-6 space-y-4">
+            <h2 className="text-base font-semibold text-foreground">Top recruiters</h2>
+            {topRecruiters.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No placements recorded yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {topRecruiters.map((rec, idx) => (
+                  <li key={idx} className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
+                      {idx + 1}
+                    </span>
+                    <span className="truncate text-sm font-medium text-foreground">{rec.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          {/* Recent activity */}
+          <Card className="p-6 space-y-4">
+            <h2 className="text-base font-semibold text-foreground">Recent activity</h2>
+            {recentActivitiesList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent activity.</p>
+            ) : (
+              <ul className="space-y-4">
+                {recentActivitiesList.map((act: any, idx: number) => (
+                  <li key={act.id || idx} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm leading-snug text-foreground">{act.action || 'System Action Recorded'}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {act.created_at ? new Date(act.created_at).toLocaleTimeString() : 'Recently'}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </div>
       </div>

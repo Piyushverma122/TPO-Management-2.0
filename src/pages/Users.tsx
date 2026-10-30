@@ -20,18 +20,19 @@ import {
   Clock,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge, StatusBadge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge, StatusBadge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { getStudents } from '../api/student.api';
 import { getCompanies } from '../api/company.api';
+import { Button as ShadButton } from '@/components/ui/button';
 
 interface UserRecord {
   id: string;
@@ -199,27 +200,23 @@ export const UsersPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 relative font-sans">
       {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Users & Access Control' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
-            User Management
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {stats.total} Accounts Registered
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Manage system users, TPO administrative access, recruiter accounts, and student permissions.
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">Users</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {stats.total} accounts. Manage admins, recruiters and student access.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchUsers}
             disabled={loading}
+            className="text-xs"
           >
             Refresh
           </Button>
@@ -229,112 +226,46 @@ export const UsersPage: React.FC = () => {
             size="md"
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={() => setIsAddModalOpen(true)}
-            className="font-extrabold text-xs shrink-0"
+            className="text-xs shrink-0"
           >
-            Add New User
+            Add user
           </Button>
         </div>
       </div>
 
-      {/* TOP 4 STATISTIC METRIC CARDS ROW */}
-      <motion.div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.08 } },
-        }}
-      >
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card className="p-5 flex items-center justify-between group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Total Accounts</span>
-              <span className="text-2xl font-extrabold text-white mt-1 block">{stats.total}</span>
-              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Active directory</span>
+      {/* STATS STRIP */}
+      <Card className="overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 [&>div]:border-border max-lg:[&>div:nth-child(n+3)]:border-t lg:[&>div+div]:border-l max-lg:[&>div:nth-child(even)]:border-l">
+          {[
+            { label: 'Total accounts', value: stats.total, note: 'Active directory', icon: Users },
+            { label: 'Admins & officers', value: stats.admins, note: 'System administrators', icon: Shield },
+            { label: 'Recruiters', value: stats.recruiters, note: 'Corporate HR accounts', icon: Building2 },
+            { label: 'Students', value: stats.students, note: 'Candidate accounts', icon: GraduationCap },
+          ].map(({ label, value, note, icon: Icon }) => (
+            <div key={label} className="p-6">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-sm">{label}</span>
+                <Icon className="w-4 h-4" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{note}</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <Users className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
+          ))}
+        </div>
+      </Card>
 
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card className="p-5 flex items-center justify-between group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">TPO Officers & Admins</span>
-              <span className="text-2xl font-extrabold text-sky-400 mt-1 block">{stats.admins}</span>
-              <span className="text-[11px] text-sky-400 font-semibold mt-1 block">System administrators</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <Shield className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card className="p-5 flex items-center justify-between group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Recruiter Partners</span>
-              <span className="text-2xl font-extrabold text-amber-400 mt-1 block">{stats.recruiters}</span>
-              <span className="text-[11px] text-amber-400 font-semibold mt-1 block">Corporate HR accounts</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <Building2 className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card className="p-5 flex items-center justify-between group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Registered Students</span>
-              <span className="text-2xl font-extrabold text-indigo-400 mt-1 block">{stats.students}</span>
-              <span className="text-[11px] text-indigo-400 font-semibold mt-1 block">Candidate accounts</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <GraduationCap className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-      </motion.div>
-
-      {/* FILTER & SEARCH CONTROL BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="flex-1 w-full min-w-0">
+      {/* DIRECTORY CARD */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4 border-b border-border">
+          <div className="flex-1 min-w-0">
             <SearchInput
-              placeholder="Search user by name, email, or role..."
+              placeholder="Search by name, email or role..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
             <Dropdown
               className="w-full sm:w-44 shrink-0"
               options={[
@@ -360,96 +291,93 @@ export const UsersPage: React.FC = () => {
             />
 
             {(selectedRole !== 'All' || selectedStatus !== 'All' || searchQuery !== '') && (
-              <button
+              <ShadButton
+                variant="ghost"
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedRole('All');
                   setSelectedStatus('All');
                 }}
-                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                className="h-10 rounded-full px-4 text-xs text-muted-foreground hover:text-foreground shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </button>
+                Reset
+              </ShadButton>
             )}
           </div>
         </div>
-      </Card>
 
-      {/* USER MANAGEMENT DATA TABLE */}
-      <Card className="p-0 overflow-hidden border-[#202D42]">
-        <Table>
+        <Table bare>
           <TableHeader>
             <TableRow>
-              <TableHead>User Account</TableHead>
-              <TableHead>System Role</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Registered Date</TableHead>
+              <TableHead>Registered</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-[#94A3B8]">
+                <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
                   No matching user accounts found.
                 </TableCell>
               </TableRow>
             ) : (
               filteredUsers.map((u) => (
-                <TableRow key={u.id} className="hover:bg-[#162032]/60 transition-colors">
+                <TableRow key={u.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar src={u.avatar} name={u.name} size="md" />
-                      <div>
-                        <p className="text-sm font-extrabold text-white">{u.name}</p>
-                        <p className="text-xs text-[#94A3B8]">{u.email}</p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{u.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    {u.role === 'super_admin' ? (
-                      <span className="bg-sky-500/15 text-sky-400 border border-sky-500/30 text-xs font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
-                        <Shield className="w-3.5 h-3.5" />
-                        TPO Super Admin
-                      </span>
-                    ) : u.role === 'tpo_officer' ? (
-                      <span className="bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 text-xs font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
-                        <UserCheck className="w-3.5 h-3.5" />
-                        TPO Officer
-                      </span>
-                    ) : u.role === 'recruiter' ? (
-                      <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-xs font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
-                        <Building2 className="w-3.5 h-3.5" />
-                        Recruiter HR
-                      </span>
-                    ) : (
-                      <span className="bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 text-xs font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
-                        <GraduationCap className="w-3.5 h-3.5" />
-                        Student
-                      </span>
-                    )}
+                    <Badge
+                      variant="neutral"
+                      size="sm"
+                      icon={
+                        u.role === 'super_admin' ? (
+                          <Shield className="w-3 h-3" />
+                        ) : u.role === 'tpo_officer' ? (
+                          <UserCheck className="w-3 h-3" />
+                        ) : u.role === 'recruiter' ? (
+                          <Building2 className="w-3 h-3" />
+                        ) : (
+                          <GraduationCap className="w-3 h-3" />
+                        )
+                      }
+                    >
+                      {u.role === 'super_admin'
+                        ? 'TPO Super Admin'
+                        : u.role === 'tpo_officer'
+                        ? 'TPO Officer'
+                        : u.role === 'recruiter'
+                        ? 'Recruiter HR'
+                        : 'Student'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    {u.status === 'Active' ? (
-                      <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-extrabold px-2.5 py-0.5 rounded-full inline-block">Active</span>
-                    ) : (
-                      <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 text-xs font-extrabold px-2.5 py-0.5 rounded-full inline-block">Inactive</span>
-                    )}
+                    <Badge variant={u.status === 'Active' ? 'success' : 'alert'} size="sm" dot>
+                      {u.status}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-[#94A3B8]">
-                    {u.createdAt}
-                  </TableCell>
+                  <TableCell className="text-muted-foreground">{u.createdAt}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <button
+                      type="button"
                       onClick={() => handleDeleteUser(u.id, u.name)}
-                      className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-2.5"
+                      aria-label={`Delete ${u.name}`}
+                      title="Delete user"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </TableCell>
                 </TableRow>
               ))
@@ -494,11 +422,11 @@ export const UsersPage: React.FC = () => {
             onChange={(val) => setNewRole(val as any)}
           />
 
-          <div className="pt-4 flex justify-end gap-3 border-t border-[#202D42]">
+          <div className="pt-4 flex justify-end gap-3 border-t border-border">
             <Button variant="secondary" size="md" onClick={() => setIsAddModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" size="md" type="submit" className="font-extrabold">
+            <Button variant="primary" size="md" type="submit" className="font-semibold">
               Create User Account
             </Button>
           </div>

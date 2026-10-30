@@ -32,17 +32,19 @@ import {
   Plus,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input } from '../components/ui/Input';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input } from '../components/app/Input';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../components/ui/Toast';
+import { useToast } from '../components/app/Toast';
 import { getStudentProfile, updateStudent } from '../api/student.api';
 import { getApplications } from '../api/application.api';
+import { Textarea as ShadTextarea } from '@/components/ui/textarea';
+import { Avatar as UiAvatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -222,31 +224,29 @@ export const ProfilePage: React.FC = () => {
     <div className="space-y-6 pb-16 font-sans">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <Breadcrumb items={[{ label: !isStudent ? 'Admin Profile & Settings' : 'Student Profile' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
-            {!isStudent ? 'TPO Administrative Profile' : 'Student Candidate Profile'}
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {!isStudent ? (user?.role ? user.role.replace('_', ' ').toUpperCase() : 'TPO SUPER ADMIN') : 'Candidate Record'}
-            </span>
+          <Breadcrumb items={[{ label: !isStudent ? 'Admin Profile' : 'Student Profile' }]} />
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">
+            {!isStudent ? 'My profile' : 'Candidate profile'}
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {!isStudent
-              ? 'Manage official TPO administrator details, system access credentials, and contact information.'
-              : 'Manage your personal details, academic credentials, professional links, and placement status.'}
+              ? 'Manage your administrator details, access and contact information.'
+              : 'Manage personal details, academic credentials, links and placement status.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchStudentProfile}
             disabled={loading}
+            className="text-xs"
           >
-            Refresh Profile
+            Refresh
           </Button>
 
           {!isEditing ? (
@@ -255,18 +255,13 @@ export const ProfilePage: React.FC = () => {
               size="md"
               leftIcon={<Edit className="w-4 h-4" />}
               onClick={() => setIsEditing(true)}
-              className="font-extrabold px-5 shadow-[0_0_15px_rgba(163,230,53,0.3)]"
+              className="text-xs"
             >
-              Edit Profile
+              Edit profile
             </Button>
           ) : (
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={<X className="w-4 h-4" />}
-              onClick={() => setIsEditing(false)}
-            >
-              Cancel Editing
+            <Button variant="secondary" size="md" leftIcon={<X className="w-4 h-4" />} onClick={() => setIsEditing(false)} className="text-xs">
+              Cancel editing
             </Button>
           )}
         </div>
@@ -276,8 +271,8 @@ export const ProfilePage: React.FC = () => {
       {errorMsg ? (
         <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
           <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Profile</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+          <h3 className="text-lg font-semibold text-foreground">Error Loading Profile</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchStudentProfile}>
             Retry Loading Profile
           </Button>
@@ -285,74 +280,107 @@ export const ProfilePage: React.FC = () => {
       ) : loading ? (
         /* LOADING SKELETON STATE */
         <div className="space-y-6">
-          <div className="h-44 bg-[#162032] rounded-2xl animate-pulse border border-[#202D42]" />
-          <div className="h-96 bg-[#162032] rounded-2xl animate-pulse border border-[#202D42]" />
+          <div className="h-44 bg-card rounded-2xl animate-pulse border border-border" />
+          <div className="h-96 bg-card rounded-2xl animate-pulse border border-border" />
         </div>
       ) : !isStudent ? (
         /* TPO ADMINISTRATOR PROFILE VIEW */
-        <div className="space-y-6">
-          <Card className="p-6 bg-gradient-to-r from-[#162032] via-[#101726] to-[#162032] border-[#202D42]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <Avatar
-                  src={avatarUrl || user?.avatar}
-                  name={user?.name || 'Dr. James Anderson'}
-                  size="lg"
-                  className="w-20 h-20 border-2 border-[#A3E635] shadow-lg shrink-0"
-                />
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-2xl font-extrabold text-white">
-                      {user?.name || 'Dr. James Anderson'}
-                    </h2>
-                    <span className="bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 text-xs font-extrabold px-2.5 py-0.5 rounded-full uppercase">
-                      {user?.role ? user.role.replace('_', ' ') : 'TPO SUPER ADMIN'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#A3E635] font-semibold">
-                    Head of Training & Placement Cell • Training & Placement Office
-                  </p>
-                  <p className="text-xs text-[#94A3B8] flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5" /> {user?.email || 'tpo.admin@college.edu'}
-                    <span className="text-[#64748B]">•</span>
-                    <Phone className="w-3.5 h-3.5" /> {phone || '+91 98765 43210'}
-                  </p>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          {/* LEFT: identity */}
+          <Card className="lg:col-span-4 p-8 text-center space-y-6">
+            <div className="flex flex-col items-center gap-4">
+              <UiAvatar className="size-28 border border-border">
+                <AvatarImage src={avatarUrl || user?.avatar} alt={user?.name || 'Admin'} className="object-cover" />
+                <AvatarFallback className="bg-secondary text-2xl font-semibold text-foreground">
+                  {(user?.name || 'Admin').slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </UiAvatar>
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold text-foreground">{user?.name || 'Dr. James Anderson'}</h2>
+                <Badge variant="neutral" size="sm">
+                  {user?.role ? user.role.replace('_', ' ').toUpperCase() : 'TPO SUPER ADMIN'}
+                </Badge>
               </div>
+            </div>
 
-              <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 md:w-72 space-y-1">
-                <span className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider block">Access Privileges</span>
-                <span className="text-xs font-extrabold text-white block">Full System Control & Role Management</span>
-                <span className="text-[11px] text-[#A3E635] font-semibold block">Active TPO Session</span>
-              </div>
+            <div className="space-y-2 border-t border-border pt-6 text-left text-sm">
+              <p className="flex items-center gap-3 text-muted-foreground">
+                <Mail className="w-4 h-4 shrink-0" />
+                <span className="truncate text-foreground">{user?.email || 'tpo.admin@college.edu'}</span>
+              </p>
+              <p className="flex items-center gap-3 text-muted-foreground">
+                <Phone className="w-4 h-4 shrink-0" />
+                <span className="text-foreground">{phone || '+91 98765 43210'}</span>
+              </p>
+              <p className="flex items-center gap-3 text-muted-foreground">
+                <MapPin className="w-4 h-4 shrink-0" />
+                <span className="text-foreground">Main Administrative Block, Room 204</span>
+              </p>
+            </div>
+
+            <div className="space-y-3 border-t border-border pt-6 text-left">
+              <h3 className="text-sm font-semibold text-foreground">Access privileges</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                {['Full system control', 'Role & user management', 'Active TPO session'].map((item) => (
+                  <li key={item} className="flex items-center gap-2.5">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-foreground">
+                      <Check className="w-3 h-3" />
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
           </Card>
 
-          {/* OFFICIAL TPO INFORMATION CARD */}
-          <Card className="p-6 space-y-5 border-[#202D42]">
-            <h3 className="text-base font-extrabold text-white border-b border-[#202D42] pb-3">Official TPO Profile Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              <Input label="Full Name" value={user?.name || 'Dr. James Anderson'} disabled />
-              <Input label="Official Email Address" value={user?.email || 'tpo.admin@college.edu'} disabled />
-              <Input
-                label="Contact Phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={!isEditing}
-                placeholder="+91 98765 43210"
-              />
-              <Input label="Designation" value="Head of Training & Placement Cell" disabled />
-              <Input label="Department / Office" value="Training & Placement Office (TPO Cell)" disabled />
-              <Input label="Office Location" value="Main Administrative Block, Room 204" disabled />
-            </div>
+          {/* RIGHT: details */}
+          <Card className="lg:col-span-8 p-8 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Contact information</h3>
+                <p className="text-xs text-muted-foreground">Official email is managed by the system.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="Full Name" value={user?.name || 'Dr. James Anderson'} disabled />
+                <Input label="Official Email Address" value={user?.email || 'tpo.admin@college.edu'} disabled />
+                <Input
+                  label="Contact Phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+            </section>
+
+            <section className="space-y-4 border-t border-border pt-8">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Office details</h3>
+                <p className="text-xs text-muted-foreground">Your role in the training and placement cell.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="Designation" value="Head of Training & Placement Cell" disabled />
+                <Input label="Department / Office" value="Training & Placement Office (TPO Cell)" disabled />
+                <div className="sm:col-span-2">
+                  <Input label="Office Location" value="Main Administrative Block, Room 204" disabled />
+                </div>
+              </div>
+            </section>
 
             {isEditing && (
-              <div className="pt-4 flex justify-end gap-3 border-t border-[#202D42]">
-                <Button variant="secondary" size="md" onClick={() => setIsEditing(false)}>
+              <div className="flex justify-end gap-2 border-t border-border pt-6">
+                <Button variant="tertiary" size="md" onClick={() => setIsEditing(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" size="md" onClick={() => { setIsEditing(false); success('Profile Saved', 'TPO Official profile updated.'); }}>
-                  Save Official Profile
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => {
+                    setIsEditing(false);
+                    success('Profile Saved', 'TPO Official profile updated.');
+                  }}
+                >
+                  Save changes
                 </Button>
               </div>
             )}
@@ -361,45 +389,45 @@ export const ProfilePage: React.FC = () => {
       ) : (
         <>
           {/* TOP PROFILE HEADER CARD */}
-          <Card className="p-6 bg-gradient-to-r from-[#162032] via-[#101726] to-[#162032] border-[#202D42]">
+          <Card className="p-6 border-border">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               
               <div className="flex items-center gap-5">
-                <Avatar
-                  src={avatarUrl || studentRecord?.users?.avatar_url}
-                  name={studentRecord?.users?.full_name || user?.name || 'Student Candidate'}
-                  size="lg"
-                  className="w-20 h-20 border-2 border-[#A3E635] shadow-lg shrink-0"
-                />
+                <UiAvatar className="size-20 border border-border shrink-0">
+                  <AvatarImage src={avatarUrl || studentRecord?.users?.avatar_url} alt="Avatar" className="object-cover" />
+                  <AvatarFallback className="bg-secondary text-xl font-semibold text-foreground">
+                    {(studentRecord?.users?.full_name || user?.name || 'S').slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </UiAvatar>
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-extrabold text-white">
+                  <h2 className="text-2xl font-semibold text-foreground">
                     {studentRecord?.users?.full_name || user?.name || 'Student Candidate'}
                   </h2>
-                  <p className="text-xs text-[#A3E635] font-semibold font-mono">
+                  <p className="text-xs text-primary font-semibold font-mono">
                     Roll: {studentRecord?.roll_number || 'N/A'} • {studentRecord?.branches?.name || 'Computer Science'}
                   </p>
-                  <p className="text-xs text-[#94A3B8] flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5" /> {studentRecord?.users?.email || user?.email}
-                    <span className="text-[#64748B]">•</span>
+                    <span className="text-muted-foreground">•</span>
                     <Phone className="w-3.5 h-3.5" /> {phone || 'Not Provided'}
                   </p>
                 </div>
               </div>
 
               {/* Profile Completion Metric Block */}
-              <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 md:w-64 space-y-2">
+              <div className="bg-muted border border-border rounded-2xl p-4 md:w-64 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-white">Profile Completion</span>
-                  <span className="font-extrabold text-[#A3E635] text-sm">{profileCompletion}%</span>
+                  <span className="font-semibold text-foreground">Profile Completion</span>
+                  <span className="font-semibold text-primary text-sm">{profileCompletion}%</span>
                 </div>
-                <div className="w-full bg-[#162032] h-2.5 rounded-full overflow-hidden border border-[#202D42]">
+                <div className="w-full bg-card h-2.5 rounded-full overflow-hidden border border-border">
                   <div
-                    className="bg-[#A3E635] h-full rounded-full transition-all duration-500"
+                    className="bg-primary h-full rounded-full transition-all duration-500"
                     style={{ width: `${profileCompletion}%` }}
                   />
                 </div>
                 {profileCompletion < 100 && (
-                  <p className="text-[10px] text-[#94A3B8] font-semibold">
+                  <p className="text-[10px] text-muted-foreground font-semibold">
                     Complete your profile details to unlock eligibility for drives.
                   </p>
                 )}
@@ -410,58 +438,58 @@ export const ProfilePage: React.FC = () => {
 
           {/* INCOMPLETE PROFILE ALERT BANNER */}
           {profileCompletion < 100 && !isEditing && (
-            <Card className="p-4 bg-[#A3E635]/10 border-[#A3E635]/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <Card className="p-4 bg-primary/10 border-primary/30 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-[#A3E635] shrink-0" />
+                <Sparkles className="w-5 h-5 text-primary shrink-0" />
                 <div>
-                  <h4 className="text-sm font-extrabold text-white">Your Profile is Incomplete</h4>
-                  <p className="text-xs text-[#94A3B8]">Fill in your skills, address, and project links to improve ATS visibility.</p>
+                  <h4 className="text-sm font-semibold text-foreground">Your Profile is Incomplete</h4>
+                  <p className="text-xs text-muted-foreground">Fill in your skills, address, and project links to improve ATS visibility.</p>
                 </div>
               </div>
-              <Button variant="primary" size="sm" onClick={() => setIsEditing(true)} className="px-5 shrink-0 font-extrabold">
+              <Button variant="primary" size="sm" onClick={() => setIsEditing(true)} className="px-5 shrink-0 font-semibold">
                 Complete Your Profile
               </Button>
             </Card>
           )}
 
           {/* TABBED NAVIGATION BAR */}
-          <div className="flex items-center gap-2 border-b border-[#202D42] pb-1 overflow-x-auto">
+          <div className="flex items-center gap-2 border-b border-border pb-1 overflow-x-auto">
             <button
               onClick={() => setActiveTab('personal')}
-              className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
+              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
                 activeTab === 'personal'
-                  ? 'bg-[#A3E635] text-[#0B0F17]'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card'
               }`}
             >
               <User className="w-3.5 h-3.5" /> Personal Details
             </button>
             <button
               onClick={() => setActiveTab('academic')}
-              className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
+              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
                 activeTab === 'academic'
-                  ? 'bg-[#A3E635] text-[#0B0F17]'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card'
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5" /> Academic Details
             </button>
             <button
               onClick={() => setActiveTab('professional')}
-              className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
+              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
                 activeTab === 'professional'
-                  ? 'bg-[#A3E635] text-[#0B0F17]'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card'
               }`}
             >
               <Code2 className="w-3.5 h-3.5" /> Professional Details
             </button>
             <button
               onClick={() => setActiveTab('placement')}
-              className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
+              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors shrink-0 flex items-center gap-2 ${
                 activeTab === 'placement'
-                  ? 'bg-[#A3E635] text-[#0B0F17]'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-[#162032]'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card'
               }`}
             >
               <Briefcase className="w-3.5 h-3.5" /> Placement Details
@@ -474,7 +502,7 @@ export const ProfilePage: React.FC = () => {
             {/* 1. PERSONAL DETAILS TAB */}
             {activeTab === 'personal' && (
               <Card className="p-6 space-y-5">
-                <h3 className="text-base font-extrabold text-white border-b border-[#202D42] pb-3">Personal Details</h3>
+                <h3 className="text-base font-semibold text-foreground border-b border-border pb-3">Personal Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   
                   <Input label="Full Name (Read Only)" value={studentRecord?.users?.full_name || user?.name || ''} disabled />
@@ -529,8 +557,8 @@ export const ProfilePage: React.FC = () => {
             {/* 2. ACADEMIC DETAILS TAB (READ ONLY MANDATE) */}
             {activeTab === 'academic' && (
               <Card className="p-6 space-y-5">
-                <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
-                  <h3 className="text-base font-extrabold text-white">Academic Details</h3>
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <h3 className="text-base font-semibold text-foreground">Academic Details</h3>
                   <Badge variant="info">Verified Academic Record</Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -549,7 +577,7 @@ export const ProfilePage: React.FC = () => {
             {/* 3. PROFESSIONAL DETAILS TAB */}
             {activeTab === 'professional' && (
               <Card className="p-6 space-y-5">
-                <h3 className="text-base font-extrabold text-white border-b border-[#202D42] pb-3">Professional & Technical Details</h3>
+                <h3 className="text-base font-semibold text-foreground border-b border-border pb-3">Professional & Technical Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   
                   <Input
@@ -595,15 +623,15 @@ export const ProfilePage: React.FC = () => {
                   </div>
 
                   <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs font-extrabold text-[#94A3B8] uppercase tracking-wider block">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
                       Projects & Achievements Summary
                     </label>
-                    <textarea
+                    <ShadTextarea
                       value={projects}
                       onChange={(e) => setProjects(e.target.value)}
                       disabled={!isEditing}
                       rows={4}
-                      className="w-full bg-[#101726] border border-[#202D42] rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#A3E635] disabled:opacity-60"
+                      className="w-full bg-muted dark:bg-muted rounded-xl p-3 text-xs text-foreground"
                       placeholder="List key projects and hackathon accomplishments..."
                     />
                   </div>
@@ -615,34 +643,34 @@ export const ProfilePage: React.FC = () => {
             {/* 4. PLACEMENT DETAILS TAB */}
             {activeTab === 'placement' && (
               <Card className="p-6 space-y-5">
-                <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
-                  <h3 className="text-base font-extrabold text-white">Placement Summary & Status</h3>
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <h3 className="text-base font-semibold text-foreground">Placement Summary & Status</h3>
                   <Badge variant={placementStats.status === 'Placed' ? 'success' : 'warning'}>
                     {placementStats.status}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   
-                  <div className="bg-[#101726] border border-[#202D42] p-4 rounded-xl space-y-1">
-                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Placement Status</span>
-                    <span className="text-lg font-extrabold text-white">{placementStats.status}</span>
+                  <div className="bg-muted border border-border p-4 rounded-xl space-y-1">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase block">Placement Status</span>
+                    <span className="text-lg font-semibold text-foreground">{placementStats.status}</span>
                   </div>
 
-                  <div className="bg-[#101726] border border-[#202D42] p-4 rounded-xl space-y-1">
-                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Resume Status</span>
-                    <span className="text-lg font-extrabold text-[#A3E635]">
+                  <div className="bg-muted border border-border p-4 rounded-xl space-y-1">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase block">Resume Status</span>
+                    <span className="text-lg font-semibold text-primary">
                       {studentRecord?.active_resume_id ? 'Uploaded' : 'Active PDF'}
                     </span>
                   </div>
 
-                  <div className="bg-[#101726] border border-[#202D42] p-4 rounded-xl space-y-1">
-                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Applied Drives</span>
-                    <span className="text-lg font-extrabold text-white">{placementStats.applied}</span>
+                  <div className="bg-muted border border-border p-4 rounded-xl space-y-1">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase block">Applied Drives</span>
+                    <span className="text-lg font-semibold text-foreground">{placementStats.applied}</span>
                   </div>
 
-                  <div className="bg-[#101726] border border-[#202D42] p-4 rounded-xl space-y-1">
-                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Offers Received</span>
-                    <span className="text-lg font-extrabold text-[#A3E635]">{placementStats.offers}</span>
+                  <div className="bg-muted border border-border p-4 rounded-xl space-y-1">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase block">Offers Received</span>
+                    <span className="text-lg font-semibold text-primary">{placementStats.offers}</span>
                   </div>
 
                 </div>
@@ -661,7 +689,7 @@ export const ProfilePage: React.FC = () => {
                   size="md"
                   isLoading={saving}
                   leftIcon={<Save className="w-4 h-4" />}
-                  className="px-6 font-extrabold shadow-[0_0_15px_rgba(163,230,53,0.3)]"
+                  className="px-6 font-semibold"
                 >
                   Save Profile Changes
                 </Button>

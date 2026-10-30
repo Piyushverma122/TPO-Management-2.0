@@ -38,17 +38,17 @@ import {
   Check,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge, StatusBadge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Pagination } from '../components/ui/Pagination';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge, StatusBadge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Pagination } from '../components/app/Pagination';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { PlacementDrive } from '../types';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
@@ -58,6 +58,8 @@ import { getCompanies } from '../api/company.api';
 import { getApplications, applyForDrive } from '../api/application.api';
 import { getStudents } from '../api/student.api';
 import supabase from '../config/supabase';
+import { Button as ShadButton } from '@/components/ui/button';
+import { CompanyLogo } from '../components/app/CompanyLogo';
 
 export const Drives: React.FC = () => {
   const navigate = useNavigate();
@@ -99,6 +101,7 @@ export const Drives: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState('All');
   const [selectedYear, setSelectedYear] = useState('All');
   const [selectedSort, setSelectedSort] = useState('Newest');
+  const [selectedDriveId, setSelectedDriveId] = useState<string | null>(null);
 
   // Fallback Placement Drives Dataset
   const FALLBACK_DRIVES: PlacementDrive[] = useMemo(() => [
@@ -422,27 +425,23 @@ export const Drives: React.FC = () => {
     <div className="space-y-6 pb-16 font-sans">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Placement Drives' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
-            Available Placement Drives
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {totalRecords} Active Drives
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Explore live recruitment opportunities, check eligibility criteria, and submit drive applications.
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">Placement drives</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {totalRecords} live drives. Check eligibility, review details and apply.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchDrivesData}
             disabled={loading}
+            className="text-xs"
           >
             Refresh
           </Button>
@@ -453,242 +452,289 @@ export const Drives: React.FC = () => {
               size="md"
               leftIcon={<Plus className="w-4 h-4" />}
               onClick={() => setIsAddModalOpen(true)}
-              className="font-extrabold text-xs shrink-0"
+              className="text-xs shrink-0"
             >
-              Add New Drive
+              Add Drive
             </Button>
           </PermissionGuard>
         </div>
       </div>
 
-      {/* SEARCH & MULTI-FILTERS BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="flex-1 w-full min-w-0">
-            <SearchInput
-              placeholder="Search drives by company name, job role, or location..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
-            <Dropdown
-              className="w-full sm:w-44 shrink-0"
-              options={[
-                { label: 'All Statuses', value: 'All' },
-                { label: 'Upcoming', value: 'Upcoming' },
-                { label: 'Ongoing / Active', value: 'Ongoing' },
-                { label: 'Completed', value: 'Completed' },
-              ]}
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-            />
-
-            <Dropdown
-              className="w-full sm:w-40 shrink-0"
-              options={[
-                { label: 'All Types', value: 'All' },
-                { label: 'Full Time', value: 'Full Time' },
-                { label: 'Internship', value: 'Internship' },
-              ]}
-              value={selectedJobType}
-              onChange={setSelectedJobType}
-            />
-
-            {(selectedStatus !== 'All' || selectedJobType !== 'All' || searchQuery !== '') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedStatus('All');
-                  setSelectedJobType('All');
-                }}
-                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </button>
-            )}
-          </div>
+      {/* TOOLBAR */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 relative z-30">
+        <div className="flex-1 min-w-0">
+          <SearchInput
+            placeholder="Search drives by company, job role or location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      </Card>
+
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+          <Dropdown
+            className="w-full sm:w-48 shrink-0"
+            options={[
+              { label: 'All Statuses', value: 'All' },
+              { label: 'Upcoming', value: 'Upcoming' },
+              { label: 'Ongoing / Active', value: 'Ongoing' },
+              { label: 'Completed', value: 'Completed' },
+            ]}
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+          />
+
+          <Dropdown
+            className="w-full sm:w-40 shrink-0"
+            options={[
+              { label: 'All Types', value: 'All' },
+              { label: 'Full Time', value: 'Full Time' },
+              { label: 'Internship', value: 'Internship' },
+            ]}
+            value={selectedJobType}
+            onChange={setSelectedJobType}
+          />
+
+          {(selectedStatus !== 'All' || selectedJobType !== 'All' || searchQuery !== '') && (
+            <ShadButton
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedStatus('All');
+                setSelectedJobType('All');
+              }}
+              className="h-10 rounded-full px-4 text-xs text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+              Reset
+            </ShadButton>
+          )}
+        </div>
+      </div>
 
       {/* ERROR STATE */}
       {errorMsg ? (
-        <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
-          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Placement Drives</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+        <Card className="p-10 text-center space-y-4">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
+          <h3 className="text-lg font-semibold text-foreground">Error loading placement drives</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchDrivesData}>
-            Retry Loading Drives
+            Retry
           </Button>
         </Card>
       ) : loading ? (
         /* LOADING SKELETON STATE */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="p-5 space-y-4 border-[#202D42] animate-pulse">
+            <Card key={i} className="p-6 space-y-4 animate-pulse">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#162032] rounded-xl" />
+                <div className="w-12 h-12 bg-secondary rounded-full" />
                 <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-[#162032] rounded w-3/4" />
-                  <div className="h-3 bg-[#162032] rounded w-1/2" />
+                  <div className="h-4 bg-secondary rounded w-3/4" />
+                  <div className="h-3 bg-secondary rounded w-1/2" />
                 </div>
               </div>
-              <div className="h-10 bg-[#162032] rounded-xl" />
-              <div className="h-10 bg-[#162032] rounded-xl" />
+              <div className="h-14 bg-secondary rounded-2xl" />
+              <div className="h-10 bg-secondary rounded-full" />
             </Card>
           ))}
         </div>
       ) : processedDrives.length === 0 ? (
         /* EMPTY STATE */
-        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
-          <Briefcase className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
-          <h3 className="text-xl font-extrabold text-white">No placement drives available.</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
-            No live recruitment drives currently match your selected filters or eligibility criteria.
+        <Card className="p-14 text-center space-y-3">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <Briefcase className="w-6 h-6" />
+          </span>
+          <h3 className="text-lg font-semibold text-foreground">No placement drives available</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            No live recruitment drives match your filters or eligibility criteria.
           </p>
         </Card>
       ) : (
-        /* PLACEMENT DRIVE CARDS GRID */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {processedDrives.map((drive) => {
-            const hasApplied = appliedDriveIds.has(drive.id);
-            const { eligible, reason } = checkEligibility(drive);
+        /* MASTER / DETAIL LAYOUT */
+        (() => {
+          const activeDrive = processedDrives.find((d) => d.id === selectedDriveId) ?? processedDrives[0];
+          const hasApplied = appliedDriveIds.has(activeDrive.id);
+          const { eligible } = checkEligibility(activeDrive);
+          const statusTone = (s: string) =>
+            s === 'Ongoing' ? 'bg-emerald-400' : s === 'Completed' ? 'bg-muted-foreground' : 'bg-amber-400';
 
-            return (
-              <motion.div
-                key={drive.id}
-                initial={{ opacity: 0, scale: 0.97, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card glowOnHover className="p-5 space-y-4 border-[#202D42] flex flex-col justify-between h-full group">
-                  
-                  <div className="space-y-4">
-                    {/* Top Row: Company Logo + Name + Job Role */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#101726] border border-[#202D42] p-1.5 flex items-center justify-center shrink-0">
-                        <Avatar src={drive.companyLogo} name={drive.companyName} size="md" />
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+              {/* LEFT: drive list */}
+              <div className="lg:col-span-5 space-y-2">
+                {processedDrives.map((drive) => {
+                  const isActive = drive.id === activeDrive.id;
+                  return (
+                    <motion.button
+                      key={drive.id}
+                      type="button"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => {
+                        if (window.matchMedia('(min-width: 1024px)').matches) setSelectedDriveId(drive.id);
+                        else setViewingDrive(drive);
+                      }}
+                      className={`flex w-full items-center gap-4 rounded-3xl border p-4 text-left transition-colors ${
+                        isActive
+                          ? 'border-foreground/30 bg-secondary'
+                          : 'border-border bg-card hover:border-foreground/20 hover:bg-accent/40'
+                      }`}
+                    >
+                      <CompanyLogo src={drive.companyLogo} name={drive.companyName} size="md" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="truncate text-sm font-semibold text-foreground">{drive.companyName}</h3>
+                          <span className="shrink-0 text-sm font-semibold text-foreground">{drive.ctc}</span>
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">{drive.roleTitle}</p>
+                        <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <span className={`h-1.5 w-1.5 rounded-full ${statusTone(drive.status)}`} />
+                            {drive.status}
+                          </span>
+                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{drive.location}</span>
+                          <span className="ml-auto">{drive.registrationDeadline}</span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-extrabold text-white truncate leading-tight group-hover:text-[#A3E635] transition-colors">
-                          {drive.companyName}
-                        </h3>
-                        <p className="text-xs text-[#A3E635] font-semibold">{drive.roleTitle}</p>
-                        <p className="text-[11px] text-[#94A3B8] flex items-center gap-1.5 mt-0.5">
-                          <MapPin className="w-3 h-3 text-[#64748B]" /> {drive.location}
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* RIGHT: selected drive detail */}
+              <Card className="hidden lg:block lg:col-span-7 lg:sticky lg:top-24 overflow-hidden">
+                <div className="space-y-8 p-8">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex min-w-0 items-center gap-4">
+                      <CompanyLogo src={activeDrive.companyLogo} name={activeDrive.companyName} size="xl" />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="neutral" size="sm" dot>{activeDrive.status}</Badge>
+                          <Badge variant="neutral" size="sm">{activeDrive.jobType}</Badge>
+                        </div>
+                        <h2 className="mt-2 truncate text-2xl font-semibold tracking-tight text-foreground">{activeDrive.companyName}</h2>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {activeDrive.roleTitle} &middot; {activeDrive.location}
                         </p>
                       </div>
                     </div>
-
-                    {/* Highlights Metric Pill Box */}
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3 grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Package (CTC)</span>
-                        <span className="font-extrabold text-[#A3E635] text-sm">{drive.ctc}</span>
-                      </div>
-                      <div className="border-l border-[#202D42] pl-3">
-                        <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Deadline</span>
-                        <span className="font-bold text-white text-xs">{drive.registrationDeadline}</span>
-                      </div>
-                    </div>
-
-                    {/* Eligibility & Branch Tags */}
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between text-[11px] text-[#94A3B8]">
-                        <span>Min. CGPA: <strong className="text-white">{drive.eligibility.minCgpa}</strong></span>
-                        <span>Max Backlogs: <strong className="text-white">{drive.eligibility.maxBacklogs}</strong></span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {drive.eligibility.branches.map((b, idx) => (
-                          <span
-                            key={idx}
-                            className="bg-[#162032] border border-[#202D42] text-xs font-semibold px-2 py-0.5 rounded-md text-[#94A3B8]"
-                          >
-                            {b}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-xs text-muted-foreground">Package</p>
+                      <p className="text-3xl font-semibold tracking-tight text-foreground">{activeDrive.ctc}</p>
                     </div>
                   </div>
 
-                  {/* ACTION BUTTONS ROW */}
-                  <div className="pt-2 flex items-center gap-2 border-t border-[#202D42] mt-4">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      leftIcon={<Eye className="w-3.5 h-3.5 text-sky-400" />}
-                      onClick={() => setViewingDrive(drive)}
-                    >
-                      View Details
-                    </Button>
-
-                    {!isStudent ? (
-                      <div className="flex items-center gap-1.5 w-full">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          fullWidth
-                          leftIcon={<Users className="w-3.5 h-3.5 text-[#A3E635]" />}
-                          onClick={() => navigate(`/applications?search=${encodeURIComponent(drive.companyName)}`)}
-                          className="font-bold text-xs hover:border-[#A3E635]/40 hover:text-[#A3E635]"
-                        >
-                          Applicants ({drive.appliedStudentsCount})
-                        </Button>
-                        <PermissionGuard module={Module.PLACEMENT_DRIVES} action={Action.DELETE}>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteDriveAction(drive.id, drive.companyName)}
-                            className="h-8 w-8 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                            title="Delete Drive"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </PermissionGuard>
+                  {/* Key facts */}
+                  <dl className="grid grid-cols-4 divide-x divide-border rounded-2xl border border-border">
+                    {[
+                      ['Deadline', activeDrive.registrationDeadline],
+                      ['Min CGPA', `${activeDrive.eligibility.minCgpa} / 10`],
+                      ['Max backlogs', String(activeDrive.eligibility.maxBacklogs)],
+                      ['Passing year', String(activeDrive.eligibility.passingYear)],
+                    ].map(([k, v]) => (
+                      <div key={k} className="px-4 py-3">
+                        <dt className="text-xs text-muted-foreground">{k}</dt>
+                        <dd className="mt-1 text-sm font-semibold text-foreground">{v}</dd>
                       </div>
-                    ) : hasApplied ? (
-                      <Button variant="secondary" size="sm" fullWidth disabled leftIcon={<Check className="w-3.5 h-3.5 text-[#A3E635]" />}>
-                        Applied
-                      </Button>
-                    ) : !eligible ? (
-                      <Button variant="secondary" size="sm" fullWidth disabled leftIcon={<Ban className="w-3.5 h-3.5 text-rose-400" />}>
-                        Not Eligible
-                      </Button>
+                    ))}
+                  </dl>
+
+                  {/* Branches */}
+                  <section className="space-y-3">
+                    <h4 className="text-sm font-semibold text-foreground">Eligible branches</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {activeDrive.eligibility.branches.map((b, idx) => (
+                        <span key={idx} className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground">
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Selection rounds */}
+                  <section className="space-y-3">
+                    <h4 className="text-sm font-semibold text-foreground">Selection process</h4>
+                    <ol className="relative space-y-4 border-l border-border pl-6">
+                      {activeDrive.rounds.map((round, idx) => (
+                        <li key={idx} className="relative">
+                          <span className="absolute -left-[37px] flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[11px] font-semibold text-foreground">
+                            {idx + 1}
+                          </span>
+                          <p className="text-sm text-foreground">{round}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                </div>
+
+                {/* Action bar */}
+                <div className="flex items-center justify-between gap-3 border-t border-border bg-muted px-8 py-4">
+                  <span className="text-xs text-muted-foreground">
+                    {activeDrive.appliedStudentsCount} applicant{activeDrive.appliedStudentsCount === 1 ? '' : 's'} so far
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {isStudent ? (
+                      hasApplied ? (
+                        <Button variant="secondary" size="md" disabled leftIcon={<Check className="w-4 h-4" />}>
+                          Applied
+                        </Button>
+                      ) : !eligible ? (
+                        <Button variant="secondary" size="md" disabled leftIcon={<Ban className="w-4 h-4" />}>
+                          Not eligible
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="md"
+                          isLoading={applyingId === activeDrive.id}
+                          leftIcon={<Send className="w-4 h-4" />}
+                          onClick={() => handleApply(activeDrive.id, activeDrive.companyName)}
+                        >
+                          Apply now
+                        </Button>
+                      )
                     ) : (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        fullWidth
-                        isLoading={applyingId === drive.id}
-                        leftIcon={<Send className="w-3.5 h-3.5" />}
-                        onClick={() => handleApply(drive.id, drive.companyName)}
-                        className="font-extrabold shadow-[0_0_12px_rgba(163,230,53,0.3)]"
-                      >
-                        Apply
-                      </Button>
+                      <>
+                        <PermissionGuard module={Module.PLACEMENT_DRIVES} action={Action.DELETE}>
+                          <Button
+                            variant="danger"
+                            size="md"
+                            leftIcon={<Trash2 className="w-4 h-4" />}
+                            onClick={() => handleDeleteDriveAction(activeDrive.id, activeDrive.companyName)}
+                          >
+                            Delete
+                          </Button>
+                        </PermissionGuard>
+                        <Button
+                          variant="primary"
+                          size="md"
+                          leftIcon={<Users className="w-4 h-4" />}
+                          onClick={() => navigate(`/applications?search=${encodeURIComponent(activeDrive.companyName)}`)}
+                        >
+                          View applicants ({activeDrive.appliedStudentsCount})
+                        </Button>
+                      </>
                     )}
                   </div>
-
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+                </div>
+              </Card>
+            </div>
+          );
+        })()
       )}
 
-      {/* FOOTER BAR & PAGINATION */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+      {/* PAGINATION */}
+      <Card className="px-4 py-2">
         <Pagination
           currentPage={currentPage}
           totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
           onPageChange={setCurrentPage}
           totalEntries={totalRecords}
         />
-      </div>
+      </Card>
 
       {/* VIEW DRIVE DETAILS MODAL */}
       <AnimatePresence>
@@ -696,65 +742,12 @@ export const Drives: React.FC = () => {
           <Modal
             isOpen={!!viewingDrive}
             onClose={() => setViewingDrive(null)}
-            title={`${viewingDrive.companyName} — Drive Specifications`}
+            title="Drive specifications"
             subtitle={`${viewingDrive.roleTitle} • ${viewingDrive.location}`}
             maxWidth="xl"
-          >
-            <div className="space-y-6 bg-[#101726] border border-[#202D42] p-6 rounded-2xl text-xs">
-              
-              {/* Header */}
-              <div className="border-b border-[#202D42] pb-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar src={viewingDrive.companyLogo} name={viewingDrive.companyName} size="md" />
-                  <div>
-                    <h2 className="text-xl font-extrabold text-white">{viewingDrive.companyName}</h2>
-                    <p className="text-xs text-[#A3E635] font-semibold">{viewingDrive.roleTitle}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge variant="active">Package: {viewingDrive.ctc}</Badge>
-                  <p className="text-[10px] text-[#64748B] mt-1">Deadline: {viewingDrive.registrationDeadline}</p>
-                </div>
-              </div>
-
-              {/* Eligibility Criteria Breakdown */}
-              <div className="space-y-2">
-                <h4 className="font-extrabold text-white uppercase text-[11px]">Eligibility Criteria</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#162032] p-3 rounded-xl border border-[#202D42]">
-                  <div>
-                    <span className="text-[10px] text-[#94A3B8] block">Min CGPA</span>
-                    <span className="font-bold text-white text-xs">{viewingDrive.eligibility.minCgpa} / 10.0</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#94A3B8] block">Max Backlogs</span>
-                    <span className="font-bold text-white text-xs">{viewingDrive.eligibility.maxBacklogs}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#94A3B8] block">Passing Year</span>
-                    <span className="font-bold text-white text-xs">{viewingDrive.eligibility.passingYear}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#94A3B8] block">Job Type</span>
-                    <span className="font-bold text-white text-xs">{viewingDrive.jobType}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Selection Process Rounds */}
-              <div className="space-y-2">
-                <h4 className="font-extrabold text-white uppercase text-[11px]">Selection Process Rounds</h4>
-                <div className="flex flex-wrap gap-2">
-                  {viewingDrive.rounds.map((round, idx) => (
-                    <Badge key={idx} variant="info">
-                      Round {idx + 1}: {round}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions Bar */}
-              <div className="pt-4 border-t border-[#202D42] flex justify-end gap-3">
-                <Button variant="secondary" size="md" onClick={() => setViewingDrive(null)}>
+            footer={
+              <>
+                <Button variant="tertiary" size="md" onClick={() => setViewingDrive(null)}>
                   Close
                 </Button>
                 {!isStudent ? (
@@ -766,13 +759,12 @@ export const Drives: React.FC = () => {
                       navigate(`/applications?search=${encodeURIComponent(viewingDrive.companyName)}`);
                       setViewingDrive(null);
                     }}
-                    className="font-extrabold"
                   >
-                    View Applicants ({viewingDrive.appliedStudentsCount})
+                    View applicants ({viewingDrive.appliedStudentsCount})
                   </Button>
                 ) : appliedDriveIds.has(viewingDrive.id) ? (
-                  <Button variant="secondary" size="md" disabled leftIcon={<Check className="w-4 h-4 text-[#A3E635]" />}>
-                    Already Applied
+                  <Button variant="secondary" size="md" disabled leftIcon={<Check className="w-4 h-4" />}>
+                    Already applied
                   </Button>
                 ) : (
                   <Button
@@ -784,11 +776,60 @@ export const Drives: React.FC = () => {
                       setViewingDrive(null);
                     }}
                   >
-                    Apply for Drive
+                    Apply for drive
                   </Button>
                 )}
+              </>
+            }
+          >
+            <div className="space-y-6 text-sm">
+              {/* Company */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <CompanyLogo src={viewingDrive.companyLogo} name={viewingDrive.companyName} size="lg" />
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-semibold text-foreground">{viewingDrive.companyName}</h2>
+                    <p className="truncate text-sm text-muted-foreground">{viewingDrive.roleTitle}</p>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xl font-semibold text-foreground">{viewingDrive.ctc}</p>
+                  <p className="text-xs text-muted-foreground">Apply by {viewingDrive.registrationDeadline}</p>
+                </div>
               </div>
 
+              {/* Eligibility */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Eligibility criteria</h4>
+                <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 rounded-2xl bg-secondary p-4">
+                  {[
+                    ['Min CGPA', `${viewingDrive.eligibility.minCgpa} / 10.0`],
+                    ['Max backlogs', String(viewingDrive.eligibility.maxBacklogs)],
+                    ['Passing year', String(viewingDrive.eligibility.passingYear)],
+                    ['Job type', viewingDrive.jobType],
+                  ].map(([k, v]) => (
+                    <div key={k}>
+                      <dt className="text-xs text-muted-foreground">{k}</dt>
+                      <dd className="mt-1 font-medium text-foreground">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              {/* Rounds */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Selection process</h4>
+                <ol className="space-y-2">
+                  {viewingDrive.rounds.map((round, idx) => (
+                    <li key={idx} className="flex items-center gap-3">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
+                        {idx + 1}
+                      </span>
+                      <span className="text-foreground">{round}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           </Modal>
         )}
@@ -798,70 +839,80 @@ export const Drives: React.FC = () => {
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Publish New Placement Drive"
+        title="Publish new placement drive"
+        subtitle="Fill in the essentials. Students can apply as soon as it is published."
+        maxWidth="2xl"
       >
-        <form onSubmit={handleCreateDriveSubmit} className="space-y-4 pt-2 font-sans">
-          <Input
-            label="Corporate Partner / Company Name"
-            placeholder="e.g. Google India"
-            value={newCompanyName}
-            onChange={(e) => setNewCompanyName(e.target.value)}
-            required
-          />
+        <form onSubmit={handleCreateDriveSubmit} className="space-y-8 font-sans">
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">1</span>
+              <h4 className="text-sm font-semibold text-foreground">Company & role</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Company name"
+                placeholder="e.g. Google India"
+                value={newCompanyName}
+                onChange={(e) => setNewCompanyName(e.target.value)}
+                required
+              />
+              <Input
+                label="Job role title"
+                placeholder="e.g. Software Engineer - SDE I"
+                value={newRoleTitle}
+                onChange={(e) => setNewRoleTitle(e.target.value)}
+                required
+              />
+              <Dropdown
+                label="Employment type"
+                options={[
+                  { label: 'Full Time', value: 'Full Time' },
+                  { label: 'Internship + PPO', value: 'Internship' },
+                  { label: 'Contractual', value: 'Contract' },
+                ]}
+                value={newJobType}
+                onChange={setNewJobType}
+              />
+              <Input
+                label="Work location"
+                placeholder="e.g. Bengaluru (Hybrid)"
+                value={newLocation}
+                onChange={(e) => setNewLocation(e.target.value)}
+                required
+              />
+            </div>
+          </section>
 
-          <Input
-            label="Job Role Title"
-            placeholder="e.g. Software Engineer - SDE I"
-            value={newRoleTitle}
-            onChange={(e) => setNewRoleTitle(e.target.value)}
-            required
-          />
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">2</span>
+              <h4 className="text-sm font-semibold text-foreground">Package & eligibility</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Package (CTC in LPA)"
+                placeholder="e.g. 48.0"
+                value={newCtc}
+                onChange={(e) => setNewCtc(e.target.value)}
+                required
+              />
+              <Input
+                label="Min cutoff CGPA"
+                placeholder="e.g. 7.5"
+                value={newMinCgpa}
+                onChange={(e) => setNewMinCgpa(e.target.value)}
+                required
+              />
+            </div>
+          </section>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Package (CTC in LPA)"
-              placeholder="e.g. 48.0"
-              value={newCtc}
-              onChange={(e) => setNewCtc(e.target.value)}
-              required
-            />
-
-            <Dropdown
-              label="Job Employment Type"
-              options={[
-                { label: 'Full Time', value: 'Full Time' },
-                { label: 'Internship + PPO', value: 'Internship' },
-                { label: 'Contractual', value: 'Contract' },
-              ]}
-              value={newJobType}
-              onChange={setNewJobType}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Work Location"
-              placeholder="e.g. Bengaluru (Hybrid)"
-              value={newLocation}
-              onChange={(e) => setNewLocation(e.target.value)}
-              required
-            />
-
-            <Input
-              label="Min Cutoff CGPA"
-              placeholder="e.g. 7.5"
-              value={newMinCgpa}
-              onChange={(e) => setNewMinCgpa(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="pt-4 flex justify-end gap-3 border-t border-[#202D42]">
-            <Button variant="secondary" size="md" onClick={() => setIsAddModalOpen(false)}>
+          <div className="flex justify-end gap-2 border-t border-border pt-5">
+            <Button type="button" variant="tertiary" size="md" onClick={() => setIsAddModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" size="md" type="submit" className="font-extrabold">
-              Publish Drive
+            <Button variant="primary" size="md" type="submit" leftIcon={<Send className="w-4 h-4" />}>
+              Publish drive
             </Button>
           </div>
         </form>

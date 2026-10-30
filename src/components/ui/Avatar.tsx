@@ -1,101 +1,108 @@
-import React from 'react';
-import { clsx } from 'clsx';
+"use client"
 
-export interface AvatarProps {
-  src?: string;
-  name?: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  online?: boolean;
-  border?: boolean;
-  borderColor?: string;
-  className?: string;
-}
+import * as React from "react"
+import { cn } from "@/lib/utils"
+import { Avatar as AvatarPrimitive } from "radix-ui"
 
-export const Avatar: React.FC<AvatarProps> = ({
-  src,
-  name = 'User',
-  size = 'md',
-  online,
-  border = false,
-  borderColor = 'border-[#A3E635]',
+function Avatar({
   className,
-}) => {
-  const sizeMap = {
-    xs: 'w-6 h-6 text-[10px]',
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-10 h-10 text-sm',
-    lg: 'w-12 h-12 text-base',
-    xl: 'w-16 h-16 text-xl',
-  };
-
-  const getInitials = (n: string) => {
-    const parts = n.trim().split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return n.slice(0, 2).toUpperCase();
-  };
-
+  size = "default",
+  ...props
+}: React.ComponentProps<typeof AvatarPrimitive.Root> & {
+  size?: "default" | "sm" | "lg"
+}) {
   return (
-    <div className={clsx('relative inline-block shrink-0 select-none', className)}>
-      {src ? (
-        <img
-          src={src}
-          alt={name}
-          className={clsx(
-            'rounded-full object-cover bg-[#101726]',
-            sizeMap[size],
-            border && `border-2 ${borderColor}`
-          )}
-        />
-      ) : (
-        <div
-          className={clsx(
-            'rounded-full bg-gradient-to-tr from-[#162032] to-[#202D42] text-[#A3E635] font-extrabold flex items-center justify-center border border-[#202D42]',
-            sizeMap[size],
-            border && `border-2 ${borderColor}`
-          )}
-        >
-          {getInitials(name)}
-        </div>
+    <AvatarPrimitive.Root
+      data-slot="avatar"
+      data-size={size}
+      className={cn(
+        "group/avatar relative flex size-8 shrink-0 overflow-hidden rounded-full select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
+        className
       )}
-      {online !== undefined && (
-        <span
-          className={clsx(
-            'absolute bottom-0 right-0 rounded-full border-2 border-[#0B0F17]',
-            online ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-slate-500',
-            size === 'xs' || size === 'sm' ? 'w-2 h-2' : 'w-3 h-3'
-          )}
-        />
-      )}
-    </div>
-  );
-};
-
-/* Stacked Avatar Group */
-export interface AvatarGroupProps {
-  avatars: Array<{ src?: string; name: string }>;
-  max?: number;
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+      {...props}
+    />
+  )
 }
 
-export const AvatarGroup: React.FC<AvatarGroupProps> = ({ avatars, max = 4, size = 'sm' }) => {
-  const visible = avatars.slice(0, max);
-  const remaining = avatars.length - max;
-
+function AvatarImage({
+  className,
+  ...props
+}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
-    <div className="flex items-center -space-x-2 overflow-hidden">
-      {visible.map((av, idx) => (
-        <Avatar key={idx} src={av.src} name={av.name} size={size} border borderColor="border-[#0B0F17]" />
-      ))}
-      {remaining > 0 && (
-        <div
-          className={clsx(
-            'rounded-full bg-[#162032] text-[#A3E635] font-extrabold flex items-center justify-center border-2 border-[#0B0F17] z-10',
-            size === 'xs' ? 'w-6 h-6 text-[10px]' : size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
-          )}
-        >
-          +{remaining}
-        </div>
+    <AvatarPrimitive.Image
+      data-slot="avatar-image"
+      className={cn("aspect-square size-full", className)}
+      {...props}
+    />
+  )
+}
+
+function AvatarFallback({
+  className,
+  ...props
+}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
+  return (
+    <AvatarPrimitive.Fallback
+      data-slot="avatar-fallback"
+      className={cn(
+        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+        className
       )}
-    </div>
-  );
-};
+      {...props}
+    />
+  )
+}
+
+function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="avatar-badge"
+      className={cn(
+        "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background select-none",
+        "group-data-[size=sm]/avatar:size-2 group-data-[size=sm]/avatar:[&>svg]:hidden",
+        "group-data-[size=default]/avatar:size-2.5 group-data-[size=default]/avatar:[&>svg]:size-2",
+        "group-data-[size=lg]/avatar:size-3 group-data-[size=lg]/avatar:[&>svg]:size-2",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="avatar-group"
+      className={cn(
+        "group/avatar-group flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:ring-background",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function AvatarGroupCount({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="avatar-group-count"
+      className={cn(
+        "relative flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm text-muted-foreground ring-2 ring-background group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+  AvatarBadge,
+  AvatarGroup,
+  AvatarGroupCount,
+}

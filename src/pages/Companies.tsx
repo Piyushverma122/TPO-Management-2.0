@@ -27,19 +27,18 @@ import {
   Sparkles,
   RefreshCw,
 } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, LineChart, Line } from 'recharts';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge, StatusBadge } from '../components/ui/Badge';
-import { Input, SearchInput, Textarea } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { Pagination } from '../components/ui/Pagination';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { RadialProgress } from '../components/ui/ProgressBar';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge, StatusBadge } from '../components/app/Badge';
+import { Input, SearchInput, Textarea } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { Pagination } from '../components/app/Pagination';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { RadialProgress } from '../components/app/ProgressBar';
+import { useToast } from '../components/app/Toast';
 import { Company } from '../types';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
@@ -49,6 +48,7 @@ import {
   deleteCompany,
   uploadCompanyLogo,
 } from '../api/company.api';
+import { CompanyLogo } from '../components/app/CompanyLogo';
 
 // Sparkline Mock Data
 const totalCompaniesSparkline = [{ v: 120 }, { v: 180 }, { v: 240 }, { v: 280 }];
@@ -221,27 +221,23 @@ export const Companies: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 relative font-sans">
       {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            Company Management
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
-              {totalRecords} Active Recruiter Partners
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
-            Manage recruiter profiles, packages, primary contact details, and tier status.
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">Companies</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {totalRecords} recruiter partners. Manage profiles, packages, contacts and tier status.
           </p>
         </div>
 
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="md"
             leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
             onClick={fetchCompaniesData}
             disabled={loading}
+            className="text-xs"
           >
             Refresh
           </Button>
@@ -251,218 +247,165 @@ export const Companies: React.FC = () => {
               variant="primary"
               size="md"
               leftIcon={<Plus className="w-4 h-4" />}
-              onClick={() => setIsAddModalOpen(true)}
-              className="font-extrabold text-xs shrink-0"
+              onClick={() => navigate('/companies/add')}
+              className="text-xs shrink-0"
             >
-              Add New Company
+              Add Company
             </Button>
           </PermissionGuard>
         </div>
       </div>
 
-      {/* TOP 3 STATISTIC METRIC CARDS ROW */}
-      <motion.div
-        className="grid grid-cols-1 sm:grid-cols-3 gap-5"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.08 } },
-        }}
-      >
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card className="p-5 flex items-center justify-between group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Total Recruiter Partners</span>
-              <span className="text-2xl font-extrabold text-white mt-1 block">{totalRecords}</span>
-              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">+18 active recruitment drives</span>
+      {/* STATS STRIP */}
+      <Card className="overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-3 [&>div]:border-border max-sm:[&>div+div]:border-t sm:[&>div+div]:border-l">
+          {[
+            { label: 'Recruiter partners', value: String(totalRecords), note: '+18 active recruitment drives', icon: Building2 },
+            { label: 'Average CTC offered', value: '₹12.5 LPA', note: 'Across all tiers', icon: TrendingUp },
+            { label: 'Highest package', value: '₹48.0 LPA', note: 'Super Dream tier', icon: Award },
+          ].map(({ label, value, note, icon: Icon }) => (
+            <div key={label} className="p-6">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-sm">{label}</span>
+                <Icon className="w-4 h-4" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{note}</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <Building2 className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card className="p-5 flex items-center justify-between group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Average CTC Offered</span>
-              <span className="text-2xl font-extrabold text-white mt-1 block">₹12.5 LPA</span>
-              <span className="text-[11px] text-sky-400 font-semibold mt-1 block">Across all tiers</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 15 },
-            visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
-          }}
-          whileHover={{ y: -4 }}
-        >
-          <Card className="p-5 flex items-center justify-between group">
-            <div>
-              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block">Highest Package Offered</span>
-              <span className="text-2xl font-extrabold text-[#A3E635] mt-1 block">₹48.0 LPA</span>
-              <span className="text-[11px] text-[#A3E635] font-semibold mt-1 block">Super Dream Tier</span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-[#A3E635]/20 text-[#A3E635] border border-[#A3E635]/40 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-              <Award className="w-6 h-6" />
-            </div>
-          </Card>
-        </motion.div>
-      </motion.div>
-
-      {/* FILTER & SEARCH CONTROL BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="flex-1 w-full min-w-0">
-            <SearchInput
-              placeholder="Search companies by name, industry, or package..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
-            <Dropdown
-              className="w-full sm:w-44 shrink-0"
-              options={[
-                { label: 'All Tiers', value: 'All' },
-                { label: 'Super Dream (>₹20L)', value: 'Super Dream' },
-                { label: 'Dream (₹10-20L)', value: 'Dream' },
-                { label: 'Standard (<₹10L)', value: 'Standard' },
-              ]}
-              value={selectedTier}
-              onChange={setSelectedTier}
-            />
-
-            <Dropdown
-              className="w-full sm:w-36 shrink-0"
-              options={[
-                { label: 'All Statuses', value: 'All' },
-                { label: 'Active', value: 'Active' },
-                { label: 'Upcoming', value: 'Upcoming' },
-                { label: 'Completed', value: 'Completed' },
-              ]}
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-            />
-
-            {/* View Mode Toggle Switcher */}
-            <div className="flex items-center gap-1 bg-[#101726] border border-[#202D42] p-1 rounded-xl">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  viewMode === 'grid' ? 'bg-[#A3E635] text-[#0B0F17]' : 'text-[#94A3B8] hover:text-white'
-                }`}
-                title="Grid View"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  viewMode === 'table' ? 'bg-[#A3E635] text-[#0B0F17]' : 'text-[#94A3B8] hover:text-white'
-                }`}
-                title="Table View"
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       </Card>
 
+      {/* TOOLBAR */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 relative z-30">
+        <div className="flex-1 min-w-0">
+          <SearchInput
+            placeholder="Search companies by name, industry or package..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+          <Dropdown
+            className="w-full sm:w-48 shrink-0"
+            options={[
+              { label: 'All Tiers', value: 'All' },
+              { label: 'Super Dream (>₹20L)', value: 'Super Dream' },
+              { label: 'Dream (₹10-20L)', value: 'Dream' },
+              { label: 'Standard (<₹10L)', value: 'Standard' },
+            ]}
+            value={selectedTier}
+            onChange={setSelectedTier}
+          />
+
+          <Dropdown
+            className="w-full sm:w-40 shrink-0"
+            options={[
+              { label: 'All Statuses', value: 'All' },
+              { label: 'Active', value: 'Active' },
+              { label: 'Upcoming', value: 'Upcoming' },
+              { label: 'Completed', value: 'Completed' },
+            ]}
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+          />
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 rounded-full bg-secondary p-1 shrink-0">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="Grid View"
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="Table View"
+              aria-label="Table view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* COMPANIES LIST (GRID / TABLE VIEW) */}
       {loading ? (
-        <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
-          <div className="w-8 h-8 border-4 border-[#A3E635] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <span>Loading corporate partners dataset...</span>
-        </div>
+        <Card className="p-12 text-center text-muted-foreground">Loading corporate partners...</Card>
       ) : companies.length === 0 ? (
-        <div className="bg-[#162032] border border-[#202D42] rounded-3xl p-12 text-center text-[#94A3B8]">
-          No matching companies found.
-        </div>
+        <Card className="p-12 text-center text-muted-foreground">No matching companies found.</Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {companies.map((cmp) => (
             <motion.div
               key={cmp.id}
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-[#162032] border border-[#202D42] rounded-2xl p-5 hover:border-[#A3E635]/40 transition-all duration-300 shadow-xl flex flex-col justify-between cursor-pointer group"
               onClick={() => handleOpenDrawer(cmp)}
+              className="group flex cursor-pointer flex-col justify-between rounded-3xl border border-border bg-card p-6 transition-colors hover:border-foreground/25"
             >
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar src={cmp.logo} name={cmp.name} size="md" className="rounded-xl border border-[#202D42]" />
-                    <div>
-                      <h3 className="text-base font-extrabold text-white group-hover:text-[#A3E635] transition-colors">
-                        {cmp.name}
-                      </h3>
-                      <p className="text-xs text-[#94A3B8]">{cmp.industry}</p>
+              <div className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <CompanyLogo src={cmp.logo} name={cmp.name} size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-base font-semibold text-foreground" title={cmp.name}>{cmp.name}</h3>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge variant={cmp.tier === 'Super Dream' ? 'accent' : 'neutral'} size="sm">
+                        {cmp.tier}
+                      </Badge>
+                      <span className="truncate text-xs text-muted-foreground">{cmp.industry}</span>
                     </div>
                   </div>
-                  <Badge variant={cmp.tier === 'Super Dream' ? 'accent' : 'neutral'} size="sm">
-                    {cmp.tier}
-                  </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#101726] border border-[#202D42] rounded-xl p-3 text-xs">
+                <dl className="grid grid-cols-2 gap-4 border-y border-border py-4">
                   <div>
-                    <span className="text-[10px] text-[#94A3B8] uppercase block font-bold">Avg Package</span>
-                    <span className="font-extrabold text-white">{cmp.avgPackage}</span>
+                    <dt className="text-xs text-muted-foreground">Avg package</dt>
+                    <dd className="mt-1 text-lg font-semibold text-foreground">{cmp.avgPackage}</dd>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#94A3B8] uppercase block font-bold">Highest CTC</span>
-                    <span className="font-extrabold text-[#A3E635]">{cmp.highestPackage}</span>
+                    <dt className="text-xs text-muted-foreground">Highest CTC</dt>
+                    <dd className="mt-1 text-lg font-semibold text-foreground">{cmp.highestPackage}</dd>
                   </div>
-                </div>
+                </dl>
 
-                <div className="flex items-center justify-between text-xs text-[#94A3B8] pt-1">
-                  <span>Hired Count: <strong className="text-white">{cmp.hiredCount}</strong></span>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>
+                    Hired <strong className="font-semibold text-foreground">{cmp.hiredCount}</strong>
+                  </span>
                   <StatusBadge status={cmp.status} size="sm" />
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#202D42] flex items-center justify-between text-xs">
+              <div className="mt-5 flex items-center justify-between text-xs">
                 <a
                   href={cmp.website}
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-sky-400 hover:underline flex items-center gap-1"
+                  className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <Globe className="w-3.5 h-3.5" />
                   Website
                 </a>
-                <span className="text-[#A3E635] font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                  View Profile &rarr;
+                <span className="flex items-center gap-1 font-medium text-foreground transition-transform group-hover:translate-x-0.5">
+                  View profile &rarr;
                 </span>
               </div>
             </motion.div>
           ))}
         </div>
       ) : (
-        <Card className="p-0 overflow-hidden">
-          <Table>
+        <Card className="overflow-hidden">
+          <Table bare>
             <TableHeader>
               <TableRow>
                 <TableHead>Company</TableHead>
@@ -479,23 +422,26 @@ export const Companies: React.FC = () => {
                 <TableRow key={cmp.id} onClick={() => handleOpenDrawer(cmp)} className="cursor-pointer">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <Avatar src={cmp.logo} name={cmp.name} size="sm" className="rounded-lg border border-[#202D42]" />
-                      <span className="font-bold text-white">{cmp.name}</span>
+                      <CompanyLogo src={cmp.logo} name={cmp.name} size="sm" />
+                      <span className="text-sm font-medium text-foreground">{cmp.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs text-[#94A3B8]">{cmp.industry}</TableCell>
+                  <TableCell className="text-muted-foreground">{cmp.industry}</TableCell>
                   <TableCell>
                     <Badge variant={cmp.tier === 'Super Dream' ? 'accent' : 'neutral'} size="sm">
                       {cmp.tier}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-extrabold text-[#A3E635] text-xs">{cmp.highestPackage}</TableCell>
-                  <TableCell className="font-bold text-white text-xs">{cmp.hiredCount}</TableCell>
+                  <TableCell className="font-medium text-foreground">{cmp.highestPackage}</TableCell>
+                  <TableCell className="text-foreground">{cmp.hiredCount}</TableCell>
                   <TableCell>
                     <StatusBadge status={cmp.status} size="sm" />
                   </TableCell>
                   <TableCell className="text-right">
-                    <button className="text-[#94A3B8] hover:text-white p-1 rounded-lg hover:bg-[#202D42]">
+                    <button
+                      aria-label="Company actions"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    >
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </TableCell>
@@ -507,16 +453,15 @@ export const Companies: React.FC = () => {
       )}
 
       {/* Server Pagination */}
-      <div className="p-4 bg-[#162032] border border-[#202D42] rounded-2xl flex items-center justify-between">
-        <span className="text-xs text-[#94A3B8]">
-          Page {currentPage} of {Math.ceil(totalRecords / itemsPerPage) || 1} ({totalRecords} companies)
-        </span>
+      <Card className="px-4 py-2">
         <Pagination
           currentPage={currentPage}
           totalPages={Math.ceil(totalRecords / itemsPerPage) || 1}
           onPageChange={setCurrentPage}
+          totalEntries={totalRecords}
+          pageSize={itemsPerPage}
         />
-      </div>
+      </Card>
 
       {/* COMPANY DETAILS DRAWER */}
       <AnimatePresence>
@@ -526,137 +471,124 @@ export const Companies: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[#0B0F17]/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/60"
               onClick={() => setIsDrawerOpen(false)}
             />
 
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
               <motion.div
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="w-screen max-w-md bg-[#162032] border-l border-[#202D42] p-6 overflow-y-auto space-y-6 shadow-2xl relative text-white"
+                transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+                className="relative flex w-screen max-w-lg flex-col rounded-l-3xl border-l border-border bg-card text-foreground"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-[#202D42] pb-4">
-                  <span className="text-xs font-extrabold text-[#A3E635] tracking-wider uppercase">
-                    Company Profile Details
-                  </span>
+                <div className="flex shrink-0 items-center justify-between px-6 py-5 border-b border-border">
+                  <div>
+                    <h2 className="text-base font-semibold">Company profile</h2>
+                    <p className="text-xs text-muted-foreground">Details, contact and eligibility</p>
+                  </div>
                   <button
                     onClick={() => setIsDrawerOpen(false)}
-                    className="p-1 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#202D42]"
+                    aria-label="Close"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Company Logo & Branding */}
-                <div className="flex items-center gap-4 bg-[#101726] border border-[#202D42] rounded-2xl p-4">
-                  <Avatar src={selectedCompany.logo} name={selectedCompany.name} size="lg" border className="rounded-2xl" />
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-extrabold text-white">{selectedCompany.name}</h3>
-                      <Badge variant={selectedCompany.tier === 'Super Dream' ? 'accent' : 'neutral'} size="sm">{selectedCompany.tier}</Badge>
+                <div className="flex-1 space-y-8 overflow-y-auto px-6 py-6">
+                  {/* Hero */}
+                  <div className="flex items-start gap-4">
+                    <CompanyLogo src={selectedCompany.logo} name={selectedCompany.name} size="xl" />
+                    <div className="min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-xl font-semibold leading-tight">{selectedCompany.name}</h3>
+                        <Badge variant={selectedCompany.tier === 'Super Dream' ? 'accent' : 'neutral'} size="sm">
+                          {selectedCompany.tier}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{selectedCompany.industry}</p>
+                      <a
+                        href={selectedCompany.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <Globe className="w-3.5 h-3.5" />
+                        <span className="truncate">{selectedCompany.website}</span>
+                      </a>
                     </div>
-                    <p className="text-xs text-[#94A3B8]">{selectedCompany.industry}</p>
-                    <a
-                      href={selectedCompany.website}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-[#A3E635] hover:underline flex items-center gap-1 mt-0.5"
-                    >
-                      <Globe className="w-3 h-3" />
-                      {selectedCompany.website}
-                    </a>
                   </div>
-                </div>
 
-                {/* Logo Upload Button */}
-                <div>
-                  <label className="cursor-pointer bg-[#101726] hover:bg-[#1C293F] border border-[#202D42] text-white w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors">
-                    <Upload className="w-4 h-4 text-[#A3E635]" />
-                    {uploadingLogo ? 'Uploading Logo...' : 'Upload New Company Logo'}
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-full border border-dashed border-input px-4 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+                    <Upload className="w-4 h-4" />
+                    {uploadingLogo ? 'Uploading logo...' : 'Upload new logo'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleLogoUploadAction} />
                   </label>
-                </div>
 
-                {/* Package Highlights Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Avg Package</span>
-                    <span className="text-base font-extrabold text-white mt-0.5 block">{selectedCompany.avgPackage}</span>
-                  </div>
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Highest Package</span>
-                    <span className="text-base font-extrabold text-[#A3E635] mt-0.5 block">{selectedCompany.highestPackage}</span>
-                  </div>
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Min CGPA Cut-off</span>
-                    <span className="text-base font-extrabold text-sky-400 mt-0.5 block">{selectedCompany.minCgpa} CGPA</span>
-                  </div>
-                  <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3">
-                    <span className="text-[10px] text-[#94A3B8] uppercase font-bold block">Max Backlogs</span>
-                    <span className="text-base font-extrabold text-rose-400 mt-0.5 block">{selectedCompany.maxBacklogs} Allowed</span>
-                  </div>
-                </div>
-
-                {/* Primary HR Recruiter Contact Info */}
-                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-3">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider block border-b border-[#202D42] pb-2">
-                    Primary HR Recruiter Contact
-                  </span>
-                  <div className="text-xs space-y-2 pt-1">
-                    <p className="font-extrabold text-white text-sm flex items-center gap-2">
-                      <Users className="w-4 h-4 text-[#A3E635]" />
-                      {selectedCompany.hrContact.name}
-                    </p>
-                    <p className="text-[#94A3B8] flex items-center gap-2">
-                      <span className="font-semibold text-white">Email:</span> {selectedCompany.hrContact.email}
-                    </p>
-                    <p className="text-[#94A3B8] flex items-center gap-2">
-                      <span className="font-semibold text-white">Phone:</span> {selectedCompany.hrContact.phone}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Allowed Branches */}
-                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-2">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider block border-b border-[#202D42] pb-2">
-                    Eligible Branches / Departments
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {selectedCompany.allowedBranches.map((br) => (
-                      <span
-                        key={br}
-                        className="bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30 text-[11px] font-bold px-2.5 py-1 rounded-lg"
-                      >
-                        {br}
-                      </span>
+                  {/* Key numbers */}
+                  <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-secondary p-5">
+                    {[
+                      ['Avg package', selectedCompany.avgPackage],
+                      ['Highest package', selectedCompany.highestPackage],
+                      ['Min CGPA cut-off', `${selectedCompany.minCgpa} CGPA`],
+                      ['Max backlogs', `${selectedCompany.maxBacklogs} allowed`],
+                    ].map(([k, v]) => (
+                      <div key={k}>
+                        <dt className="text-xs text-muted-foreground">{k}</dt>
+                        <dd className="mt-1 text-lg font-semibold">{v}</dd>
+                      </div>
                     ))}
-                  </div>
+                  </dl>
+
+                  {/* HR contact */}
+                  <section className="space-y-3">
+                    <h4 className="text-sm font-semibold">Primary HR contact</h4>
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
+                        <Users className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0 text-sm">
+                        <p className="font-medium">{selectedCompany.hrContact.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{selectedCompany.hrContact.email}</p>
+                        <p className="text-xs text-muted-foreground">{selectedCompany.hrContact.phone}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Branches */}
+                  <section className="space-y-3">
+                    <h4 className="text-sm font-semibold">Eligible branches</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedCompany.allowedBranches.map((br) => (
+                        <span key={br} className="rounded-full bg-secondary px-3 py-1 text-xs font-medium">
+                          {br}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Description */}
+                  <section className="space-y-3">
+                    <h4 className="text-sm font-semibold">About & location</h4>
+                    <div className="space-y-3 text-sm text-muted-foreground">
+                      <p>
+                        <span className="block text-xs text-foreground">Headquarters</span>
+                        {selectedCompany.location}
+                      </p>
+                      <p className="leading-relaxed">
+                        <span className="block text-xs text-foreground">Overview & requirements</span>
+                        {selectedCompany.description}
+                      </p>
+                    </div>
+                  </section>
                 </div>
 
-                {/* Job Description & Location */}
-                <div className="bg-[#101726] border border-[#202D42] rounded-2xl p-4 space-y-2">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider block border-b border-[#202D42] pb-2">
-                    Company Description & Location
-                  </span>
-                  <div className="text-xs space-y-2 pt-1">
-                    <p className="text-[#94A3B8]">
-                      <span className="font-semibold text-white block mb-0.5">Headquarters / Office Location:</span>
-                      {selectedCompany.location}
-                    </p>
-                    <p className="text-[#94A3B8] leading-relaxed">
-                      <span className="font-semibold text-white block mb-0.5">Overview & Job Requirements:</span>
-                      {selectedCompany.description}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Drawer Footer Actions */}
-                <div className="pt-4 border-t border-[#202D42] flex gap-2">
-                  <Button variant="secondary" size="md" fullWidth onClick={() => setIsDrawerOpen(false)}>
+                {/* Footer Actions */}
+                <div className="flex shrink-0 gap-2 border-t border-border px-6 py-4">
+                  <Button variant="tertiary" size="md" fullWidth onClick={() => setIsDrawerOpen(false)}>
                     Close
                   </Button>
                   <Button
@@ -665,7 +597,7 @@ export const Companies: React.FC = () => {
                     fullWidth
                     onClick={() => handleDeleteCompanyAction(selectedCompany.id)}
                   >
-                    Delete Company
+                    Delete company
                   </Button>
                 </div>
               </motion.div>

@@ -32,18 +32,18 @@ import {
   X,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge, StatusBadge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Dropdown } from '../components/ui/Dropdown';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { ProgressBar } from '../components/ui/ProgressBar';
-import { Pagination } from '../components/ui/Pagination';
-import { Modal } from '../components/ui/Modal';
-import { Avatar } from '../components/ui/Avatar';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge, StatusBadge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
+import { ProgressBar } from '../components/app/ProgressBar';
+import { Pagination } from '../components/app/Pagination';
+import { Modal } from '../components/app/Modal';
+import { Avatar } from '../components/app/Avatar';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { useAuth } from '../context/AuthContext';
 import {
   getTrainings,
@@ -53,6 +53,7 @@ import {
 } from '../api/training.api';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
+import { Button as ShadButton } from '@/components/ui/button';
 
 export interface StudentTrainingItem {
   id: string;
@@ -240,13 +241,13 @@ export const Training: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Training & Skill Development' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight flex items-center gap-3 mt-1">
             Training & Skill Development
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
               {totalRecords} Active Tracks
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Technical bootcamps, skill development tracks, attendance tracking, and verified certificates.
           </p>
         </div>
@@ -268,7 +269,7 @@ export const Training: React.FC = () => {
               size="md"
               leftIcon={<Plus className="w-4 h-4" />}
               onClick={() => setIsCreateModalOpen(true)}
-              className="font-extrabold text-xs"
+              className="font-semibold text-xs"
             >
               Publish Training Track
             </Button>
@@ -277,7 +278,7 @@ export const Training: React.FC = () => {
       </div>
 
       {/* SEARCH & FILTERS BAR */}
-      <Card className="p-3 relative z-30 bg-[#101726] border-[#202D42] shadow-xl">
+      <Card className="p-3 relative z-30 bg-muted border-border shadow-xl">
         <div className="flex flex-col md:flex-row items-center gap-3">
           <div className="flex-1 w-full min-w-0">
             <SearchInput
@@ -312,18 +313,18 @@ export const Training: React.FC = () => {
             />
 
             {(selectedCategory !== 'All' || selectedSort !== 'Latest' || searchQuery !== '') && (
-              <button
+              <ShadButton variant="outline"
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedCategory('All');
                   setSelectedSort('Latest');
                 }}
-                className="h-10 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                className="[&_svg:not([class*='size-'])]:size-3.5 h-10 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 px-3 rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Reset</span>
-              </button>
+              </ShadButton>
             )}
           </div>
         </div>
@@ -333,8 +334,8 @@ export const Training: React.FC = () => {
       {errorMsg ? (
         <Card className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-500/5">
           <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Error Loading Training Tracks</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">{errorMsg}</p>
+          <h3 className="text-lg font-semibold text-foreground">Error Loading Training Tracks</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">{errorMsg}</p>
           <Button variant="primary" size="md" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={fetchTrainingsData}>
             Retry Loading Tracks
           </Button>
@@ -343,19 +344,19 @@ export const Training: React.FC = () => {
         /* LOADING SKELETON STATE */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-5 border-[#202D42] animate-pulse space-y-4">
-              <div className="h-6 bg-[#162032] rounded w-1/3" />
-              <div className="h-4 bg-[#162032] rounded w-3/4" />
-              <div className="h-12 bg-[#162032] rounded-xl" />
+            <Card key={i} className="p-5 border-border animate-pulse space-y-4">
+              <div className="h-6 bg-card rounded w-1/3" />
+              <div className="h-4 bg-card rounded w-3/4" />
+              <div className="h-12 bg-card rounded-xl" />
             </Card>
           ))}
         </div>
       ) : processedTrainings.length === 0 ? (
         /* EMPTY STATE */
-        <Card className="p-12 text-center space-y-4 border-[#202D42] bg-[#101726]">
-          <GraduationCap className="w-12 h-12 text-[#94A3B8] mx-auto opacity-40" />
-          <h3 className="text-xl font-extrabold text-white">No training assigned.</h3>
-          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+        <Card className="p-12 text-center space-y-4 border-border bg-muted">
+          <GraduationCap className="w-12 h-12 text-muted-foreground mx-auto opacity-40" />
+          <h3 className="text-xl font-semibold text-foreground">No training assigned.</h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
             You do not currently have any active or enrolled skill development courses assigned.
           </p>
         </Card>
@@ -372,7 +373,7 @@ export const Training: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.25 }}
               >
-                <Card glowOnHover className="p-5 border-[#202D42] space-y-4 flex flex-col justify-between h-full group">
+                <Card glowOnHover className="p-5 border-border space-y-4 flex flex-col justify-between h-full group">
                   
                   <div className="space-y-3">
                     {/* Top Row: Category + Status Badge */}
@@ -385,26 +386,26 @@ export const Training: React.FC = () => {
 
                     {/* Title & Instructor */}
                     <div>
-                      <h3 className="text-base font-extrabold text-white leading-tight group-hover:text-[#A3E635] transition-colors">
+                      <h3 className="text-base font-semibold text-foreground leading-tight group-hover:text-primary transition-colors">
                         {track.title}
                       </h3>
-                      <p className="text-xs text-[#94A3B8] mt-1">Instructor: <strong className="text-white">{track.trainerName}</strong></p>
-                      <p className="text-[11px] text-[#94A3B8] mt-1 line-clamp-2">{track.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Instructor: <strong className="text-foreground">{track.trainerName}</strong></p>
+                      <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{track.description}</p>
                     </div>
 
                     {/* Course Progress & Attendance */}
-                    <div className="bg-[#101726] border border-[#202D42] rounded-xl p-3 space-y-2">
+                    <div className="bg-muted border border-border rounded-xl p-3 space-y-2">
                       <ProgressBar value={track.progressPercentage} label="Course Progress" size="sm" />
                       
-                      <div className="flex items-center justify-between text-[11px] text-[#94A3B8] pt-1 border-t border-[#202D42]">
-                        <span>Finished: <strong className="text-white">{track.finishedModules}/{track.totalModules} Modules</strong></span>
-                        <span>Attendance: <strong className="text-[#A3E635]">{track.attendancePercentage}%</strong></span>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border">
+                        <span>Finished: <strong className="text-foreground">{track.finishedModules}/{track.totalModules} Modules</strong></span>
+                        <span>Attendance: <strong className="text-primary">{track.attendancePercentage}%</strong></span>
                       </div>
                     </div>
                   </div>
 
                   {/* ACTION BUTTONS ROW */}
-                  <div className="pt-3 border-t border-[#202D42] flex items-center justify-between gap-2 text-xs">
+                  <div className="pt-3 border-t border-border flex items-center justify-between gap-2 text-xs">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -420,7 +421,7 @@ export const Training: React.FC = () => {
                         size="sm"
                         leftIcon={<Award className="w-3.5 h-3.5" />}
                         onClick={() => setViewingCertificateTraining(track)}
-                        className="font-extrabold shadow-[0_0_12px_rgba(163,230,53,0.3)]"
+                        className="font-semibold"
                       >
                         Certificate
                       </Button>
@@ -429,7 +430,7 @@ export const Training: React.FC = () => {
                         variant="tertiary"
                         size="sm"
                         onClick={() => handleEnrollTrack(track.id, track.title)}
-                        className="font-bold"
+                        className="font-semibold"
                       >
                         Enrolled
                       </Button>
@@ -463,28 +464,28 @@ export const Training: React.FC = () => {
             subtitle={`Instructor: ${viewingMaterialsTraining.trainerName}`}
             maxWidth="xl"
           >
-            <div className="space-y-5 bg-[#101726] border border-[#202D42] p-6 rounded-2xl text-xs">
+            <div className="space-y-5 bg-muted border border-border p-6 rounded-2xl text-xs">
               
-              <div className="border-b border-[#202D42] pb-3 flex items-center justify-between">
-                <span className="font-extrabold text-white uppercase text-[11px]">Downloadable Study Resources</span>
+              <div className="border-b border-border pb-3 flex items-center justify-between">
+                <span className="font-semibold text-foreground uppercase text-[11px]">Downloadable Study Resources</span>
                 <Badge variant="active">{viewingMaterialsTraining.materials.length} Files</Badge>
               </div>
 
               <div className="space-y-3">
                 {viewingMaterialsTraining.materials.map((item, idx) => (
-                  <div key={idx} className="bg-[#162032] border border-[#202D42] p-3 rounded-xl flex items-center justify-between">
+                  <div key={idx} className="bg-card border border-border p-3 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#A3E635]/15 text-[#A3E635] flex items-center justify-center font-bold">
+                      <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center font-semibold">
                         {item.type === 'PDF' ? <FileText className="w-4 h-4" /> : <Video className="w-4 h-4" />}
                       </div>
                       <div>
-                        <span className="font-bold text-white block">{item.title}</span>
-                        <span className="text-[10px] text-[#94A3B8]">{item.type} File Format</span>
+                        <span className="font-semibold text-foreground block">{item.title}</span>
+                        <span className="text-[10px] text-muted-foreground">{item.type} File Format</span>
                       </div>
                     </div>
 
                     <a href={item.url} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" size="sm" leftIcon={<Download className="w-3.5 h-3.5 text-[#A3E635]" />}>
+                      <Button variant="secondary" size="sm" leftIcon={<Download className="w-3.5 h-3.5 text-primary" />}>
                         Download
                       </Button>
                     </a>
@@ -492,7 +493,7 @@ export const Training: React.FC = () => {
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-[#202D42] flex justify-end">
+              <div className="pt-4 border-t border-border flex justify-end">
                 <Button variant="secondary" size="md" onClick={() => setViewingMaterialsTraining(null)}>
                   Close
                 </Button>
@@ -513,20 +514,20 @@ export const Training: React.FC = () => {
             subtitle={`Credential ID: ${viewingCertificateTraining.certificateNumber || 'CERT-2026-9921'}`}
             maxWidth="xl"
           >
-            <div className="space-y-6 bg-[#101726] border border-[#202D42] p-6 rounded-2xl text-xs">
+            <div className="space-y-6 bg-muted border border-border p-6 rounded-2xl text-xs">
               
-              <div className="p-8 bg-white text-slate-900 rounded-2xl border-4 border-amber-400 text-center space-y-4 font-serif shadow-2xl relative overflow-hidden">
+              <div className="p-8 bg-white text-slate-900 rounded-2xl border-4 border-amber-400 text-center space-y-4 font-serif  relative overflow-hidden">
                 <div className="space-y-1">
                   <Award className="w-12 h-12 text-amber-500 mx-auto" />
-                  <h2 className="text-2xl font-extrabold uppercase tracking-widest text-slate-900">Certificate of Completion</h2>
+                  <h2 className="text-2xl font-semibold uppercase tracking-widest text-slate-900">Certificate of Completion</h2>
                   <p className="text-xs font-sans text-slate-500 uppercase tracking-wider">TPO Management System 2.0</p>
                 </div>
 
                 <div className="space-y-2 py-4 border-y border-slate-200">
                   <p className="text-xs font-sans text-slate-600">This is to certify that candidate</p>
-                  <h3 className="text-xl font-bold text-slate-900 font-sans">{user?.name || 'Student Candidate'}</h3>
+                  <h3 className="text-xl font-semibold text-slate-900 font-sans">{user?.name || 'Student Candidate'}</h3>
                   <p className="text-xs font-sans text-slate-600">has successfully completed the skill bootcamp track</p>
-                  <h4 className="text-base font-extrabold text-[#0B0F17] font-sans">{viewingCertificateTraining.title}</h4>
+                  <h4 className="text-base font-semibold text-primary-foreground font-sans">{viewingCertificateTraining.title}</h4>
                 </div>
 
                 <div className="flex justify-between items-center text-[10px] font-sans text-slate-500 pt-2">
@@ -535,7 +536,7 @@ export const Training: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#202D42] flex justify-end gap-3">
+              <div className="pt-4 border-t border-border flex justify-end gap-3">
                 <Button variant="secondary" size="md" onClick={() => setViewingCertificateTraining(null)}>
                   Close
                 </Button>

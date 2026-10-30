@@ -1,75 +1,63 @@
-import React from 'react';
-import { clsx } from 'clsx';
-import { Loader2 } from 'lucide-react';
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+import { Slot } from "radix-ui"
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'danger' | 'accent';
-  size?: 'sm' | 'md' | 'lg';
-  isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  fullWidth?: boolean;
-  iconOnly?: boolean;
-}
+const buttonVariants = cva(
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
+        outline:
+          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost:
+          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
+        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        icon: "size-9",
+        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-8",
+        "icon-lg": "size-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
 
-export const Button: React.FC<ButtonProps> = ({
-  children,
-  variant = 'primary',
-  size = 'md',
-  isLoading = false,
-  leftIcon,
-  rightIcon,
-  fullWidth = false,
-  iconOnly = false,
+function Button({
   className,
-  disabled,
+  variant = "default",
+  size = "default",
+  asChild = false,
   ...props
-}) => {
-  const baseStyles =
-    'inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0B0F17] disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]';
-
-  const sizeStyles = {
-    sm: iconOnly ? 'w-8 h-8 text-xs p-0' : 'px-3 py-1.5 text-xs gap-1.5',
-    md: iconOnly ? 'w-10 h-10 text-sm p-0' : 'px-4 py-2.5 text-sm gap-2',
-    lg: iconOnly ? 'w-12 h-12 text-base p-0' : 'px-6 py-3.5 text-base gap-2.5',
-  };
-
-  const variantStyles = {
-    primary:
-      'bg-[#A3E635] text-[#0B0F17] hover:bg-[#BEF264] active:bg-[#84CC16] shadow-[0_0_15px_rgba(163,230,53,0.3)] hover:shadow-[0_0_25px_rgba(163,230,53,0.5)] focus:ring-[#A3E635]',
-    secondary:
-      'bg-[#162032] text-white border border-[#202D42] hover:bg-[#1C293F] hover:border-[#A3E635]/40 focus:ring-[#202D42]',
-    tertiary:
-      'bg-transparent text-[#A3E635] border border-[#A3E635]/30 hover:bg-[#A3E635]/10 hover:border-[#A3E635] focus:ring-[#A3E635]',
-    ghost:
-      'bg-transparent text-[#94A3B8] hover:text-white hover:bg-[#162032]/60 focus:ring-slate-700',
-    danger:
-      'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30 focus:ring-rose-500',
-    accent:
-      'bg-sky-500 text-slate-950 font-bold hover:bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.3)] focus:ring-sky-400',
-  };
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean
+  }) {
+  const Comp = asChild ? Slot.Root : "button"
 
   return (
-    <button
-      className={clsx(
-        baseStyles,
-        sizeStyles[size],
-        variantStyles[variant],
-        fullWidth && 'w-full',
-        className
-      )}
-      disabled={disabled || isLoading}
+    <Comp
+      data-slot="button"
+      data-variant={variant}
+      data-size={size}
+      className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    >
-      {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin text-current" />
-      ) : (
-        <>
-          {leftIcon && <span className="shrink-0">{leftIcon}</span>}
-          {!iconOnly && children && <span>{children}</span>}
-          {rightIcon && <span className="shrink-0">{rightIcon}</span>}
-        </>
-      )}
-    </button>
-  );
-};
+    />
+  )
+}
+
+export { Button, buttonVariants }

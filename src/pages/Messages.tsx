@@ -17,14 +17,14 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Input, SearchInput } from '../components/ui/Input';
-import { Avatar } from '../components/ui/Avatar';
-import { Modal } from '../components/ui/Modal';
-import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { useToast } from '../components/ui/Toast';
+import { Card } from '../components/app/Card';
+import { Button } from '../components/app/Button';
+import { Badge } from '../components/app/Badge';
+import { Input, SearchInput } from '../components/app/Input';
+import { Avatar } from '../components/app/Avatar';
+import { Modal } from '../components/app/Modal';
+import { Breadcrumb } from '../components/app/Breadcrumb';
+import { useToast } from '../components/app/Toast';
 import { useAuth } from '../context/AuthContext';
 import {
   getConversations,
@@ -214,9 +214,9 @@ export const MessagesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Messages' }, { label: 'Team Chats' }]} />
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight flex items-center gap-2 mt-1">
             Internal Messaging Console
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#A3E635]/15 text-[#A3E635] border border-[#A3E635]/30">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
               Live Team Channel
             </span>
           </h1>
@@ -238,7 +238,7 @@ export const MessagesPage: React.FC = () => {
             size="md"
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={() => setIsNewConvOpen(true)}
-            className="font-extrabold text-xs shrink-0"
+            className="font-semibold text-xs shrink-0"
           >
             Start New Conversation
           </Button>
@@ -248,9 +248,9 @@ export const MessagesPage: React.FC = () => {
       {/* THREE COLUMN MESSAGING CHAT LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT COLUMN (4 cols): Active Conversations List */}
-        <Card className="lg:col-span-4 p-5 space-y-4 bg-[#101726] border-[#202D42] flex flex-col justify-between">
+        <Card className="lg:col-span-4 p-5 space-y-4 bg-muted border-border flex flex-col justify-between">
           <div className="space-y-3">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-white border-b border-[#202D42] pb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground border-b border-border pb-3">
               Active Conversations
             </h2>
             <SearchInput
@@ -261,9 +261,9 @@ export const MessagesPage: React.FC = () => {
 
             <div className="space-y-2 pt-1 max-h-[500px] overflow-y-auto">
               {loadingConvs ? (
-                <p className="text-xs text-[#94A3B8] text-center py-6">Loading conversations...</p>
+                <p className="text-xs text-muted-foreground text-center py-6">Loading conversations...</p>
               ) : conversations.length === 0 ? (
-                <p className="text-xs text-[#94A3B8] text-center py-6">No active conversations found.</p>
+                <p className="text-xs text-muted-foreground text-center py-6">No active conversations found.</p>
               ) : (
                 conversations.map((conv) => {
                   const isActive = activeConv?.id === conv.id;
@@ -273,20 +273,20 @@ export const MessagesPage: React.FC = () => {
                       onClick={() => setActiveConv(conv)}
                       className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center gap-3 border ${
                         isActive
-                          ? 'bg-[#162032] border-[#A3E635]/60 shadow-[0_0_12px_rgba(163,230,53,0.2)]'
-                          : 'bg-[#101726] border-[#202D42] hover:bg-[#162032]/60'
+                          ? 'bg-card border-primary/60'
+                          : 'bg-muted border-border hover:bg-card/60'
                       }`}
                     >
                       <Avatar src={conv.avatar} name={conv.title} size="md" online />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-extrabold text-white text-xs truncate">{conv.title}</h4>
-                          <span className="text-[10px] text-[#64748B] font-bold">{conv.timestamp}</span>
+                          <h4 className="font-semibold text-foreground text-xs truncate">{conv.title}</h4>
+                          <span className="text-[10px] text-muted-foreground font-semibold">{conv.timestamp}</span>
                         </div>
-                        <p className="text-[11px] text-[#94A3B8] truncate mt-0.5">{conv.lastMessage}</p>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{conv.lastMessage}</p>
                       </div>
                       {conv.unreadCount > 0 && (
-                        <span className="bg-[#A3E635] text-[#0B0F17] text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                        <span className="bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full">
                           {conv.unreadCount}
                         </span>
                       )}
@@ -299,21 +299,21 @@ export const MessagesPage: React.FC = () => {
         </Card>
 
         {/* MIDDLE COLUMN (8 cols): Active Chat Window */}
-        <Card className="lg:col-span-8 p-5 space-y-4 border-[#202D42] flex flex-col justify-between min-h-[550px]">
+        <Card className="lg:col-span-8 p-5 space-y-4 border-border flex flex-col justify-between min-h-[550px]">
           {activeConv ? (
             <>
               {/* Chat Window Header */}
-              <div className="flex items-center justify-between border-b border-[#202D42] pb-3">
+              <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-3">
                   <Avatar src={activeConv.avatar} name={activeConv.title} size="md" online />
                   <div>
-                    <h3 className="text-sm font-extrabold text-white">{activeConv.title}</h3>
-                    <p className="text-[10px] text-[#A3E635]">Live Channel Session</p>
+                    <h3 className="text-sm font-semibold text-foreground">{activeConv.title}</h3>
+                    <p className="text-[10px] text-primary">Live Channel Session</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-[#94A3B8]">
-                  <button className="p-1.5 rounded-lg hover:bg-[#202D42] hover:text-white">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <button className="p-1.5 rounded-lg hover:bg-secondary hover:text-foreground">
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </div>
@@ -322,9 +322,9 @@ export const MessagesPage: React.FC = () => {
               {/* Chat Messages Timeline */}
               <div className="flex-1 overflow-y-auto space-y-3 pr-2 my-2 max-h-[380px]">
                 {loadingMsgs ? (
-                  <p className="text-xs text-[#94A3B8] text-center py-10">Loading message history...</p>
+                  <p className="text-xs text-muted-foreground text-center py-10">Loading message history...</p>
                 ) : messages.length === 0 ? (
-                  <p className="text-xs text-[#94A3B8] text-center py-10">No messages in this chat thread yet. Say hello!</p>
+                  <p className="text-xs text-muted-foreground text-center py-10">No messages in this chat thread yet. Say hello!</p>
                 ) : (
                   messages.map((msg) => (
                     <div
@@ -333,8 +333,8 @@ export const MessagesPage: React.FC = () => {
                     >
                       <Avatar src={msg.senderAvatar} name={msg.senderName} size="sm" />
                       <div className={`max-w-[75%] space-y-1 ${msg.isMe ? 'text-right' : 'text-left'}`}>
-                        <div className="flex items-center gap-1.5 text-[10px] text-[#64748B]">
-                          <span className="font-bold text-[#94A3B8]">{msg.senderName}</span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span className="font-semibold text-muted-foreground">{msg.senderName}</span>
                           <span>•</span>
                           <span>{msg.timestamp}</span>
                         </div>
@@ -342,8 +342,8 @@ export const MessagesPage: React.FC = () => {
                         <div
                           className={`p-3 rounded-2xl inline-block leading-relaxed relative group ${
                             msg.isMe
-                              ? 'bg-[#A3E635] text-[#0B0F17] font-semibold rounded-tr-none'
-                              : 'bg-[#101726] border border-[#202D42] text-white rounded-tl-none'
+                              ? 'bg-primary text-primary-foreground font-semibold rounded-tr-none'
+                              : 'bg-muted border border-border text-foreground rounded-tl-none'
                           }`}
                         >
                           <p>{msg.text}</p>
@@ -365,7 +365,7 @@ export const MessagesPage: React.FC = () => {
               </div>
 
               {/* Chat Input Bar */}
-              <form onSubmit={handleSendMessage} className="pt-3 border-t border-[#202D42] flex items-center gap-2">
+              <form onSubmit={handleSendMessage} className="pt-3 border-t border-border flex items-center gap-2">
                 <Input
                   placeholder="Write a message to team thread..."
                   value={inputText}
@@ -385,7 +385,7 @@ export const MessagesPage: React.FC = () => {
               </form>
             </>
           ) : (
-            <div className="flex items-center justify-center h-full text-[#94A3B8] text-sm">
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
               Select a conversation to open chat thread.
             </div>
           )}
