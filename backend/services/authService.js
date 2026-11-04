@@ -1,14 +1,18 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { supabase, supabaseAdmin } = require('../config/supabase');
+const dataClient = require('../config/supabase');
+const { supabase, supabaseAdmin } = dataClient;
 const env = require('../config/env');
 
 /**
  * Register user with Supabase Auth & create profile in public.users
  */
-const registerUser = async ({ email, password, full_name, role = 'student', phone, department }) => {
+const registerUser = async ({ email, password, full_name, phone, department }) => {
+  // Public self-registration can only ever create a student; staff accounts are created by admins.
+  const role = 'student';
+
   // 1. Check if email already exists in public.users
-  const { data: existingUser } = await supabase
+  const { data: existingUser } = await dataClient
     .from('users')
     .select('id')
     .eq('email', email)
@@ -39,7 +43,7 @@ const registerUser = async ({ email, password, full_name, role = 'student', phon
   const passwordHash = await bcrypt.hash(password, 10);
 
   // 3. Store user record in public.users table
-  const { data: newUser, error: dbError } = await supabase
+  const { data: newUser, error: dbError } = await dataClient
     .from('users')
     .insert([
       {
@@ -358,7 +362,7 @@ const logoutUser = async () => {
  */
 const forgotPassword = async (email) => {
   // 1. Query public.users for email, is_active, and deleted_at
-  const { data: userRecord, error: dbError } = await supabase
+  const { data: userRecord, error: dbError } = await dataClient
     .from('users')
     .select('id, email, is_active, deleted_at')
     .eq('email', email)
@@ -528,8 +532,21 @@ const refreshSession = async (refreshToken) => {
     throw err;
   }
 
+  // The API only trusts tokens signed with JWT_SECRET, so re-issue one for the refreshed Supabase session.
+  const profile = await getCurrentUserProfile(data.user?.id);
+  if (!profile.is_active) {
+    const err = new Error('Your account has been deactivated. Please contact TPO admin.');
+    err.statusCode = 403;
+    throw err;
+  }
+  const accessToken = jwt.sign(
+    { id: profile.id, email: profile.email, role: profile.role },
+    env.jwtSecret,
+    { expiresIn: env.jwtExpiresIn }
+  );
+
   return {
-    access_token: data.session?.access_token,
+    access_token: accessToken,
     refresh_token: data.session?.refresh_token,
     expires_in: data.session?.expires_in,
   };

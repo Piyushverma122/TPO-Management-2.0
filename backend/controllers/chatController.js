@@ -160,7 +160,18 @@ const getUnreadCount = async (req, res, next) => {
   }
 };
 
+/** @route GET /api/v1/chat/attachments/:attachmentId/file */
+const getAttachmentFile = async (req, res, next) => {
+  try {
+    const file = await chatService.getAttachmentFileUrl(req.params.attachmentId, req.user.id);
+    return sendSuccess(res, 'Attachment link created', file, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  getAttachmentFile,
   getConversations,
   createConversation,
   getConversationById,

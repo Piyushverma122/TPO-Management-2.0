@@ -1,160 +1,112 @@
 const reportService = require('../services/reportService');
 const exportService = require('../services/exportService');
-const { sendSuccess } = require('../utils/responseHandler');
+const { sendSuccess, sendError } = require('../utils/responseHandler');
 
-/**
- * @desc    Get Filtered Student Report JSON
- * @route   GET /api/v1/reports/students
- * @access  Private (Admin, TPO, Faculty)
- */
-const getStudentsReport = async (req, res, next) => {
+const FILTER_KEYS = ['batch', 'department_id', 'branch_id', 'from', 'to', 'status', 'tier', 'cgpa_min', 'cgpa_max'];
+const filtersOf = (query) => Object.fromEntries(FILTER_KEYS.filter((k) => query[k] !== undefined && query[k] !== '').map((k) => [k, query[k]]));
+const describeFilters = (f) => {
+  const parts = Object.entries(f).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`);
+  return parts.length ? `Filters - ${parts.join(', ')}` : 'All records';
+};
+
+/** @route GET /api/v1/reports/dashboard */
+const getDashboard = async (req, res, next) => {
   try {
-    const report = await reportService.getStudentReport(req.query);
-    return sendSuccess(res, 'Student report generated successfully', { count: report.length, report }, 200);
+    const report = await reportService.getReportDashboard(req.user, filtersOf(req.query));
+    return sendSuccess(res, 'Report dashboard retrieved', report, 200);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Get Filtered Company Report JSON
- * @route   GET /api/v1/reports/companies
- * @access  Private (Admin, TPO, Faculty)
- */
-const getCompaniesReport = async (req, res, next) => {
+/** @route GET /api/v1/reports/:type  (placements | students | companies | drives | trainings) */
+const getReportRows = async (req, res, next) => {
   try {
-    const report = await reportService.getCompanyReport(req.query);
-    return sendSuccess(res, 'Company report generated successfully', { count: report.length, report }, 200);
+    const rows = await reportService.getDataset(req.params.type, req.user, filtersOf(req.query));
+    return sendSuccess(res, `${req.params.type} report retrieved`, { rows, count: rows.length }, 200);
   } catch (error) {
     next(error);
   }
 };
 
+const stamp = () => new Date().toISOString().slice(0, 10);
+const download = (res, filename, contentType, body) => {
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+  return res.status(200).send(body);
+};
+
+/** The dashboard flattened into tables, so Excel and PDF can show it. */
+const summaryTables = (d) => {
+  const kpis = [
+    d.kpis.totalStudents != null && { label: 'Students', value: d.kpis.totalStudents },
+    { label: 'Placed', value: d.kpis.placedStudents },
+    d.kpis.placementRate != null && { label: 'Placement rate', value: `${d.kpis.placementRate}%` },
+    { label: 'Highest (LPA)', value: d.kpis.highestPackage },
+    { label: 'Average (LPA)', value: d.kpis.averagePackage },
+    { label: 'Median (LPA)', value: d.kpis.medianPackage },
+    { label: 'Companies hiring', value: d.kpis.companiesHiring },
+    { label: 'Drives', value: d.kpis.totalDrives },
+    { label: 'Applications', value: d.kpis.totalApplications },
+  ].filter(Boolean);
+
+  const sheets = [
+    { name: 'Summary', rows: kpis.map((k) => ({ Metric: k.label, Value: k.value })) },
+    { name: 'Monthly trend', rows: d.trend.map((t) => ({ Month: t.month, Placed: t.placed, Cumulative: t.cumulative })) },
+    { name: 'By department', rows: d.byDepartment.map((x) => ({ Department: x.name, Placed: x.count })) },
+    { name: 'By batch', rows: d.byBatch.map((x) => ({ Batch: x.name, Placed: x.count })) },
+    { name: 'Top recruiters', rows: d.topRecruiters.map((x) => ({ Company: x.name, Tier: x.tier || '', Placed: x.placed, 'Average (LPA)': x.averagePackage, 'Highest (LPA)': x.highestPackage })) },
+    { name: 'Package split', rows: d.packageDistribution.map((x) => ({ Range: x.name, Students: x.count })) },
+    { name: 'Funnel', rows: d.funnel.map((x) => ({ Stage: x.stage, Applications: x.count })) },
+    { name: 'Latest placements', rows: d.latestPlacements.map((x) => ({ Student: x.student, Company: x.company, Role: x.role, 'Package (LPA)': x.package, Date: String(x.date).slice(0, 10) })) },
+  ];
+  return { kpis, sheets };
+};
+
 /**
- * @desc    Get Filtered Placement Analytics Report JSON
- * @route   GET /api/v1/reports/placements
- * @access  Private (Admin, TPO, Faculty)
+ * @route GET /api/v1/reports/export/:format?type=summary|placements|students|companies|drives|trainings&<filters>
+ * format: csv | excel (real .xlsx) | pdf (real PDF).
  */
-const getPlacementsReport = async (req, res, next) => {
+const exportReport = async (req, res, next) => {
   try {
-    const report = await reportService.getPlacementReport(req.query);
-    return sendSuccess(res, 'Placement report generated successfully', { count: report.length, report }, 200);
+    const { format } = req.params;
+    if (!['csv', 'excel', 'pdf'].includes(format)) return sendError(res, 'Format must be csv, excel or pdf.', null, 400);
+
+    const type = req.query.type || 'summary';
+    const filters = filtersOf(req.query);
+    const label = describeFilters(filters);
+
+    let kpis = [];
+    let sheets;
+    let title;
+    if (type === 'summary') {
+      const tables = summaryTables(await reportService.getReportDashboard(req.user, filters));
+      title = 'Placement Summary Report';
+      kpis = tables.kpis;
+      sheets = tables.sheets;
+    } else {
+      const rows = await reportService.getDataset(type, req.user, filters);
+      title = `${type.charAt(0).toUpperCase()}${type.slice(1)} Report`;
+      sheets = [{ name: type, rows }];
+    }
+
+    const base = `TPO_${type}_report_${stamp()}`;
+    if (format === 'csv') return download(res, `${base}.csv`, 'text/csv; charset=utf-8', exportService.convertToCSV(sheets[0].rows));
+    if (format === 'excel') {
+      const buffer = await exportService.buildWorkbook(sheets, { title, filtersText: label });
+      return download(res, `${base}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', Buffer.from(buffer));
+    }
+    const pdf = await exportService.buildPdf({
+      title,
+      subtitle: `${label}  |  Generated ${new Date().toLocaleString('en-IN')}`,
+      kpis,
+      sections: sheets.map((s) => ({ heading: s.name, rows: s.rows })),
+    });
+    return download(res, `${base}.pdf`, 'application/pdf', pdf);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Get Filtered Training Progress Report JSON
- * @route   GET /api/v1/reports/trainings
- * @access  Private (Admin, TPO, Faculty)
- */
-const getTrainingsReport = async (req, res, next) => {
-  try {
-    const report = await reportService.getTrainingReport(req.query);
-    return sendSuccess(res, 'Training report generated successfully', { count: report.length, report }, 200);
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Get Filtered Placement Drives Report JSON
- * @route   GET /api/v1/reports/drives
- * @access  Private (Admin, TPO, Faculty, Recruiter)
- */
-const getDrivesReport = async (req, res, next) => {
-  try {
-    const report = await reportService.getDriveReport(req.query);
-    return sendSuccess(res, 'Drive report generated successfully', { count: report.length, report }, 200);
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Export Report Dataset as CSV Download
- * @route   GET /api/v1/reports/export/csv
- * @access  Private (Authenticated)
- */
-const exportCSV = async (req, res, next) => {
-  try {
-    const type = req.query.type || 'placements';
-    let data = [];
-
-    if (type === 'students') data = await reportService.getStudentReport(req.query);
-    else if (type === 'companies') data = await reportService.getCompanyReport(req.query);
-    else if (type === 'trainings') data = await reportService.getTrainingReport(req.query);
-    else if (type === 'drives') data = await reportService.getDriveReport(req.query);
-    else data = await reportService.getPlacementReport(req.query);
-
-    const csvContent = exportService.convertToCSV(data);
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=TPO_Report_${type}_${Date.now()}.csv`);
-    return res.status(200).send(csvContent);
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Export Report Dataset as Excel CSV (.xlsx compatible) Download
- * @route   GET /api/v1/reports/export/excel
- * @access  Private (Authenticated)
- */
-const exportExcel = async (req, res, next) => {
-  try {
-    const type = req.query.type || 'placements';
-    let data = [];
-
-    if (type === 'students') data = await reportService.getStudentReport(req.query);
-    else if (type === 'companies') data = await reportService.getCompanyReport(req.query);
-    else if (type === 'trainings') data = await reportService.getTrainingReport(req.query);
-    else if (type === 'drives') data = await reportService.getDriveReport(req.query);
-    else data = await reportService.getPlacementReport(req.query);
-
-    const excelCSV = exportService.convertToExcelCSV(data);
-
-    res.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename=TPO_Report_${type}_${Date.now()}.csv`);
-    return res.status(200).send(excelCSV);
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Export Report Dataset as Printable PDF Payload
- * @route   GET /api/v1/reports/export/pdf
- * @access  Private (Authenticated)
- */
-const exportPDF = async (req, res, next) => {
-  try {
-    const type = req.query.type || 'placements';
-    let data = [];
-
-    if (type === 'students') data = await reportService.getStudentReport(req.query);
-    else if (type === 'companies') data = await reportService.getCompanyReport(req.query);
-    else if (type === 'trainings') data = await reportService.getTrainingReport(req.query);
-    else if (type === 'drives') data = await reportService.getDriveReport(req.query);
-    else data = await reportService.getPlacementReport(req.query);
-
-    const pdfPayload = exportService.formatPDFPayload(`TPO Official Report - ${type.toUpperCase()}`, data);
-
-    return sendSuccess(res, 'PDF report payload generated successfully', { pdfPayload }, 200);
-  } catch (error) {
-    next(error);
-  }
-};
-
-module.exports = {
-  getStudentsReport,
-  getCompaniesReport,
-  getPlacementsReport,
-  getTrainingsReport,
-  getDrivesReport,
-  exportCSV,
-  exportExcel,
-  exportPDF,
-};
+module.exports = { getDashboard, getReportRows, exportReport };

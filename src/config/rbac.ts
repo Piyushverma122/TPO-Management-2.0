@@ -46,6 +46,7 @@ export enum Action {
   EXPORT = 'export',
   IMPORT = 'import',
   MANAGE = 'manage',
+  RESPOND = 'respond',
 }
 
 export type ActionType = Action | `${Action}`;
@@ -123,7 +124,7 @@ export const ROLE_PERMISSIONS: RolePermissionsMatrix = {
     [Module.APPLICATIONS]: { view: true, create: true, edit: true, delete: true },
     [Module.INTERVIEWS]: { view: true },
     [Module.PLACEMENTS]: { view: false },
-    [Module.OFFER_LETTERS]: { view: true },
+    [Module.OFFER_LETTERS]: { view: true, respond: true },
     [Module.TRAINING]: { view: true },
     [Module.REPORTS]: { view: false },
     [Module.NOTIFICATIONS]: { view: true },

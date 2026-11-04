@@ -8,12 +8,11 @@ const { sendSuccess, sendError } = require('../utils/responseHandler');
  */
 const register = async (req, res, next) => {
   try {
-    const { email, password, full_name, role, phone, department } = req.body;
+    const { email, password, full_name, phone, department } = req.body;
     const result = await authService.registerUser({
       email,
       password,
       full_name,
-      role,
       phone,
       department,
     });

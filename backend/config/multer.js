@@ -1,5 +1,8 @@
 const multer = require('multer');
 
+/** Rejected uploads are a client error (400), not a server failure. */
+const badFile = (message) => Object.assign(new Error(message), { statusCode: 400 });
+
 // Configure Memory Storage for Buffer Processing
 const storage = multer.memoryStorage();
 
@@ -8,7 +11,7 @@ const resumeFileFilter = (req, file, cb) => {
   if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF documents (.pdf) are allowed for resumes.'), false);
+    cb(badFile('Invalid file type. Only PDF documents (.pdf) are allowed for resumes.'), false);
   }
 };
 
@@ -26,7 +29,7 @@ const documentFileFilter = (req, file, cb) => {
   if (allowedMimeTypes.includes(file.mimetype) || file.originalname.match(/\.(pdf|jpg|jpeg|png|webp|docx|doc)$/i)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid document format. Allowed: PDF, JPG, PNG, WEBP, DOCX.'), false);
+    cb(badFile('Invalid document format. Allowed: PDF, JPG, PNG, WEBP, DOCX.'), false);
   }
 };
 
@@ -35,7 +38,7 @@ const logoFileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/') || file.originalname.match(/\.(jpg|jpeg|png|webp|svg)$/i)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid logo file format. Allowed: JPG, PNG, WEBP, SVG.'), false);
+    cb(badFile('Invalid logo file format. Allowed: JPG, PNG, WEBP, SVG.'), false);
   }
 };
 
@@ -44,7 +47,7 @@ const pdfFileFilter = (req, file, cb) => {
   if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file format. Only PDF documents (.pdf) are allowed.'), false);
+    cb(badFile('Invalid file format. Only PDF documents (.pdf) are allowed.'), false);
   }
 };
 
@@ -53,7 +56,7 @@ const chatFileFilter = (req, file, cb) => {
   if (file.originalname.match(/\.(jpg|jpeg|png|webp|gif|pdf|docx|doc|xlsx|xls|zip|rar)$/i)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid chat attachment file format. Allowed: Images, PDF, DOCX, XLSX, ZIP.'), false);
+    cb(badFile('Invalid chat attachment file format. Allowed: Images, PDF, DOCX, XLSX, ZIP.'), false);
   }
 };
 
@@ -105,7 +108,14 @@ const uploadChatAttachment = multer({
   fileFilter: chatFileFilter,
 });
 
+const uploadDriveJd = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: pdfFileFilter,
+});
+
 module.exports = {
+  uploadDriveJd,
   uploadResume,
   uploadDocument,
   uploadCompanyLogo,

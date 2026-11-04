@@ -41,7 +41,7 @@ import { Avatar } from '../components/app/Avatar';
 import { Breadcrumb } from '../components/app/Breadcrumb';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/app/Toast';
-import { getStudentProfile, updateStudent } from '../api/student.api';
+import { getStudentProfile, updateMyProfile } from '../api/student.api';
 import { getApplications } from '../api/application.api';
 import { Textarea as ShadTextarea } from '@/components/ui/textarea';
 import { Avatar as UiAvatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -70,8 +70,8 @@ export const ProfilePage: React.FC = () => {
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
   const [skills, setSkills] = useState('');
-  const [languages, setLanguages] = useState('');
-  const [projects, setProjects] = useState('');
+  const [headline, setHeadline] = useState('');
+  const [bio, setBio] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
@@ -94,8 +94,8 @@ export const ProfilePage: React.FC = () => {
     setErrorMsg(null);
     try {
       if (!isStudent) {
-        setPhone(user?.phone || '+91 98765 43210');
-        setAvatarUrl(user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120');
+        setPhone(user?.phone || '');
+        setAvatarUrl(user?.avatar || '');
         setLoading(false);
         return;
       }
@@ -119,12 +119,13 @@ export const ProfilePage: React.FC = () => {
         setState(currentStudent.state || '');
         setPincode(currentStudent.pincode || '');
         setSkills(
-          Array.isArray(currentStudent.skills)
-            ? currentStudent.skills.join(', ')
-            : currentStudent.skills || 'Python, C++, SQL, React'
+          (Array.isArray(currentStudent.skills) ? currentStudent.skills : [])
+            .map((s: any) => s?.skills?.name || s?.name || (typeof s === 'string' ? s : ''))
+            .filter(Boolean)
+            .join(', ')
         );
-        setLanguages(currentStudent.languages || 'English, Hindi');
-        setProjects(currentStudent.projects || 'Smart Placement Management Portal, ATS Resume Screener');
+        setHeadline(currentStudent.resume_headline || '');
+        setBio(currentStudent.bio || '');
         setLinkedinUrl(currentStudent.linkedin_url || '');
         setGithubUrl(currentStudent.github_url || '');
         setPortfolioUrl(currentStudent.portfolio_url || '');
@@ -155,13 +156,13 @@ export const ProfilePage: React.FC = () => {
     if (address || city) score += 1;
     if (skills) score += 1;
     if (studentRecord?.active_resume_id || studentRecord?.resumes?.length > 0) score += 1;
-    if (projects) score += 1;
+    if (bio) score += 1;
     if (githubUrl) score += 1;
     if (linkedinUrl) score += 1;
     if (portfolioUrl) score += 1;
 
     return Math.min(100, Math.round((score / totalCheckpoints) * 100));
-  }, [avatarUrl, phone, address, city, skills, studentRecord, projects, githubUrl, linkedinUrl, portfolioUrl]);
+  }, [avatarUrl, phone, address, city, skills, studentRecord, bio, githubUrl, linkedinUrl, portfolioUrl]);
 
   // Placement Statistics Calculation
   const placementStats = useMemo(() => {
@@ -172,7 +173,6 @@ export const ProfilePage: React.FC = () => {
 
     return {
       applied: totalApplied,
-      eligible: 12,
       selected: totalOffers,
       offers: totalOffers,
       status: isPlaced ? 'Placed' : 'Unplaced',
@@ -183,34 +183,28 @@ export const ProfilePage: React.FC = () => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentRecord?.id) {
-      toastError('Save Error', 'Student identifier missing.');
+      toastError('Save Error', 'Your account is not linked to a student record.');
       return;
     }
 
     setSaving(true);
     try {
-      const skillsArray = skills
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
       const payload = {
         phone,
         address,
         city,
         state,
         pincode,
-        skills: skillsArray,
-        languages,
-        projects,
+        resume_headline: headline,
+        bio,
         linkedin_url: linkedinUrl,
         github_url: githubUrl,
         portfolio_url: portfolioUrl,
       };
 
-      await updateStudent(studentRecord.id, payload);
+      await updateMyProfile(payload);
       setIsEditing(false);
-      success('Profile Updated Successfully', 'Your profile details have been synced with Supabase.');
+      success('Profile updated', 'Your details have been saved.');
       await fetchStudentProfile();
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to update student profile on server.';
@@ -296,7 +290,7 @@ export const ProfilePage: React.FC = () => {
                 </AvatarFallback>
               </UiAvatar>
               <div className="space-y-2">
-                <h2 className="text-xl font-semibold text-foreground">{user?.name || 'Dr. James Anderson'}</h2>
+                <h2 className="text-xl font-semibold text-foreground">{user?.name || 'User'}</h2>
                 <Badge variant="neutral" size="sm">
                   {user?.role ? user.role.replace('_', ' ').toUpperCase() : 'TPO SUPER ADMIN'}
                 </Badge>
@@ -306,11 +300,11 @@ export const ProfilePage: React.FC = () => {
             <div className="space-y-2 border-t border-border pt-6 text-left text-sm">
               <p className="flex items-center gap-3 text-muted-foreground">
                 <Mail className="w-4 h-4 shrink-0" />
-                <span className="truncate text-foreground">{user?.email || 'tpo.admin@college.edu'}</span>
+                <span className="truncate text-foreground">{user?.email || ''}</span>
               </p>
               <p className="flex items-center gap-3 text-muted-foreground">
                 <Phone className="w-4 h-4 shrink-0" />
-                <span className="text-foreground">{phone || '+91 98765 43210'}</span>
+                <span className="text-foreground">{phone || 'Not provided'}</span>
               </p>
               <p className="flex items-center gap-3 text-muted-foreground">
                 <MapPin className="w-4 h-4 shrink-0" />
@@ -341,8 +335,8 @@ export const ProfilePage: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Official email is managed by the system.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Full Name" value={user?.name || 'Dr. James Anderson'} disabled />
-                <Input label="Official Email Address" value={user?.email || 'tpo.admin@college.edu'} disabled />
+                <Input label="Full Name" value={user?.name || 'User'} disabled />
+                <Input label="Official Email Address" value={user?.email || ''} disabled />
                 <Input
                   label="Contact Phone"
                   value={phone}
@@ -404,7 +398,7 @@ export const ProfilePage: React.FC = () => {
                     {studentRecord?.users?.full_name || user?.name || 'Student Candidate'}
                   </h2>
                   <p className="text-xs text-primary font-semibold font-mono">
-                    Roll: {studentRecord?.roll_number || 'N/A'} • {studentRecord?.branches?.name || 'Computer Science'}
+                    Roll: {studentRecord?.roll_number || 'N/A'} • {studentRecord?.branches?.name || 'Branch not set'}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5" /> {studentRecord?.users?.email || user?.email}
@@ -517,7 +511,7 @@ export const ProfilePage: React.FC = () => {
                   />
 
                   <Input label="Gender (Read Only)" value={studentRecord?.gender || 'Not Specified'} disabled />
-                  <Input label="Date of Birth (Read Only)" value={studentRecord?.date_of_birth || '2003-05-15'} disabled />
+                  <Input label="Date of Birth (Read Only)" value={studentRecord?.date_of_birth || 'Not provided'} disabled />
 
                   <Input
                     label="Address"
@@ -562,14 +556,14 @@ export const ProfilePage: React.FC = () => {
                   <Badge variant="info">Verified Academic Record</Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  <Input label="Roll Number" value={studentRecord?.roll_number || 'RN-103022'} disabled />
+                  <Input label="Roll Number" value={studentRecord?.roll_number || ''} disabled />
                   <Input label="Enrollment Number" value={studentRecord?.enrollment_number || 'EN-2022-882'} disabled />
                   <Input label="Department / Branch" value={studentRecord?.branches?.name || 'Computer Science & Engineering'} disabled />
                   <Input label="Current Semester" value={`Semester ${studentRecord?.current_semester || 7}`} disabled />
                   <Input label="Graduation Passing Year" value={studentRecord?.passing_year || 2025} disabled />
                   <Input label="Cumulative CGPA" value={studentRecord?.cgpa ? `${studentRecord.cgpa} / 10.0` : '8.5 / 10.0'} disabled />
                   <Input label="Active Backlogs" value={studentRecord?.active_backlogs ?? 0} disabled />
-                  <Input label="Academic Section" value={studentRecord?.section || 'Section A'} disabled />
+                  <Input label="Academic Section" value={studentRecord?.section || 'Not set'} disabled />
                 </div>
               </Card>
             )}
@@ -580,20 +574,15 @@ export const ProfilePage: React.FC = () => {
                 <h3 className="text-base font-semibold text-foreground border-b border-border pb-3">Professional & Technical Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   
-                  <Input
-                    label="Technical Skills (Comma separated)"
-                    value={skills}
-                    onChange={(e) => setSkills(e.target.value)}
-                    disabled={!isEditing}
-                    placeholder="Python, C++, SQL, React, Node.js"
-                  />
+                  <Input label="Skills (managed by the TPO office)" value={skills} disabled placeholder="No skills recorded yet" />
 
                   <Input
-                    label="Languages Spoken"
-                    value={languages}
-                    onChange={(e) => setLanguages(e.target.value)}
+                    label="Resume headline"
+                    value={headline}
+                    onChange={(e) => setHeadline(e.target.value)}
                     disabled={!isEditing}
-                    placeholder="English, Hindi"
+                    placeholder="e.g. Final-year CSE student, full-stack developer"
+                    maxLength={150}
                   />
 
                   <Input
@@ -624,15 +613,15 @@ export const ProfilePage: React.FC = () => {
 
                   <div className="sm:col-span-2 space-y-1">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                      Projects & Achievements Summary
+                      About me / projects
                     </label>
                     <ShadTextarea
-                      value={projects}
-                      onChange={(e) => setProjects(e.target.value)}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
                       disabled={!isEditing}
                       rows={4}
                       className="w-full bg-muted dark:bg-muted rounded-xl p-3 text-xs text-foreground"
-                      placeholder="List key projects and hackathon accomplishments..."
+                      placeholder="A short summary of your projects and achievements..." maxLength={2000}
                     />
                   </div>
 

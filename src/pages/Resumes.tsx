@@ -33,6 +33,9 @@ import { Avatar } from '../components/app/Avatar';
 import { Breadcrumb } from '../components/app/Breadcrumb';
 import { useToast } from '../components/app/Toast';
 import { getStudents } from '../api/student.api';
+import { StudentResumes } from '../components/resumes/StudentResumes';
+import { useAuth } from '../context/AuthContext';
+import { Role, normalizeRole } from '../config/rbac';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
 // Resume Model
@@ -54,7 +57,7 @@ export interface ResumeItem {
   fileUrl?: string | null;
 }
 
-export const Resumes: React.FC = () => {
+const StaffResumes: React.FC = () => {
   const { success, error: toastError, info } = useToast();
 
   // API Live Data States
@@ -540,4 +543,10 @@ export const Resumes: React.FC = () => {
 
     </div>
   );
+};
+
+/** Students manage their own resume; staff browse the resume bank. */
+export const Resumes: React.FC = () => {
+  const { user } = useAuth();
+  return normalizeRole(user?.role) === Role.STUDENT ? <StudentResumes /> : <StaffResumes />;
 };

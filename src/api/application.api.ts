@@ -38,7 +38,7 @@ export const applyForDrive = async (data: { drive_id: string; resume_id?: string
 };
 
 export const updateApplication = async (id: string, data: { status: string; remarks?: string }) => {
-  const response = await apiClient.put(`/applications/${id}`, data);
+  const response = await apiClient.put(`/applications/${id}/status`, data);
   return response.data;
 };
 
@@ -48,7 +48,7 @@ export const deleteApplication = async (id: string) => {
 };
 
 export const withdrawApplication = async (id: string) => {
-  const response = await apiClient.post(`/applications/${id}/withdraw`);
+  const response = await apiClient.delete(`/applications/${id}`);
   return response.data;
 };
 
@@ -59,18 +59,6 @@ export const bulkShortlist = async (data: { application_ids: string[] }) => {
 
 export const bulkReject = async (data: { application_ids: string[]; reason?: string }) => {
   const response = await apiClient.post('/applications/bulk-reject', data);
-  return response.data;
-};
-
-export const scheduleInterview = async (id: string, data: { interview_date: string; mode: string; location_link: string }) => {
-  const response = await apiClient.post(`/applications/${id}/schedule-interview`, data);
-  return response.data;
-};
-
-export const uploadOffer = async (id: string, formData: FormData) => {
-  const response = await apiClient.post(`/applications/${id}/upload-offer`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
   return response.data;
 };
 

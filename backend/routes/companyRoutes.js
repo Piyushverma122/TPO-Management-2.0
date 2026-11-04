@@ -5,6 +5,7 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 const { authorizeModule } = require('../middleware/authorize');
 const { Module, Action } = require('../config/rbac');
 const { uploadCompanyLogo, uploadCompanyDoc } = require('../config/multer');
+const { compressUpload } = require('../middlewares/compressUpload');
 const {
   validateCreateCompany,
   validateUpdateCompany,
@@ -31,17 +32,18 @@ router.post(
   '/:id/logo',
   authorizeModule(Module.COMPANIES, Action.EDIT),
   validateCompanyId,
-  uploadCompanyLogo.single('logo'),
+  uploadCompanyLogo.single('logo'), compressUpload({ maxDimension: 512 }),
   companyController.uploadLogo
 );
 router.post(
   '/:id/document',
   authorizeModule(Module.COMPANIES, Action.UPLOAD),
   validateCompanyId,
-  uploadCompanyDoc.single('document'),
+  uploadCompanyDoc.single('document'), compressUpload(),
   companyController.uploadDocument
 );
 router.get('/:id/documents', authorizeModule(Module.COMPANIES, Action.VIEW), validateCompanyId, companyController.listDocuments);
+router.get('/document/:documentId/file', authorizeModule(Module.COMPANIES, Action.VIEW), companyController.getDocumentFile);
 router.delete('/document/:documentId', authorizeModule(Module.COMPANIES, Action.DELETE), companyController.deleteDocument);
 
 // Recruiter Management Routes

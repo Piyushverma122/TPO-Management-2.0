@@ -50,6 +50,7 @@ import {
   createTraining,
   deleteTraining,
   enrollTraining,
+  getMaterialFileUrl,
 } from '../api/training.api';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
 import { Module, Action } from '../config/rbac';
@@ -74,7 +75,7 @@ export interface StudentTrainingItem {
   totalSessions: number;
   certificateNumber?: string;
   certificateIssueDate?: string;
-  materials: { title: string; type: 'PDF' | 'Video' | 'Link'; url: string }[];
+  materials: { id?: string; title: string; type: 'PDF' | 'Video' | 'Link'; url: string }[];
 }
 
 export const Training: React.FC = () => {
@@ -484,11 +485,21 @@ export const Training: React.FC = () => {
                       </div>
                     </div>
 
-                    <a href={item.url} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" size="sm" leftIcon={<Download className="w-3.5 h-3.5 text-primary" />}>
-                        Download
-                      </Button>
-                    </a>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<Download className="w-3.5 h-3.5 text-primary" />}
+                      onClick={async () => {
+                        try {
+                          const file = await getMaterialFileUrl(item.id as string);
+                          window.open(file.url, '_blank', 'noopener,noreferrer');
+                        } catch (err: any) {
+                          toastError('Could not open the file', err.response?.data?.message || 'Please try again.');
+                        }
+                      }}
+                    >
+                      Download
+                    </Button>
                   </div>
                 ))}
               </div>

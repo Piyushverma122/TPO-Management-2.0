@@ -77,3 +77,10 @@ export const getTrainingStatistics = async () => {
   const response = await apiClient.get('/trainings/statistics');
   return response.data;
 };
+
+/** Short-lived signed links to course material and certificates (files are private). */
+export const getMaterialFileUrl = async (materialId: string) => {
+  const response = await apiClient.get<{ data: { url: string } }>(`/trainings/material/${materialId}/file`);
+  return response.data.data;
+};
+

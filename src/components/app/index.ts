@@ -16,3 +16,5 @@ export * from './ProgressBar';
 export * from './Tabs';
 export * from './Tooltip';
 export * from './LoadingScreen';
+export * from './StatTile';
+export * from './EntityCell';

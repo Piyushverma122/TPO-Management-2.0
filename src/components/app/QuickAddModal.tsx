@@ -42,6 +42,9 @@ const SHORTCUTS: QuickAddShortcut[] = [
   },
 ];
 
+/** True when the role can create at least one thing the Quick add modal offers. */
+export const canQuickAdd = (role?: string | null) => SHORTCUTS.some((s) => canPerformAction(role, s.module, Action.CREATE));
+
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user } = useAuth();

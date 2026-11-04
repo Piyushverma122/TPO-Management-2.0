@@ -251,7 +251,18 @@ const deleteRecruiter = async (req, res, next) => {
   }
 };
 
+/** @route GET /api/v1/companies/document/:documentId/file */
+const getDocumentFile = async (req, res, next) => {
+  try {
+    const file = await companyService.getCompanyDocumentFileUrl(req.params.documentId, req.user);
+    return sendSuccess(res, 'Document link created', file, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  getDocumentFile,
   getCompanies,
   getCompanyById,
   createCompany,

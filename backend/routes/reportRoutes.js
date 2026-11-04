@@ -8,16 +8,13 @@ const { Module, Action } = require('../config/rbac');
 // All routes require authentication
 router.use(verifyToken);
 
-// Domain Reports
-router.get('/students', authorizeModule(Module.REPORTS, Action.VIEW), reportController.getStudentsReport);
-router.get('/companies', authorizeModule(Module.REPORTS, Action.VIEW), reportController.getCompaniesReport);
-router.get('/placements', authorizeModule(Module.REPORTS, Action.VIEW), reportController.getPlacementsReport);
-router.get('/trainings', authorizeModule(Module.REPORTS, Action.VIEW), reportController.getTrainingsReport);
-router.get('/drives', authorizeModule(Module.REPORTS, Action.VIEW), reportController.getDrivesReport);
+// The whole Reports page in one call (KPIs, charts, tables). A recruiter only ever gets their own company's numbers.
+router.get('/dashboard', authorizeModule(Module.REPORTS, Action.VIEW), reportController.getDashboard);
 
-// Export Downloads & Payloads
-router.get('/export/csv', authorizeModule(Module.REPORTS, Action.EXPORT), reportController.exportCSV);
-router.get('/export/excel', authorizeModule(Module.REPORTS, Action.EXPORT), reportController.exportExcel);
-router.get('/export/pdf', authorizeModule(Module.REPORTS, Action.EXPORT), reportController.exportPDF);
+// Downloads: /export/csv|excel|pdf?type=summary|placements|students|companies|drives|trainings
+router.get('/export/:format', authorizeModule(Module.REPORTS, Action.EXPORT), reportController.exportReport);
+
+// Tabular reports: placements | students | companies | drives | trainings
+router.get('/:type', authorizeModule(Module.REPORTS, Action.VIEW), reportController.getReportRows);
 
 module.exports = router;

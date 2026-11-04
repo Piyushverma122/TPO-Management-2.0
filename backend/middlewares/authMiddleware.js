@@ -15,13 +15,9 @@ const verifyToken = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, env.jwtSecret);
+      decoded = jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] });
     } catch (e) {
-      decoded = jwt.decode(token);
-    }
-
-    if (!decoded) {
-      return sendError(res, 'Invalid or unreadable authentication token.', null, 401);
+      return sendError(res, 'Invalid or expired token.', null, 401);
     }
 
     // Normalize user identity object from decoded token payload

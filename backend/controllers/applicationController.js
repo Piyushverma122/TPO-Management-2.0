@@ -153,30 +153,9 @@ const scheduleInterview = async (req, res, next) => {
       meeting_url,
       venue,
       remarks,
-      req.user.id
+      req.user
     );
     return sendSuccess(res, 'Interview round scheduled successfully', { application: result }, 200);
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Upload offer letter PDF to offer-letters bucket
- * @route   POST /api/v1/applications/:id/offer-letter
- * @access  Private (Admin, TPO, Recruiter)
- */
-const uploadOfferLetter = async (req, res, next) => {
-  try {
-    if (!req.file) {
-      return sendError(res, 'Please select a PDF file to upload as offer letter', null, 400);
-    }
-    const application = await applicationService.uploadOfferLetter(
-      req.params.id,
-      req.file,
-      req.user.id
-    );
-    return sendSuccess(res, 'Offer letter uploaded and status updated to Offer', { application }, 200);
   } catch (error) {
     next(error);
   }
@@ -205,6 +184,5 @@ module.exports = {
   bulkShortlist,
   bulkReject,
   scheduleInterview,
-  uploadOfferLetter,
   getStatistics,
 };

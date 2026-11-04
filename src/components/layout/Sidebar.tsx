@@ -15,7 +15,7 @@ export interface SidebarProps {
 // Groups the flat role-based nav config into labelled sections.
 const SECTIONS: { label: string; ids: string[] }[] = [
   { label: 'Overview', ids: ['dashboard'] },
-  { label: 'Recruitment', ids: ['students', 'companies', 'drives', 'applications', 'interviews', 'placements', 'offers'] },
+  { label: 'Recruitment', ids: ['students', 'companies', 'drives', 'applications', 'resumes', 'interviews', 'placements', 'offers'] },
   { label: 'Growth & insights', ids: ['training', 'reports'] },
   { label: 'Communication', ids: ['notifications', 'messages'] },
   { label: 'Account', ids: ['users', 'settings', 'profile'] },
@@ -40,8 +40,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
   const linkClass = (isActive: boolean) =>
     `group flex items-center justify-between gap-3 rounded-full px-3.5 py-2 text-sm transition-colors ${
       isActive
-        ? 'bg-secondary font-medium text-foreground'
-        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+        ? 'bg-primary/15 font-semibold text-primary ring-1 ring-primary/30'
+        : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring outline-none'
     }`;
 
   const sidebarContent = (

@@ -55,6 +55,8 @@ const listPlacements = async (queryParams, reqUser) => {
     query = dataScopeService.applyDataScope(query, reqUser, 'placements', scopeContext);
   }
 
+  query = query.eq('offer_status', 'Accepted');
+
   if (company_id) query = query.eq('company_id', company_id);
   if (student_id) query = query.eq('student_id', student_id);
   if (drive_id) query = query.eq('drive_id', drive_id);
@@ -179,6 +181,7 @@ const createPlacement = async (payload) => {
   const { count: selectedCount } = await supabase
     .from('placements')
     .select('id', { count: 'exact', head: true })
+    .eq('offer_status', 'Accepted')
     .eq('drive_id', drive_id);
 
   await supabase
@@ -191,6 +194,7 @@ const createPlacement = async (payload) => {
     const { count: companyHiredCount } = await supabase
       .from('placements')
       .select('id', { count: 'exact', head: true })
+      .eq('offer_status', 'Accepted')
       .eq('company_id', company_id);
 
     await supabase
@@ -273,6 +277,7 @@ const deletePlacement = async (placementId) => {
   const { count: remaining } = await supabase
     .from('placements')
     .select('id', { count: 'exact', head: true })
+    .eq('offer_status', 'Accepted')
     .eq('student_id', placement.student_id);
 
   if (remaining === 0) {
@@ -298,11 +303,11 @@ const getPlacementStatistics = async () => {
       companies (id, name, tier),
       students (
         passing_year,
-        branches (id, name, code),
-        users (department)
+        branches (id, name, code, departments (id, name))
       )
     `
-    );
+    )
+    .eq('offer_status', 'Accepted');
 
   if (error) {
     const err = new Error(error.message);
@@ -355,7 +360,7 @@ const getPlacementStatistics = async () => {
     const branchName = p.students?.branches?.name || 'General';
     branchMap[branchName] = (branchMap[branchName] || 0) + 1;
 
-    const deptName = p.students?.users?.department || 'General';
+    const deptName = p.students?.branches?.departments?.name || 'General';
     deptMap[deptName] = (deptMap[deptName] || 0) + 1;
 
     const batchYear = p.students?.passing_year || 'Unknown';
@@ -400,6 +405,7 @@ const getStudentPlacementHistory = async (studentId) => {
     `
     )
     .eq('student_id', studentId)
+    .eq('offer_status', 'Accepted')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -444,6 +450,7 @@ const getCompanyPlacementHistory = async (companyId) => {
     `
     )
     .eq('company_id', companyId)
+    .eq('offer_status', 'Accepted')
     .order('created_at', { ascending: false });
 
   if (error) {

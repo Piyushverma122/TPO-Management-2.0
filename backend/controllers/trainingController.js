@@ -197,7 +197,29 @@ const getStatistics = async (req, res, next) => {
   }
 };
 
+/** @route GET /api/v1/trainings/material/:materialId/file */
+const getMaterialFile = async (req, res, next) => {
+  try {
+    const file = await trainingService.getMaterialFileUrl(req.params.materialId);
+    return sendSuccess(res, 'Material link created', file, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** @route GET /api/v1/trainings/certificate/:certificateId/file */
+const getCertificateFile = async (req, res, next) => {
+  try {
+    const file = await trainingService.getCertificateFileUrl(req.params.certificateId, req.user);
+    return sendSuccess(res, 'Certificate link created', file, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  getMaterialFile,
+  getCertificateFile,
   getTrainings,
   getTrainingById,
   createTraining,

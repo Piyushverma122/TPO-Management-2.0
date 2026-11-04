@@ -56,7 +56,7 @@ const getDrives = async (req, res, next) => {
  */
 const getDriveById = async (req, res, next) => {
   try {
-    const drive = await driveService.getDriveById(req.params.id);
+    const drive = await driveService.getDriveForUser(req.params.id, req.user);
     return sendSuccess(res, 'Placement drive details retrieved', { drive }, 200);
   } catch (error) {
     next(error);
@@ -70,7 +70,7 @@ const getDriveById = async (req, res, next) => {
  */
 const createDrive = async (req, res, next) => {
   try {
-    const drive = await driveService.createDrive(req.body, req.user.id);
+    const drive = await driveService.createDrive(req.body, req.user);
     return sendSuccess(res, 'Placement drive created successfully', { drive }, 201);
   } catch (error) {
     next(error);
@@ -84,8 +84,7 @@ const createDrive = async (req, res, next) => {
  */
 const updateDrive = async (req, res, next) => {
   try {
-    await checkDriveAccess(req, req.params.id);
-    const updatedDrive = await driveService.updateDrive(req.params.id, req.body);
+    const updatedDrive = await driveService.updateDrive(req.params.id, req.body, req.user);
     return sendSuccess(res, 'Placement drive updated successfully', { drive: updatedDrive }, 200);
   } catch (error) {
     next(error);
@@ -99,7 +98,7 @@ const updateDrive = async (req, res, next) => {
  */
 const deleteDrive = async (req, res, next) => {
   try {
-    await driveService.deleteDrive(req.params.id);
+    await driveService.deleteDrive(req.params.id, req.user);
     return sendSuccess(res, 'Placement drive soft deleted', null, 200);
   } catch (error) {
     next(error);
@@ -113,7 +112,7 @@ const deleteDrive = async (req, res, next) => {
  */
 const getDriveProfile = async (req, res, next) => {
   try {
-    const profile = await driveService.getDriveProfile(req.params.id);
+    const profile = await driveService.getDriveProfile(req.params.id, req.user);
     return sendSuccess(res, 'Full placement drive profile retrieved', { profile }, 200);
   } catch (error) {
     next(error);
@@ -196,7 +195,84 @@ const bindEligibleBatches = async (req, res, next) => {
   }
 };
 
+/** @route POST /api/v1/drives/:id/approve */
+const approveDrive = async (req, res, next) => {
+  try {
+    const drive = await driveService.approveDrive(req.params.id, req.user);
+    return sendSuccess(res, 'Drive approved and published', { drive }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** @route POST /api/v1/drives/:id/reject */
+const rejectDrive = async (req, res, next) => {
+  try {
+    const drive = await driveService.rejectDrive(req.params.id, req.user, req.body.reason);
+    return sendSuccess(res, 'Drive rejected', { drive }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** @route GET /api/v1/drives/summary */
+const getSummary = async (req, res, next) => {
+  try {
+    const summary = await driveService.getSummary(req.user);
+    return sendSuccess(res, 'Drive summary retrieved', { summary }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** @route GET /api/v1/drives/lookups */
+const getLookups = async (req, res, next) => {
+  try {
+    const lookups = await driveService.getLookups(req.user);
+    return sendSuccess(res, 'Drive form options retrieved', lookups, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** @route GET /api/v1/drives/:id/my-eligibility */
+const getMyEligibility = async (req, res, next) => {
+  try {
+    const eligibility = await driveService.getMyEligibility(req.params.id, req.user);
+    return sendSuccess(res, 'Eligibility checked', { eligibility }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** @route POST /api/v1/drives/:id/jd */
+const uploadJd = async (req, res, next) => {
+  try {
+    const drive = await driveService.attachJd(req.params.id, req.file, req.user);
+    return sendSuccess(res, 'Job description uploaded', { drive }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** @route GET /api/v1/drives/:id/jd */
+const getJd = async (req, res, next) => {
+  try {
+    const file = await driveService.getJdUrl(req.params.id, req.user);
+    return sendSuccess(res, 'Job description link created', file, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  getLookups,
+  approveDrive,
+  rejectDrive,
+  getSummary,
+  getMyEligibility,
+  uploadJd,
+  getJd,
   getDrives,
   getDriveById,
   createDrive,

@@ -8,6 +8,8 @@ const recruiterRoutes = require('./recruiterRoutes');
 const driveRoutes = require('./driveRoutes');
 const applicationRoutes = require('./applicationRoutes');
 const placementRoutes = require('./placementRoutes');
+const interviewRoutes = require('./interviewRoutes');
+const offerRoutes = require('./offerRoutes');
 const trainingRoutes = require('./trainingRoutes');
 const dashboardRoutes = require('./dashboardRoutes');
 const reportRoutes = require('./reportRoutes');
@@ -15,6 +17,7 @@ const notificationRoutes = require('./notificationRoutes');
 const chatRoutes = require('./chatRoutes');
 const calendarRoutes = require('./calendarRoutes');
 const adminRoutes = require('./adminRoutes');
+const publicRoutes = require('./publicRoutes');
 const notificationController = require('./../controllers/notificationController');
 const { verifyToken, authorizeRoles } = require('../middlewares/authMiddleware');
 
@@ -27,6 +30,8 @@ router.use('/recruiters', recruiterRoutes);
 router.use('/drives', driveRoutes);
 router.use('/applications', applicationRoutes);
 router.use('/placements', placementRoutes);
+router.use('/interviews', interviewRoutes);
+router.use('/offers', offerRoutes);
 router.use('/trainings', trainingRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/reports', reportRoutes);
@@ -34,6 +39,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/chat', chatRoutes);
 router.use('/calendar', calendarRoutes);
 router.use('/admin', adminRoutes);
+router.use('/public', publicRoutes); // no login: company logos only
 
 // Direct Email Logs alias: GET /api/v1/email/logs
 router.get('/email/logs', verifyToken, authorizeRoles('admin', 'tpo'), notificationController.getEmailLogs);

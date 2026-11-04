@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Users,
   CheckCircle2,
@@ -11,18 +11,13 @@ import {
   MoreVertical,
   Plus,
   X,
-  Mail,
-  Phone,
   GraduationCap,
   Award,
   Download,
   Edit,
   Trash2,
-  ExternalLink,
-  Briefcase,
   FileCheck,
   RefreshCw,
-  Upload,
   Eye,
   EyeOff,
   Copy,
@@ -52,15 +47,14 @@ import { Module, Action } from '../config/rbac';
 import { Input as ShadInput } from '@/components/ui/input';
 import { Textarea as ShadTextarea } from '@/components/ui/textarea';
 import { Button as ShadButton } from '@/components/ui/button';
+import { getDriveLookups } from '../api/drive.api';
+import { StudentDetailModal } from '../components/students/StudentDetailModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   getStudents,
   createStudent,
   updateStudent,
   deleteStudent,
-  uploadResume,
-  getResumes,
-  deleteResume,
 } from '../api/student.api';
 
 // Sparkline Mock Data
@@ -91,6 +85,9 @@ export const Students: React.FC = () => {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
+  const [departmentOptions, setDepartmentOptions] = useState<{ label: string; value: string }[]>([]);
+  // Batches around the current year: students graduate one to four years from now.
+  const batchOptions = Array.from({ length: 6 }, (_, i) => String(new Date().getFullYear() - 1 + i)).map((y) => ({ label: `${y} Batch`, value: y }));
   const [selectedYear, setSelectedYear] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedCgpa, setSelectedCgpa] = useState('All');
@@ -175,8 +172,6 @@ export const Students: React.FC = () => {
   }, [passwordCriteria]);
 
   // Resume Upload State
-  const [resumesList, setResumesList] = useState<any[]>([]);
-  const [uploadingResume, setUploadingResume] = useState(false);
 
   // Fetch Students API Data
   const fetchStudentsData = async () => {
@@ -243,62 +238,17 @@ export const Students: React.FC = () => {
   };
 
   useEffect(() => {
+    getDriveLookups().then((l) => setDepartmentOptions(l.departments.map((d) => ({ label: d.name, value: d.id })))).catch(() => setDepartmentOptions([]));
+  }, []);
+
+  useEffect(() => {
     fetchStudentsData();
   }, [currentPage, searchQuery, selectedDept, selectedYear, selectedStatus]);
 
-  // ESC key listener for drawer
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isDrawerOpen) {
-        setIsDrawerOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDrawerOpen]);
-
-  const handleOpenDrawer = async (student: Student) => {
+  const handleOpenDrawer = (student: Student) => {
     setSelectedStudent(student);
     setIsDrawerOpen(true);
     setActionMenuOpenId(null);
-    try {
-      const res = await getResumes(student.id);
-      setResumesList(res.data?.resumes || []);
-    } catch (e) {
-      setResumesList([]);
-    }
-  };
-
-  const handleResumeFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !selectedStudent) return;
-    const file = e.target.files[0];
-
-    const formData = new FormData();
-    formData.append('resume', file);
-    formData.append('version_title', `${file.name} (Uploaded ${new Date().toLocaleDateString()})`);
-
-    setUploadingResume(true);
-    try {
-      await uploadResume(selectedStudent.id, formData);
-      success('Resume Uploaded', `${file.name} uploaded successfully.`);
-      const res = await getResumes(selectedStudent.id);
-      setResumesList(res.data?.resumes || []);
-    } catch (err: any) {
-      toastError('Upload Failed', err.response?.data?.message || 'Failed to upload PDF resume.');
-    } finally {
-      setUploadingResume(false);
-    }
-  };
-
-  const handleDeleteResumeFile = async (resumeId: string) => {
-    if (!selectedStudent) return;
-    try {
-      await deleteResume(selectedStudent.id, resumeId);
-      success('Resume Deleted', 'Resume record removed.');
-      setResumesList(resumesList.filter((r) => r.id !== resumeId));
-    } catch (err: any) {
-      toastError('Delete Failed', err.response?.data?.message || 'Failed to delete resume.');
-    }
   };
 
   const handleAddStudentSubmit = async (e: React.FormEvent) => {
@@ -529,10 +479,7 @@ export const Students: React.FC = () => {
               className="w-full sm:w-44 shrink-0"
               options={[
                 { label: 'All Departments', value: 'All' },
-                { label: 'Computer Science', value: 'Computer Science' },
-                { label: 'Information Tech', value: 'Information Tech' },
-                { label: 'Electronics', value: 'Electronics' },
-                { label: 'Mechanical', value: 'Mechanical' },
+                ...departmentOptions,
               ]}
               value={selectedDept}
               onChange={setSelectedDept}
@@ -542,8 +489,7 @@ export const Students: React.FC = () => {
               className="w-full sm:w-36 shrink-0"
               options={[
                 { label: 'All Batches', value: 'All' },
-                { label: '2025 Batch', value: '2025' },
-                { label: '2026 Batch', value: '2026' },
+                ...batchOptions,
               ]}
               value={selectedYear}
               onChange={setSelectedYear}
@@ -700,270 +646,8 @@ export const Students: React.FC = () => {
         </div>
       </Card>
 
-      {/* STUDENT PROFILE DETAILED DRAWER */}
-      <AnimatePresence>
-        {isDrawerOpen && selectedStudent && (
-          <div className="fixed inset-0 z-50 overflow-hidden">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-background/80 backdrop-blur-sm"
-              onClick={() => setIsDrawerOpen(false)}
-            />
-
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-              <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="w-screen max-w-md bg-card border-l border-border p-6 overflow-y-auto space-y-6  relative text-foreground"
-              >
-                {/* Drawer Header */}
-                <div className="flex items-center justify-between border-b border-border pb-4">
-                  <span className="text-xs font-semibold text-primary tracking-wider uppercase">
-                    Student Master Profile
-                  </span>
-                  <button
-                    onClick={() => setIsDrawerOpen(false)}
-                    className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Candidate Main Profile Banner Card */}
-                <div className="bg-muted border border-border rounded-2xl p-4 space-y-3">
-                  <div className="flex items-start gap-4">
-                    <Avatar src={selectedStudent.avatar} name={selectedStudent.name} size="lg" />
-                    <div className="space-y-1 overflow-hidden">
-                      <h3 className="text-lg font-semibold text-foreground leading-tight">{selectedStudent.name}</h3>
-                      {selectedStudent.resumeHeadline && (
-                        <p className="text-xs text-primary font-semibold truncate">{selectedStudent.resumeHeadline}</p>
-                      )}
-                      <div className="flex flex-wrap gap-2 text-xs font-mono font-semibold pt-1">
-                        <span className="text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                          Roll: {selectedStudent.rollNumber}
-                        </span>
-                        {selectedStudent.enrollmentNumber && (
-                          <span className="text-muted-foreground bg-accent px-2 py-0.5 rounded">
-                            EN: {selectedStudent.enrollmentNumber}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contact & Personal details */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-xs">
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Email</span>
-                      <span className="text-foreground font-medium truncate block">{selectedStudent.email}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Phone</span>
-                      <span className="text-foreground font-medium">{selectedStudent.phone || 'N/A'}</span>
-                    </div>
-                    {selectedStudent.gender && (
-                      <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Gender</span>
-                        <span className="text-foreground font-medium">{selectedStudent.gender}</span>
-                      </div>
-                    )}
-                    {selectedStudent.dateOfBirth && (
-                      <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">DOB</span>
-                        <span className="text-foreground font-medium">{selectedStudent.dateOfBirth}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Academic Highlights Grid */}
-                <div className="space-y-2">
-                  <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
-                    Academic Record
-                  </span>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="bg-muted border border-border rounded-xl p-2.5">
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">CGPA</span>
-                      <span className="text-base font-semibold text-foreground">{selectedStudent.cgpa.toFixed(2)}</span>
-                    </div>
-                    <div className="bg-muted border border-border rounded-xl p-2.5">
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Branch</span>
-                      <span className="text-xs font-semibold text-foreground truncate block">{selectedStudent.branch}</span>
-                    </div>
-                    <div className="bg-muted border border-border rounded-xl p-2.5">
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Placement</span>
-                      <Badge variant={selectedStudent.placementStatus === 'Placed' ? 'success' : 'neutral'} size="sm">
-                        {selectedStudent.placementStatus}
-                      </Badge>
-                    </div>
-
-                    <div className="bg-muted border border-border rounded-xl p-2.5">
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Semester</span>
-                      <span className="text-xs font-semibold text-foreground">Sem {selectedStudent.currentSemester || 1}</span>
-                    </div>
-                    <div className="bg-muted border border-border rounded-xl p-2.5">
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Passing Year</span>
-                      <span className="text-xs font-semibold text-foreground">{selectedStudent.passingYear}</span>
-                    </div>
-                    <div className="bg-muted border border-border rounded-xl p-2.5">
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Backlogs</span>
-                      <span className={`text-xs font-semibold ${selectedStudent.backlogs > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                        {selectedStudent.backlogs} Active
-                      </span>
-                    </div>
-
-                    {selectedStudent.tenthPercentage !== undefined && (
-                      <div className="bg-muted border border-border rounded-xl p-2.5">
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">10th %</span>
-                        <span className="text-xs font-semibold text-foreground">{selectedStudent.tenthPercentage}%</span>
-                      </div>
-                    )}
-                    {selectedStudent.twelfthPercentage !== undefined && (
-                      <div className="bg-muted border border-border rounded-xl p-2.5">
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">12th %</span>
-                        <span className="text-xs font-semibold text-foreground">{selectedStudent.twelfthPercentage}%</span>
-                      </div>
-                    )}
-                    {selectedStudent.diplomaPercentage !== undefined && (
-                      <div className="bg-muted border border-border rounded-xl p-2.5">
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Diploma %</span>
-                        <span className="text-xs font-semibold text-foreground">{selectedStudent.diplomaPercentage}%</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Candidate Bio & Address section */}
-                {(selectedStudent.bio || selectedStudent.address || selectedStudent.city) && (
-                  <div className="bg-muted border border-border rounded-xl p-3 space-y-2 text-xs">
-                    {selectedStudent.bio && (
-                      <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Summary / Bio</span>
-                        <p className="text-foreground/90 text-xs leading-relaxed">{selectedStudent.bio}</p>
-                      </div>
-                    )}
-                    {(selectedStudent.address || selectedStudent.city) && (
-                      <div className="pt-2 border-t border-border">
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Address</span>
-                        <p className="text-foreground/90 text-xs">
-                          {[selectedStudent.address, selectedStudent.city, selectedStudent.state, selectedStudent.country, selectedStudent.pincode].filter(Boolean).join(', ')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Professional & Social Profiles */}
-                {(selectedStudent.linkedinUrl || selectedStudent.githubUrl || selectedStudent.portfolioUrl || selectedStudent.leetcodeUrl || selectedStudent.hackerrankUrl) && (
-                  <div className="space-y-2">
-                    <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
-                      Coding & Social Profiles
-                    </span>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      {selectedStudent.linkedinUrl && (
-                        <a href={selectedStudent.linkedinUrl} target="_blank" rel="noreferrer" className="bg-[#0A66C2]/20 border border-[#0A66C2]/40 text-[#0A66C2] px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-[#0A66C2]/30">
-                          LinkedIn <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      {selectedStudent.githubUrl && (
-                        <a href={selectedStudent.githubUrl} target="_blank" rel="noreferrer" className="bg-[#24292E]/60 border border-[#404448] text-foreground px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-[#24292E]">
-                          GitHub <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      {selectedStudent.portfolioUrl && (
-                        <a href={selectedStudent.portfolioUrl} target="_blank" rel="noreferrer" className="bg-primary/15 border border-primary/30 text-primary px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-primary/25">
-                          Portfolio <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      {selectedStudent.leetcodeUrl && (
-                        <a href={selectedStudent.leetcodeUrl} target="_blank" rel="noreferrer" className="bg-amber-500/15 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-amber-500/25">
-                          LeetCode <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      {selectedStudent.hackerrankUrl && (
-                        <a href={selectedStudent.hackerrankUrl} target="_blank" rel="noreferrer" className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 hover:bg-emerald-500/25">
-                          HackerRank <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Resume Upload & File List Section */}
-                <div className="space-y-3 pt-2 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                      Resumes ({resumesList.length})
-                    </span>
-                    <label className="cursor-pointer bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                      <Upload className="w-3.5 h-3.5" />
-                      Upload PDF
-                      <input type="file" accept=".pdf" className="hidden" onChange={handleResumeFileUpload} />
-                    </label>
-                  </div>
-
-                  {uploadingResume && (
-                    <div className="text-xs text-primary flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      Uploading resume PDF to server storage...
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {resumesList.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">No active resumes uploaded for candidate.</p>
-                    ) : (
-                      resumesList.map((resItem) => (
-                        <div key={resItem.id} className="bg-muted border border-border rounded-xl p-3 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            <FileText className="w-4 h-4 text-primary shrink-0" />
-                            <span className="truncate font-semibold text-foreground">{resItem.file_name || resItem.version_title}</span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <a
-                              href={resItem.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                            <button
-                              onClick={() => handleDeleteResumeFile(resItem.id)}
-                              className="p-1 text-rose-400 hover:bg-rose-500/10 rounded-md"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Drawer Footer Actions */}
-                <div className="pt-4 border-t border-border flex gap-2">
-                  <Button variant="secondary" size="md" fullWidth onClick={() => setIsDrawerOpen(false)}>
-                    Close
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="md"
-                    fullWidth
-                    onClick={() => handleDeleteStudentAction(selectedStudent.id)}
-                  >
-                    Delete Student
-                  </Button>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* STUDENT DETAILS MODAL: profile, onboarding, drives, interviews, offers, files, training */}
+      <StudentDetailModal studentId={isDrawerOpen ? selectedStudent?.id ?? null : null} onClose={() => setIsDrawerOpen(false)} onDelete={handleDeleteStudentAction} />
 
       {/* ENROLL NEW STUDENT MODAL */}
       <Modal

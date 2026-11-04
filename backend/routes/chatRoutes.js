@@ -3,6 +3,7 @@ const router = express.Router();
 const chatController = require('../controllers/chatController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 const { uploadChatAttachment } = require('../config/multer');
+const { compressUpload } = require('../middlewares/compressUpload');
 const {
   validateCreateConversation,
   validateSendMessage,
@@ -23,6 +24,9 @@ router.get('/conversations', chatController.getConversations);
 router.post('/conversations', validateCreateConversation, chatController.createConversation);
 router.get('/conversations/:id', validateConversationId, chatController.getConversationById);
 
+// Attachment download link (participants only)
+router.get('/attachments/:attachmentId/file', chatController.getAttachmentFile);
+
 // Messages Routes
 router.post('/messages', validateSendMessage, chatController.sendMessage);
 router.get('/messages/:conversationId', validateQueryFilter, chatController.getMessages);
@@ -34,7 +38,7 @@ router.post('/messages/:id/read', validateMessageId, chatController.markMessageR
 router.post(
   '/messages/:id/attachment',
   validateMessageId,
-  uploadChatAttachment.single('attachment'),
+  uploadChatAttachment.single('attachment'), compressUpload(),
   chatController.uploadAttachment
 );
 

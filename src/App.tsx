@@ -16,6 +16,7 @@ const Eligibility = lazy(() => import('./pages/Eligibility').then((m) => ({ defa
 const Resumes = lazy(() => import('./pages/Resumes').then((m) => ({ default: m.Resumes })));
 const Interviews = lazy(() => import('./pages/Interviews').then((m) => ({ default: m.Interviews })));
 const Offers = lazy(() => import('./pages/Offers').then((m) => ({ default: m.Offers })));
+const Placements = lazy(() => import('./pages/Placements').then((m) => ({ default: m.Placements })));
 const MessagesPage = lazy(() => import('./pages/Messages').then((m) => ({ default: m.MessagesPage })));
 const Training = lazy(() => import('./pages/Training').then((m) => ({ default: m.Training })));
 const Reports = lazy(() => import('./pages/Reports').then((m) => ({ default: m.Reports })));
@@ -198,7 +199,7 @@ export const AppContent: React.FC = () => {
           path="/placements"
           element={
             <ProtectedRoute module={Module.PLACEMENTS}>
-              <Offers />
+              <Placements />
             </ProtectedRoute>
           }
         />

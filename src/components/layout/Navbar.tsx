@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Avatar } from '../app/Avatar';
 import { useNavigate } from 'react-router-dom';
-import { Search, Globe, Lock, Smartphone, Bell, Plus, ChevronDown, Menu, LayoutGrid, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
+import { Search, Globe, Lock, Bell, Plus, ChevronDown, Menu, LayoutGrid, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../app/Button';
 import { useToast } from '../app/Toast';
 import { getNotifications } from '../../api/notification.api';
+import { canQuickAdd } from '../app/QuickAddModal';
+import { Role, normalizeRole } from '../../config/rbac';
 import { Input as ShadInput } from '@/components/ui/input';
 import { applyTheme, getStoredTheme, type ThemeMode } from '@/lib/theme';
 import {
@@ -52,7 +54,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onQuickAdd, onToggleSidebar }) =
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchValue.trim()) {
-      navigate(`/students?search=${encodeURIComponent(searchValue.trim())}`);
+      // Students cannot open the student roster, so their search goes to drives.
+      const target = normalizeRole(user?.role) === Role.STUDENT ? '/drives' : '/students';
+      navigate(`${target}?search=${encodeURIComponent(searchValue.trim())}`);
       info('Global Search', `Searching for "${searchValue.trim()}"`);
     }
   };
@@ -75,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onQuickAdd, onToggleSidebar }) =
             type="text"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Search drives, students, companies..."
+            placeholder={normalizeRole(user?.role) === Role.STUDENT ? 'Search drives...' : 'Search drives, students, companies...'}
             aria-label="Global Search"
             className="h-10 w-full rounded-full border-transparent bg-secondary pl-11 pr-4 text-sm dark:bg-secondary"
           />
@@ -84,15 +88,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onQuickAdd, onToggleSidebar }) =
 
       {/* Right Controls */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-        <Button
-          variant="primary"
-          size="sm"
-          leftIcon={<Plus className="w-4 h-4" />}
-          onClick={onQuickAdd}
-          className="h-10 shrink-0 px-4 text-xs"
-        >
-          <span className="hidden sm:inline">Quick add</span>
-        </Button>
+        {canQuickAdd(user?.role) && (
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus className="w-4 h-4" />}
+            onClick={onQuickAdd}
+            className="h-10 shrink-0 px-4 text-xs"
+          >
+            <span className="hidden sm:inline">Quick add</span>
+          </Button>
+        )}
 
         {/* Utilities menu */}
         <DropdownMenu>
@@ -106,11 +112,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onQuickAdd, onToggleSidebar }) =
             <DropdownMenuItem onClick={() => info('Language Selector', 'English (US) selected.')}>
               <Globe className="w-4 h-4" /> Language
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => info('Security Portal', 'Portal role: TPO Admin (Active Session)')}>
+            <DropdownMenuItem onClick={() => info('Security Portal', `Signed in as ${user?.role ?? 'user'}`)}>
               <Lock className="w-4 h-4" /> Security & permissions
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => info('Mobile App Sync', 'TPO Mobile Companion App version 2.4.1')}>
-              <Smartphone className="w-4 h-4" /> Mobile companion app
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

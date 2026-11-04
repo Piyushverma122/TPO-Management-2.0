@@ -26,9 +26,6 @@ const validateRegister = validate([
   body('email').isEmail().withMessage('Valid email address is required').normalizeEmail(),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
   body('full_name').trim().notEmpty().withMessage('Full name is required'),
-  body('role')
-    .isIn(['admin', 'tpo', 'faculty', 'student', 'recruiter'])
-    .withMessage('Role must be one of: admin, tpo, faculty, student, recruiter'),
   body('phone').optional().isMobilePhone().withMessage('Invalid phone number format'),
   body('department').optional().trim(),
 ]);

@@ -59,7 +59,30 @@ const validateQueryFilter = validate([
   query('cgpa_max').optional().isFloat({ min: 0, max: 10 }),
 ]);
 
+const optionalUrl = (field) =>
+  body(field).optional({ values: 'falsy' }).trim().isURL({ require_protocol: true }).withMessage(`${field} must be a full link starting with http(s)://`);
+
+const validateUpdateOwnProfile = validate([
+  body('phone').optional({ values: 'falsy' }).trim().isLength({ min: 7, max: 20 }).withMessage('Phone number looks invalid'),
+  body('alternate_phone').optional({ values: 'falsy' }).trim().isLength({ min: 7, max: 20 }).withMessage('Alternate phone looks invalid'),
+  body('date_of_birth').optional({ values: 'falsy' }).isISO8601().withMessage('Date of birth must be a valid date'),
+  body('gender').optional({ values: 'falsy' }).trim().isLength({ max: 30 }),
+  body('address').optional({ values: 'falsy' }).trim().isLength({ max: 500 }),
+  body('city').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),
+  body('state').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),
+  body('country').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),
+  body('pincode').optional({ values: 'falsy' }).trim().isLength({ max: 12 }),
+  body('resume_headline').optional({ values: 'falsy' }).trim().isLength({ max: 150 }),
+  body('bio').optional({ values: 'falsy' }).trim().isLength({ max: 2000 }),
+  optionalUrl('linkedin_url'),
+  optionalUrl('github_url'),
+  optionalUrl('portfolio_url'),
+  optionalUrl('leetcode_url'),
+  optionalUrl('hackerrank_url'),
+]);
+
 module.exports = {
+  validateUpdateOwnProfile,
   validateCreateStudent,
   validateUpdateStudent,
   validateStudentId,

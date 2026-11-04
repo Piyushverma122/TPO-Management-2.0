@@ -5,6 +5,7 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 const { authorizeModule } = require('../middleware/authorize');
 const { Module, Action } = require('../config/rbac');
 const { uploadTrainingMaterial, uploadCertificate } = require('../config/multer');
+const { compressUpload } = require('../middlewares/compressUpload');
 const {
   validateCreateTraining,
   validateUpdateTraining,
@@ -21,6 +22,8 @@ router.get('/', authorizeModule(Module.TRAINING, Action.VIEW), validateQueryFilt
 router.get('/statistics', authorizeModule(Module.TRAINING, Action.VIEW), trainingController.getStatistics);
 
 // Training Module CRUD Routes
+router.get('/material/:materialId/file', authorizeModule(Module.TRAINING, Action.VIEW), trainingController.getMaterialFile);
+router.get('/certificate/:certificateId/file', authorizeModule(Module.TRAINING, Action.VIEW), trainingController.getCertificateFile);
 router.get('/:id', authorizeModule(Module.TRAINING, Action.VIEW), validateTrainingId, trainingController.getTrainingById);
 router.post('/', authorizeModule(Module.TRAINING, Action.CREATE), validateCreateTraining, trainingController.createTraining);
 router.put('/:id', authorizeModule(Module.TRAINING, Action.EDIT), validateUpdateTraining, trainingController.updateTraining);
@@ -43,7 +46,7 @@ router.post(
   '/:id/material',
   authorizeModule(Module.TRAINING, Action.UPLOAD),
   validateTrainingId,
-  uploadTrainingMaterial.single('material'),
+  uploadTrainingMaterial.single('material'), compressUpload(),
   trainingController.uploadMaterial
 );
 
@@ -52,7 +55,7 @@ router.post(
   '/:id/certificate',
   authorizeModule(Module.TRAINING, Action.UPLOAD),
   validateTrainingId,
-  uploadCertificate.single('certificate'),
+  uploadCertificate.single('certificate'), compressUpload(),
   trainingController.uploadCertificate
 );
 

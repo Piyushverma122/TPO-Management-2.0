@@ -142,6 +142,119 @@ Training & Placement Office
   return sendMail({ to: toEmail, subject, html, text });
 };
 
+const escapeHtml = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
+/**
+ * Interview lifecycle email (scheduled / rescheduled / cancelled / result) sent to the candidate.
+ */
+const sendInterviewEmail = async ({ to, name, kind, title, company, role, round, when, mode, meetingUrl, venue, note }) => {
+  const showSlot = kind === 'scheduled' || kind === 'rescheduled';
+  const where = mode === 'Online'
+    ? (meetingUrl ? `<a href="${escapeHtml(meetingUrl)}">${escapeHtml(meetingUrl)}</a>` : 'Link will be shared soon')
+    : escapeHtml(venue || 'Venue will be shared soon');
+
+  const rows = [
+    ['Company', company],
+    ['Role', role],
+    ['Round', round],
+    ['Date & time (IST)', when],
+  ];
+  if (showSlot) rows.push(['Mode', mode], [mode === 'Online' ? 'Meeting link' : 'Venue', where]);
+
+  const tableRows = rows
+    .map(([label, value]) => `<tr><td style="padding:6px 12px;color:#555">${label}</td><td style="padding:6px 12px"><strong>${label === 'Meeting link' || label === 'Venue' ? value : escapeHtml(value)}</strong></td></tr>`)
+    .join('');
+
+  const html = `
+<div style="font-family:Segoe UI,Roboto,Arial,sans-serif;max-width:560px;margin:auto">
+  <h2>${escapeHtml(title)}</h2>
+  <p>Hi ${escapeHtml(name || 'there')},</p>
+  <table style="border-collapse:collapse;background:#f6f7f9;border-radius:8px">${tableRows}</table>
+  ${note ? `<p><strong>Note:</strong> ${escapeHtml(note)}</p>` : ''}
+  <p style="color:#777;font-size:12px">TPO Management System</p>
+</div>`;
+
+  return sendMail({
+    to,
+    subject: title,
+    html,
+    text: `${title} - ${company}, ${role}, ${round}, ${when}${note ? `. ${note}` : ''}`,
+  });
+};
+
+/**
+ * Offer lifecycle email (new offer released to the candidate).
+ */
+const sendOfferEmail = async ({ to, name, title, company, role, message }) => {
+  const html = `
+<div style="font-family:Segoe UI,Roboto,Arial,sans-serif;max-width:560px;margin:auto">
+  <h2>${escapeHtml(title)}</h2>
+  <p>Hi ${escapeHtml(name || 'there')},</p>
+  <p>${escapeHtml(message)}</p>
+  <p style="color:#555">${escapeHtml(company)} &middot; ${escapeHtml(role)}</p>
+  <p style="color:#777;font-size:12px">TPO Management System</p>
+</div>`;
+
+  return sendMail({ to, subject: title, html, text: `${title}: ${message}` });
+};
+
+const money = (n) => (n === null || n === undefined || n === '' ? null : Number(n).toLocaleString('en-IN'));
+const range = (min, max, suffix) => {
+  const a = money(min);
+  const b = money(max);
+  if (!a && !b) return null;
+  return `\u20B9${a === b || !b ? a : !a ? b : `${a}\u2013${b}`}${suffix}`;
+};
+
+const profileHtml = (p) => {
+  const lines = [
+    p.streams?.length ? `<em>${p.streams.map(escapeHtml).join(' / ')}</em>` : null,
+    range(p.stipend_min, p.stipend_max, ' per month stipend') && `Stipend: ${range(p.stipend_min, p.stipend_max, ' per month')}`,
+    p.probation_months ? `Probation: ${p.probation_months} months` : null,
+    range(p.ctc_min, p.ctc_max, ' LPA') && `CTC: ${range(p.ctc_min, p.ctc_max, ' LPA')}`,
+    range(p.ppo_ctc_min, p.ppo_ctc_max, ' LPA') && `Post-probation / PPO CTC: ${range(p.ppo_ctc_min, p.ppo_ctc_max, ' LPA')}`,
+    p.interview_mode ? `Interview: ${escapeHtml(p.interview_mode)}${p.interview_location ? ` (${escapeHtml(p.interview_location)})` : ''}` : null,
+  ].filter(Boolean);
+  return `<li style="margin-bottom:8px"><strong>${escapeHtml(p.title)}</strong><br/>${lines.join('<br/>')}</li>`;
+};
+
+/**
+ * Announcement for a newly published drive: profiles, pay, interview process, location note, deadline and how to register.
+ */
+const sendDriveAnnouncementEmail = async ({ to, name, drive }) => {
+  if (!to) return { success: false, error: 'No recipient' };
+  const company = drive.companies?.name || 'A company';
+  const deadline = drive.registration_deadline ? new Date(drive.registration_deadline).toLocaleDateString('en-IN', { dateStyle: 'long' }) : null;
+  const rounds = Array.isArray(drive.rounds) ? drive.rounds.map((r) => (typeof r === 'string' ? r : r?.name)).filter(Boolean) : [];
+  const portal = `${env.clientUrl || ''}/drives`;
+
+  const html = `
+<div style="font-family:Segoe UI,Roboto,Arial,sans-serif;max-width:640px;margin:auto;line-height:1.55;color:#222">
+  <p>Dear ${escapeHtml(name || 'Student')},</p>
+  <p>Greetings from the Training &amp; Placement Office!</p>
+  <p>We are pleased to share a placement opportunity with <strong>${escapeHtml(company)}</strong>${drive.location ? ` (${escapeHtml(drive.location)})` : ''}.</p>
+  <h3 style="margin-bottom:4px">Available profiles</h3>
+  <ul style="padding-left:18px">${(drive.drive_profiles || []).map(profileHtml).join('') || `<li>${escapeHtml(drive.role_title)}</li>`}</ul>
+  ${rounds.length ? `<h3 style="margin-bottom:4px">Selection process</h3><p>${rounds.map(escapeHtml).join(' &rarr; ')}</p>` : ''}
+  ${drive.location_note ? `<h3 style="margin-bottom:4px">Important</h3><p>${escapeHtml(drive.location_note)}</p>` : ''}
+  ${drive.bond_details ? `<p><strong>Service agreement:</strong> ${escapeHtml(drive.bond_details)}</p>` : ''}
+  <h3 style="margin-bottom:4px">Eligibility</h3>
+  <p>Minimum CGPA ${escapeHtml(String(drive.min_cgpa ?? '-'))}, up to ${escapeHtml(String(drive.max_backlogs ?? 0))} active backlogs, ${escapeHtml(String(drive.passing_year || ''))} batch.</p>
+  <h3 style="margin-bottom:4px">Registration</h3>
+  <p>${deadline ? `Registration deadline: <strong>${escapeHtml(deadline)}</strong><br/>` : ''}Open the portal and apply: <a href="${escapeHtml(portal)}">${escapeHtml(portal)}</a>
+  ${drive.registration_link ? `<br/>Additional registration form: <a href="${escapeHtml(drive.registration_link)}">${escapeHtml(drive.registration_link)}</a>` : ''}</p>
+  <p>Please apply only if you are genuinely interested and comfortable with the location and compensation above.</p>
+  <p>Thanks &amp; Regards,<br/>Training &amp; Placement Office</p>
+</div>`;
+
+  const subject = `Placement opportunity: ${company} - ${drive.role_title}`;
+  return sendMail({ to, subject, html, text: `${subject}. Open ${portal} to see the profiles and apply.` });
+};
+
 module.exports = {
+  sendDriveAnnouncementEmail,
   sendStudentWelcomeEmail,
+  sendInterviewEmail,
+  sendOfferEmail,
 };

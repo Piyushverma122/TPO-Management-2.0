@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const storage = require('./storageService');
 
 /**
  * List training modules with pagination and category/status filters
@@ -34,6 +35,7 @@ const listTrainings = async (queryParams) => {
         session_date
       ),
       training_materials (
+        id,
         title,
         file_url,
         mime_type
@@ -84,6 +86,7 @@ const listTrainings = async (queryParams) => {
       total_sessions: sessions.length,
       finished_sessions: sessions.filter((s) => new Date(s.session_date).getTime() < now).length,
       materials: (training_materials || []).map((x) => ({
+        id: x.id,
         title: x.title,
         url: x.file_url,
         type: x.mime_type === 'application/pdf' ? 'PDF' : x.mime_type?.startsWith('video') ? 'Video' : 'Link',
@@ -375,26 +378,7 @@ const markAttendance = async (sessionId, studentId, isPresent, remarks) => {
  */
 const uploadTrainingMaterial = async (moduleId, file, title) => {
   await getTrainingById(moduleId);
-
-  const fileExt = file.originalname.split('.').pop();
-  const fileName = `${Date.now()}_material.${fileExt}`;
-  const storagePath = `${moduleId}/${fileName}`;
-
-  // Upload to Supabase Storage 'training-materials'
-  const { error: uploadErr } = await supabase.storage
-    .from('training-materials')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Material Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  const { data: publicUrlData } = supabase.storage.from('training-materials').getPublicUrl(storagePath);
+  const storagePath = await storage.storeFile('training-materials', [moduleId], file);
 
   const { data: newMaterial, error: dbErr } = await supabase
     .from('training_materials')
@@ -402,18 +386,19 @@ const uploadTrainingMaterial = async (moduleId, file, title) => {
       {
         module_id: moduleId,
         title: title || file.originalname,
-        bucket_name: 'training-materials',
+        bucket_name: storage.R2_TAG,
         storage_path: storagePath,
         file_name: file.originalname,
         mime_type: file.mimetype,
         file_size: file.size,
-        file_url: publicUrlData.publicUrl,
+        file_url: `r2:${storagePath}`,
       },
     ])
     .select('*')
     .single();
 
   if (dbErr) {
+    await storage.removeObject(storagePath);
     const err = new Error(dbErr.message);
     err.statusCode = 500;
     throw err;
@@ -428,26 +413,8 @@ const uploadTrainingMaterial = async (moduleId, file, title) => {
 const uploadCertificate = async (moduleId, studentId, file, certNumber) => {
   await getTrainingById(moduleId);
 
-  const fileExt = file.originalname.split('.').pop();
   const certNo = certNumber || `CERT-${Date.now().toString().slice(-6)}`;
-  const fileName = `${Date.now()}_cert.${fileExt}`;
-  const storagePath = `${moduleId}/${studentId}/${fileName}`;
-
-  // Upload to 'training-certificates' bucket
-  const { error: uploadErr } = await supabase.storage
-    .from('training-certificates')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Certificate Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  const { data: publicUrlData } = supabase.storage.from('training-certificates').getPublicUrl(storagePath);
+  const storagePath = await storage.storeFile('training-certificates', [moduleId, studentId], file);
 
   const { data: cert, error: dbErr } = await supabase
     .from('training_certificates')
@@ -456,12 +423,12 @@ const uploadCertificate = async (moduleId, studentId, file, certNumber) => {
         module_id: moduleId,
         student_id: studentId,
         certificate_number: certNo,
-        bucket_name: 'training-certificates',
+        bucket_name: storage.R2_TAG,
         storage_path: storagePath,
         file_name: file.originalname,
         mime_type: file.mimetype,
         file_size: file.size,
-        certificate_url: publicUrlData.publicUrl,
+        certificate_url: `r2:${storagePath}`,
         issued_date: new Date().toISOString().split('T')[0],
       },
     ])
@@ -469,6 +436,7 @@ const uploadCertificate = async (moduleId, studentId, file, certNumber) => {
     .single();
 
   if (dbErr) {
+    await storage.removeObject(storagePath);
     const err = new Error(dbErr.message);
     err.statusCode = 500;
     throw err;
@@ -589,3 +557,24 @@ module.exports = {
   getStudentProgress,
   getTrainingStatistics,
 };
+
+/** Signed link to a course material (anyone who can open Training). */
+const getMaterialFileUrl = async (materialId) => {
+  const { data: row } = await supabase.from('training_materials').select('*').eq('id', materialId).maybeSingle();
+  if (!row) throw Object.assign(new Error('Training material not found.'), { statusCode: 404 });
+  return storage.signedLinkFor(row, supabase);
+};
+
+/** Signed link to a certificate: the student it was issued to, or staff/faculty. */
+const getCertificateFileUrl = async (certificateId, user) => {
+  const { data: row } = await supabase.from('training_certificates').select('*').eq('id', certificateId).maybeSingle();
+  if (!row) throw Object.assign(new Error('Certificate not found.'), { statusCode: 404 });
+  if (user.role === 'student') {
+    const { data: student } = await supabase.from('students').select('user_id').eq('id', row.student_id).maybeSingle();
+    if (student?.user_id !== user.id) throw Object.assign(new Error('Certificate not found.'), { statusCode: 404 });
+  }
+  return storage.signedLinkFor(row, supabase, { urlColumn: 'certificate_url' });
+};
+
+module.exports.getMaterialFileUrl = getMaterialFileUrl;
+module.exports.getCertificateFileUrl = getCertificateFileUrl;

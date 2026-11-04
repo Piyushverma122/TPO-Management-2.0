@@ -34,7 +34,7 @@ const getAdminDashboard = async () => {
     supabase.from('students').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('companies').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('placement_drives').select('id', { count: 'exact', head: true }).is('deleted_at', null),
-    supabase.from('placements').select('id', { count: 'exact', head: true }),
+    supabase.from('placements').select('id', { count: 'exact', head: true }).eq('offer_status', 'Accepted'),
     supabase.from('students').select('id', { count: 'exact', head: true }).eq('placement_status', 'Placed').is('deleted_at', null),
     supabase.from('recruiters').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('training_modules').select('id', { count: 'exact', head: true }).is('deleted_at', null),
@@ -53,13 +53,14 @@ const getAdminDashboard = async () => {
       .limit(8),
     supabase
       .from('placements')
-      .select('created_at, students(branches(name, code))'),
+      .select('created_at, students(branches(name, code))')
+      .eq('offer_status', 'Accepted'),
     supabase
       .from('students')
       .select('created_at, branches(name, code)')
       .eq('placement_status', 'Placed')
       .is('deleted_at', null),
-    supabase.from('placements').select('package, companies(name)'),
+    supabase.from('placements').select('package, companies(name)').eq('offer_status', 'Accepted'),
   ]));
 
   const totalPlacements = Math.max(totalPlacementsRecord || 0, placedStudentsCount || 0);
@@ -153,7 +154,7 @@ const getTPODashboard = async () => {
       .in('stage', ['Round 1', 'Round 2', 'Technical', 'HR'])
       .order('created_at', { ascending: false })
       .limit(5),
-    supabase.from('placements').select('package'),
+    supabase.from('placements').select('package').eq('offer_status', 'Accepted'),
     supabase.from('students').select('id', { count: 'exact', head: true }).eq('placement_status', 'Placed').is('deleted_at', null),
     supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'Active').is('deleted_at', null),
     supabase.from('training_modules').select('id', { count: 'exact', head: true }).eq('status', 'Active').is('deleted_at', null),
@@ -185,10 +186,20 @@ const getTPODashboard = async () => {
 /**
  * Student Dashboard Metrics
  */
+/** Share of profile details the student has actually filled in (resume counts too). */
+const profileCompletionOf = (student) => {
+  if (!student) return 0;
+  const checks = [
+    student.phone, student.address || student.city, student.date_of_birth, student.gender, student.resume_headline, student.bio,
+    student.linkedin_url || student.github_url || student.portfolio_url, student.active_resume_id,
+  ];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+};
+
 const getStudentDashboard = async (userId) => {
   const { data: student } = await supabase
     .from('students')
-    .select('id, placement_status, active_resume_id')
+    .select('id, placement_status, active_resume_id, phone, address, city, date_of_birth, gender, linkedin_url, github_url, portfolio_url, resume_headline, bio')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -199,6 +210,9 @@ const getStudentDashboard = async (userId) => {
     { data: activeResume },
     { data: notifications },
     { data: enrollments },
+    { data: offerRows },
+    { data: interviewRows },
+    { count: openDrives },
   ] = assertNoErrors(await Promise.all([
     studentId
       ? supabase
@@ -214,10 +228,53 @@ const getStudentDashboard = async (userId) => {
     studentId
       ? supabase.from('training_enrollments').select('*, training_modules(title)').eq('student_id', studentId)
       : Promise.resolve({ data: [] }),
+    studentId
+      ? supabase
+          .from('placements')
+          .select('id, package, offer_status, role_title, companies(name, logo_url)')
+          .eq('student_id', studentId)
+          .in('offer_status', ['Released', 'Accepted'])
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    studentId
+      ? supabase
+          .from('interviews')
+          .select('id, round_name, scheduled_at, mode, meeting_url, venue, status, companies(name), placement_drives(role_title)')
+          .eq('student_id', studentId)
+          .eq('status', 'Scheduled')
+          .is('deleted_at', null)
+          .gte('scheduled_at', new Date().toISOString())
+          .order('scheduled_at', { ascending: true })
+          .limit(5)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from('placement_drives')
+      .select('id', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .eq('approval_status', 'Approved')
+      .in('status', ['Upcoming', 'Ongoing'])
+      .gte('registration_deadline', new Date().toISOString()),
   ]));
+
+  const offers = offerRows || [];
+  const packages = offers.map((o) => parseFloat(o.package) || 0);
 
   return {
     placementStatus: student ? student.placement_status : 'Unplaced',
+    hasStudentProfile: Boolean(student),
+    profileCompletion: profileCompletionOf(student),
+    applicationStats: {
+      total: (appliedDrives || []).length,
+      pending: (appliedDrives || []).filter((a) => ['Applied', 'Eligible'].includes(a.status)).length,
+    },
+    offerStats: {
+      total: offers.length,
+      released: offers.filter((o) => o.offer_status === 'Released').length,
+      accepted: offers.filter((o) => o.offer_status === 'Accepted').length,
+      highestPackage: packages.length ? Math.max(...packages) : null,
+    },
+    upcomingInterviews: interviewRows || [],
+    openDrives: openDrives || 0,
     appliedDrives: appliedDrives || [],
     activeResume: activeResume || null,
     notifications: notifications || [],
@@ -296,7 +353,7 @@ const getFacultyDashboard = async (userId) => {
   ] = assertNoErrors(await Promise.all([
     supabase.from('training_modules').select('id', { count: 'exact', head: true }).eq('status', 'Active').is('deleted_at', null),
     supabase.from('training_sessions').select('id, title, session_date, meeting_link, training_modules(title)').order('session_date', { ascending: true }).limit(5),
-    supabase.from('placements').select('id', { count: 'exact', head: true }),
+    supabase.from('placements').select('id', { count: 'exact', head: true }).eq('offer_status', 'Accepted'),
   ]));
 
   return {

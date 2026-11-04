@@ -1,3 +1,6 @@
+/** Interview slots are private to the candidate and company; students read theirs from /interviews, not the shared calendar. */
+const visibleTo = (user, events) => (user?.role === 'student' ? events.filter((e) => e.event_type !== 'mock_interview') : events);
+
 const calendarService = require('../services/calendarService');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
 
@@ -8,7 +11,7 @@ const { sendSuccess, sendError } = require('../utils/responseHandler');
  */
 const getEvents = async (req, res, next) => {
   try {
-    const events = await calendarService.listEvents(req.query);
+    const events = visibleTo(req.user, await calendarService.listEvents(req.query));
     return sendSuccess(res, 'Calendar events list retrieved', { events }, 200);
   } catch (error) {
     next(error);
@@ -78,7 +81,7 @@ const deleteEvent = async (req, res, next) => {
  */
 const getUpcomingEvents = async (req, res, next) => {
   try {
-    const events = await calendarService.getUpcomingEvents();
+    const events = visibleTo(req.user, await calendarService.getUpcomingEvents());
     return sendSuccess(res, 'Upcoming events retrieved', { events }, 200);
   } catch (error) {
     next(error);
@@ -92,7 +95,7 @@ const getUpcomingEvents = async (req, res, next) => {
  */
 const getTodayEvents = async (req, res, next) => {
   try {
-    const events = await calendarService.getTodayEvents();
+    const events = visibleTo(req.user, await calendarService.getTodayEvents());
     return sendSuccess(res, "Today's events retrieved", { events }, 200);
   } catch (error) {
     next(error);
@@ -106,7 +109,7 @@ const getTodayEvents = async (req, res, next) => {
  */
 const getWeekEvents = async (req, res, next) => {
   try {
-    const events = await calendarService.getWeekEvents();
+    const events = visibleTo(req.user, await calendarService.getWeekEvents());
     return sendSuccess(res, "This week's events retrieved", { events }, 200);
   } catch (error) {
     next(error);

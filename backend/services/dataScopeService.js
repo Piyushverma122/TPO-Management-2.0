@@ -4,6 +4,8 @@ const { Role, normalizeRole } = require('../config/rbac');
 /**
  * Log Ownership Violation to audit_logs table
  */
+const NO_MATCH_ID = '00000000-0000-0000-0000-000000000000';
+
 const logOwnershipViolation = async (user, resource, resourceId, attemptedAction, reason) => {
   try {
     const userId = user?.id || user?.userId || null;
@@ -36,25 +38,38 @@ const getStudentIdForUser = async (userId) => {
 };
 
 /**
+ * Faculty see only the students of their own department (faculty.department_id -> branches -> students).
+ * A faculty account that is not linked to a department sees no students at all.
+ */
+const getFacultyBranchIds = async (userId) => {
+  if (!userId) return [];
+  const { data: faculty } = await supabase.from('faculty').select('department_id').eq('user_id', userId).is('deleted_at', null).maybeSingle();
+  if (!faculty?.department_id) return [];
+  const { data: branches } = await supabase.from('branches').select('id').eq('department_id', faculty.department_id);
+  return (branches || []).map((b) => b.id);
+};
+
+const getFacultyStudentIds = async (userId) => {
+  const branchIds = await getFacultyBranchIds(userId);
+  if (!branchIds.length) return [];
+  const { data } = await supabase.from('students').select('id').in('branch_id', branchIds).is('deleted_at', null);
+  return (data || []).map((s) => s.id);
+};
+
+/**
  * Helper: Resolve recruiter company ID from logged-in user
  */
 const getCompanyIdForRecruiter = async (userId) => {
   if (!userId) return null;
+  // recruiters.user_id -> recruiters.company_id is the only recruiter/company link in the schema
   const { data } = await supabase
-    .from('company_contacts')
+    .from('recruiters')
     .select('company_id')
     .eq('user_id', userId)
+    .is('deleted_at', null)
     .maybeSingle();
 
-  if (data?.company_id) return data.company_id;
-
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('company_id')
-    .eq('id', userId)
-    .maybeSingle();
-
-  return userRow?.company_id || null;
+  return data?.company_id || null;
 };
 
 /**
@@ -73,7 +88,8 @@ const resolveScopeContext = async (user) => {
 
   if (role === Role.STUDENT && userId) {
     const studentData = await getStudentIdForUser(userId);
-    context.studentId = studentData?.id || userId;
+    // No students row => match nothing (never fall back to the users.id, which looks like a valid id but is not one).
+    context.studentId = studentData?.id || NO_MATCH_ID;
   } else if (role === Role.RECRUITER && userId) {
     const companyId = await getCompanyIdForRecruiter(userId);
     context.companyId = companyId || null;
@@ -85,15 +101,8 @@ const resolveScopeContext = async (user) => {
       context.driveIds = (companyDrives || []).map((d) => d.id);
     }
   } else if (role === Role.FACULTY) {
-    const userDept = user?.department || user?.branch_id;
-    context.userDept = userDept || null;
-    if (userDept) {
-      const { data: deptStudents } = await supabase
-        .from('students')
-        .select('id')
-        .eq('branch_id', userDept);
-      context.studentIds = (deptStudents || []).map((s) => s.id);
-    }
+    context.branchIds = await getFacultyBranchIds(userId);
+    context.studentIds = await getFacultyStudentIds(userId);
   }
 
   return context;
@@ -115,7 +124,7 @@ const applyDataScope = (query, user, resourceType, scopeContext = null) => {
 
   // 1. STUDENT SCOPE
   if (role === Role.STUDENT) {
-    const studentId = scopeContext?.studentId || userId;
+    const studentId = scopeContext?.studentId || NO_MATCH_ID;
 
     if (resourceType === 'students' || resourceType === 'profile') {
       return query.eq('user_id', userId);
@@ -133,6 +142,9 @@ const applyDataScope = (query, user, resourceType, scopeContext = null) => {
       return query.eq('user_id', userId);
     }
     if (resourceType === 'training') {
+      return query.eq('student_id', studentId);
+    }
+    if (resourceType === 'interviews') {
       return query.eq('student_id', studentId);
     }
   }
@@ -161,22 +173,18 @@ const applyDataScope = (query, user, resourceType, scopeContext = null) => {
     if (resourceType === 'placements') {
       return query.eq('company_id', companyId);
     }
+    if (resourceType === 'interviews') {
+      return query.eq('company_id', companyId);
+    }
   }
 
   // 3. FACULTY SCOPE
   if (role === Role.FACULTY) {
-    const userDept = scopeContext?.userDept || user?.department || user?.branch_id;
+    const branchIds = scopeContext?.branchIds || [];
+    const studentIds = scopeContext?.studentIds || [];
 
-    if (resourceType === 'students' && userDept) {
-      return query.eq('branch_id', userDept);
-    }
-    if (resourceType === 'applications' && userDept) {
-      const studentIds = scopeContext?.studentIds || [];
-      if (studentIds.length > 0) {
-        return query.in('student_id', studentIds);
-      }
-      return query.eq('id', '00000000-0000-0000-0000-000000000000');
-    }
+    if (resourceType === 'students') return query.in('branch_id', branchIds.length ? branchIds : [NO_MATCH_ID]);
+    if (resourceType === 'applications') return query.in('student_id', studentIds.length ? studentIds : [NO_MATCH_ID]);
   }
 
   return query;
@@ -224,6 +232,18 @@ const validateOwnership = async (user, resourceType, recordId, attemptedAction =
     }
   }
 
+  // FACULTY: only students of their own department
+  if (role === Role.FACULTY && resourceType === 'students') {
+    const [branchIds, { data: target }] = await Promise.all([
+      getFacultyBranchIds(userId),
+      supabase.from('students').select('branch_id').eq('id', recordId).maybeSingle(),
+    ]);
+    if (target && !branchIds.includes(target.branch_id)) {
+      await logOwnershipViolation(user, resourceType, recordId, attemptedAction, 'Faculty can only access students of their own department');
+      return false;
+    }
+  }
+
   // RECRUITER OWNERSHIP VALIDATION
   if (role === Role.RECRUITER) {
     const companyId = await getCompanyIdForRecruiter(userId);
@@ -245,7 +265,25 @@ const validateOwnership = async (user, resourceType, recordId, attemptedAction =
   return true;
 };
 
+/**
+ * Throws 403 unless the user may manage records of this company
+ * (admin/TPO: any company, recruiter: only the company they belong to).
+ */
+const assertCanManageCompany = async (user, companyId) => {
+  const role = normalizeRole(user?.role);
+  if (role === Role.ADMIN || role === Role.TPO) return;
+
+  if (role === Role.RECRUITER) {
+    const ownCompanyId = await getCompanyIdForRecruiter(user.id || user.userId);
+    if (ownCompanyId && ownCompanyId === companyId) return;
+    await logOwnershipViolation(user, 'company', companyId, 'MANAGE', 'Recruiter cannot manage records of another company');
+  }
+  throw Object.assign(new Error("You do not have access to this company's records."), { statusCode: 403 });
+};
+
 module.exports = {
+  getFacultyStudentIds,
+  assertCanManageCompany,
   resolveScopeContext,
   applyDataScope,
   validateOwnership,

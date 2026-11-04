@@ -28,7 +28,10 @@ const validateCreatePlacement = validate([
   body('drive_id').isUUID().withMessage('Valid drive ID is required'),
   body('package').isFloat({ min: 0 }).withMessage('Package (CTC) must be a positive number'),
   body('joining_date').optional().isISO8601().withMessage('Valid joining date is required'),
-  body('offer_status').optional().trim(),
+  body('offer_status')
+    .optional()
+    .isIn(['Pending Approval', 'Released', 'Accepted', 'Declined', 'Expired', 'Rejected'])
+    .withMessage('Invalid offer status'),
 ]);
 
 const validateUpdatePlacement = validate([

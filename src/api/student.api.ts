@@ -49,6 +49,12 @@ export const deleteStudent = async (id: string) => {
   return response.data;
 };
 
+/** The signed-in student edits their own (non-academic) details. */
+export const updateMyProfile = async (data: Record<string, unknown>) => {
+  const response = await apiClient.put('/students/profile', data);
+  return response.data;
+};
+
 export const getStudentProfile = async () => {
   const response = await apiClient.get('/students/profile');
   return response.data;
@@ -62,17 +68,23 @@ export const uploadResume = async (studentId: string, formData: FormData) => {
 };
 
 export const getResumes = async (studentId: string) => {
-  const response = await apiClient.get(`/students/${studentId}/resume`);
+  const response = await apiClient.get(`/students/${studentId}/resumes`);
   return response.data;
 };
 
-export const deleteResume = async (studentId: string, resumeId: string) => {
-  const response = await apiClient.delete(`/students/${studentId}/resume/${resumeId}`);
+/** Short-lived signed link to a resume PDF (files are private). */
+export const getResumeFileUrl = async (resumeId: string) => {
+  const response = await apiClient.get<{ data: { url: string; file_name: string | null } }>(`/students/resume/${resumeId}/file`);
+  return response.data.data;
+};
+
+export const deleteResume = async (resumeId: string) => {
+  const response = await apiClient.delete(`/students/resume/${resumeId}`);
   return response.data;
 };
 
 export const uploadDocument = async (studentId: string, formData: FormData) => {
-  const response = await apiClient.post(`/students/${studentId}/documents`, formData, {
+  const response = await apiClient.post(`/students/${studentId}/document`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
@@ -83,7 +95,50 @@ export const getDocuments = async (studentId: string) => {
   return response.data;
 };
 
-export const deleteDocument = async (studentId: string, documentId: string) => {
-  const response = await apiClient.delete(`/students/${studentId}/documents/${documentId}`);
+export const deleteDocument = async (documentId: string) => {
+  const response = await apiClient.delete(`/students/document/${documentId}`);
   return response.data;
+};
+
+export interface OnboardingChecklistItem {
+  key: string;
+  label: string;
+  done: boolean;
+}
+
+/** One student as staff see them: profile, onboarding, applications, interviews, offers, training and more. */
+export interface StudentOverview {
+  student: Record<string, any>;
+  onboarding: { status: 'Completed' | 'Pending' | 'Not started'; completion: number; checklist: OnboardingChecklistItem[]; missing: string[] };
+  skills: any[];
+  semesters: any[];
+  resumes: any[];
+  documents: any[];
+  applications: any[];
+  interviews: { upcoming: any[]; live: any[]; past: any[] };
+  drives: {
+    applied: number;
+    attended: number;
+    selected: number;
+    rejected: number;
+    inProgress: number;
+    byStatus: Record<string, number>;
+    openNotApplied: { id: string; drive_code: string; role_title: string; ctc: number | string | null; registration_deadline: string; company?: { name: string; logo_url?: string | null }; eligible: boolean; reasons: string[] }[];
+  };
+  offers: any[];
+  placement: { status: string; accepted: any | null; acceptedCount: number };
+  training: { enrollments: any[]; certificates: any[]; attendance: { sessions: number; present: number; percentage: number | null } };
+  notifications: any[];
+  stats: { applications: number; interviews: number; upcomingInterviews: number; offers: number; resumes: number; documents: number; certificates: number };
+}
+
+export const getStudentOverview = async (id: string) => {
+  const response = await apiClient.get<{ data: { overview: StudentOverview } }>(`/students/${id}/overview`);
+  return response.data.data.overview;
+};
+
+/** Short-lived signed link to a student document (files are private). */
+export const getDocumentFileUrl = async (documentId: string) => {
+  const response = await apiClient.get<{ data: { url: string; file_name: string | null } }>(`/students/document/${documentId}/file`);
+  return response.data.data;
 };

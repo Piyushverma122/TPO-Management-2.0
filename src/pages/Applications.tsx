@@ -49,7 +49,6 @@ import {
   getApplications,
   updateApplication,
   withdrawApplication,
-  uploadOffer,
 } from '../api/application.api';
 import { createNotification } from '../api/notification.api';
 import supabase from '../config/supabase';
@@ -117,81 +116,6 @@ export const Applications: React.FC = () => {
     }
   }, [searchParam]);
 
-  // Fallback Candidate Applications Dataset for Drives
-  const FALLBACK_APPLICATIONS: DetailedApplication[] = useMemo(() => [
-    {
-      id: 'app-101',
-      studentId: 'std-1',
-      studentName: 'Jatin Sahu',
-      studentAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=120',
-      rollNumber: '21CS045',
-      branch: 'Computer Science',
-      cgpa: 8.7,
-      semester: 8,
-      companyId: 'cmp-google',
-      companyName: searchParam || 'Drive Test Company 1785057685495',
-      companyLogo: 'https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?auto=format&fit=crop&q=80&w=120',
-      driveId: driveIdParam || 'drv-google-101',
-      roleTitle: 'Verification Systems Engineer',
-      ctc: '₹20.0 LPA',
-      location: 'On Campus',
-      appliedDate: '2026-08-01',
-      status: 'Shortlisted',
-      resumeUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-      resumeName: 'Jatin_Sahu_Resume.pdf',
-      githubUrl: 'https://github.com',
-      linkedinUrl: 'https://linkedin.com',
-      portfolioUrl: 'https://portfolio.dev',
-      skills: ['Verification', 'System Design', 'C++', 'Python'],
-    },
-    {
-      id: 'app-102',
-      studentId: 'std-2',
-      studentName: 'Priya Verma',
-      studentAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=120',
-      rollNumber: '21IT022',
-      branch: 'Information Tech',
-      cgpa: 9.1,
-      semester: 8,
-      companyId: 'cmp-google',
-      companyName: searchParam || 'Drive Test Company 1785057685495',
-      companyLogo: 'https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?auto=format&fit=crop&q=80&w=120',
-      driveId: driveIdParam || 'drv-google-101',
-      roleTitle: 'Verification Systems Engineer',
-      ctc: '₹20.0 LPA',
-      location: 'On Campus',
-      appliedDate: '2026-08-02',
-      status: 'Applied',
-      resumeUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-      resumeName: 'Priya_Verma_CV.pdf',
-      githubUrl: 'https://github.com',
-      linkedinUrl: 'https://linkedin.com',
-      skills: ['Verification', 'VLSI', 'Python', 'SQL'],
-    },
-    {
-      id: 'app-103',
-      studentId: 'std-3',
-      studentName: 'Rahul Sharma',
-      studentAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120',
-      rollNumber: '21CS088',
-      branch: 'Computer Science',
-      cgpa: 8.4,
-      semester: 8,
-      companyId: 'cmp-amazon',
-      companyName: 'Amazon AWS',
-      companyLogo: 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
-      driveId: 'drv-amazon-102',
-      roleTitle: 'Frontend & Cloud Systems Engineer',
-      ctc: '₹28.5 LPA',
-      location: 'Bengaluru, KA',
-      appliedDate: '2026-07-28',
-      status: 'Selected',
-      resumeUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-      resumeName: 'Rahul_Sharma_Resume.pdf',
-      skills: ['AWS', 'React', 'Node.js', 'Docker'],
-    },
-  ], [searchParam, driveIdParam]);
-
   // Fetch Applications from Backend API
   const fetchApplicationsData = useCallback(async () => {
     setLoading(true);
@@ -200,71 +124,63 @@ export const Applications: React.FC = () => {
       let fetchedList: DetailedApplication[] = [];
       let totalCount = 0;
 
-      try {
-        const res = await getApplications({
-          page: currentPage,
-          limit: itemsPerPage,
-          search: searchQuery || searchParam || undefined,
-          status: selectedStatus !== 'All' ? selectedStatus : undefined,
-          drive_id: driveIdParam || undefined,
+      const res = await getApplications({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery || searchParam || undefined,
+        status: selectedStatus !== 'All' ? selectedStatus : undefined,
+        drive_id: driveIdParam || undefined,
+      });
+
+      const rawList = res.data?.applications || [];
+      totalCount = res.data?.total || rawList.length;
+
+      if (rawList.length > 0) {
+        fetchedList = rawList.map((a: any) => {
+          const driveObj = a.placement_drives || a.drives;
+          const compObj = driveObj?.companies;
+          const studentObj = a.students;
+          const userObj = studentObj?.users;
+          const appDate = a.created_at || a.applied_at || a.applied_date;
+
+          return {
+            id: a.id,
+            studentId: studentObj?.id || '',
+            studentName: userObj?.full_name || studentObj?.name || 'Candidate',
+            studentAvatar: userObj?.avatar_url || '',
+            rollNumber: studentObj?.roll_number || '',
+            branch: studentObj?.branches?.name || '',
+            cgpa: studentObj?.cgpa ? parseFloat(studentObj.cgpa) : 0,
+            semester: studentObj?.current_semester || 0,
+            companyId: compObj?.id || '',
+            companyName: compObj?.name || driveObj?.company_name || 'Corporate Partner',
+            companyLogo: compObj?.logo_url || '',
+            driveId: driveObj?.id || a.drive_id || '',
+            roleTitle: driveObj?.role_title || '',
+            ctc: Number(driveObj?.ctc) > 0 ? `₹${driveObj.ctc} LPA` : '',
+            location: driveObj?.location || '',
+            appliedDate: appDate ? new Date(appDate).toLocaleDateString() : new Date().toLocaleDateString(),
+            status: a.status || 'Applied',
+            resumeUrl: a.resumes?.file_url || '',
+            resumeName: a.resumes?.file_name || '',
+            offerLetterUrl: a.offer_letter_url || '',
+            remarks: a.remarks || '',
+            skills: studentObj?.skills || [],
+          };
         });
-
-        const rawList = res.data?.applications || [];
-        totalCount = res.data?.total || rawList.length;
-
-        if (rawList.length > 0) {
-          fetchedList = rawList.map((a: any) => {
-            const driveObj = a.placement_drives || a.drives;
-            const compObj = driveObj?.companies;
-            const studentObj = a.students;
-            const userObj = studentObj?.users;
-            const appDate = a.created_at || a.applied_at || a.applied_date;
-
-            return {
-              id: a.id,
-              studentId: studentObj?.id || '',
-              studentName: userObj?.full_name || studentObj?.name || 'Candidate',
-              studentAvatar: userObj?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-              rollNumber: studentObj?.roll_number || '21CS045',
-              branch: studentObj?.branches?.name || 'Computer Science',
-              cgpa: studentObj?.cgpa ? parseFloat(studentObj.cgpa) : 8.5,
-              semester: studentObj?.current_semester || 8,
-              companyId: compObj?.id || '',
-              companyName: compObj?.name || driveObj?.company_name || 'Corporate Partner',
-              companyLogo: compObj?.logo_url || 'https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&q=80&w=120',
-              driveId: driveObj?.id || a.drive_id || '',
-              roleTitle: driveObj?.role_title || 'Software Engineer',
-              ctc: driveObj?.ctc ? `₹${driveObj.ctc} LPA` : '₹12.0 LPA',
-              location: driveObj?.location || 'On Campus',
-              appliedDate: appDate ? new Date(appDate).toLocaleDateString() : new Date().toLocaleDateString(),
-              status: a.status || 'Applied',
-              resumeUrl: a.resumes?.file_url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-              resumeName: a.resumes?.file_name || 'Student_CV.pdf',
-              offerLetterUrl: a.offer_letter_url || '',
-              remarks: a.remarks || 'Application submitted successfully.',
-              skills: studentObj?.skills || ['System Design', 'React', 'Node.js'],
-            };
-          });
-        }
-      } catch (err) {
-        console.warn('Backend applications fetch warning, using candidate dataset:', err);
-      }
-
-      if (fetchedList.length === 0) {
-        fetchedList = FALLBACK_APPLICATIONS;
-        totalCount = FALLBACK_APPLICATIONS.length;
       }
 
       setApplications(fetchedList);
       setTotalRecords(totalCount);
     } catch (err: any) {
-      console.error('Applications fetch error:', err);
-      setApplications(FALLBACK_APPLICATIONS);
-      setTotalRecords(FALLBACK_APPLICATIONS.length);
+      const message = err?.response?.data?.message || 'Failed to load applications.';
+      setErrorMsg(message);
+      setApplications([]);
+      setTotalRecords(0);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchQuery, searchParam, selectedStatus, driveIdParam, FALLBACK_APPLICATIONS]);
+  }, [currentPage, itemsPerPage, searchQuery, searchParam, selectedStatus, driveIdParam]);
 
   useEffect(() => {
     fetchApplicationsData();

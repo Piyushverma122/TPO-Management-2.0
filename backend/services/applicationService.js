@@ -23,11 +23,10 @@ const applyForDrive = async (userId, driveId, remarks) => {
   // 2. Fetch Placement Drive
   const drive = await driveService.getDriveById(driveId);
 
-  // Check Registration Deadline
-  const now = new Date();
-  const deadline = new Date(drive.registration_deadline);
-  if (now > deadline) {
-    const err = new Error('Registration deadline for this drive has closed.');
+  // Published, open for registration, and the student meets every eligibility rule.
+  const eligibility = await driveService.evaluateEligibility(drive, student);
+  if (!eligibility.eligible) {
+    const err = new Error(`Not eligible: ${eligibility.reasons.join(' ')}`);
     err.statusCode = 400;
     throw err;
   }
@@ -56,19 +55,6 @@ const applyForDrive = async (userId, driveId, remarks) => {
 
   if (!activeResume) {
     const err = new Error('No active resume found. Upload a resume before applying.');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  // 5. Check Basic Criteria (CGPA & Backlogs)
-  if (student.cgpa < drive.min_cgpa) {
-    const err = new Error(`Ineligible: Minimum CGPA required is ${drive.min_cgpa} (Your CGPA: ${student.cgpa}).`);
-    err.statusCode = 400;
-    throw err;
-  }
-
-  if (student.active_backlogs > drive.max_backlogs) {
-    const err = new Error(`Ineligible: Maximum active backlogs allowed is ${drive.max_backlogs} (Your backlogs: ${student.active_backlogs}).`);
     err.statusCode = 400;
     throw err;
   }
@@ -459,83 +445,18 @@ const bulkReject = async (applicationIds, remarks = 'Application rejected', upda
 /**
  * Schedule Interview Round
  */
-const scheduleInterview = async (applicationId, roundName, interviewDate, mode, meetingUrl, venue, remarks, updatedBy) => {
-  const app = await getApplicationById(applicationId);
-
-  // Determine stage mapping
-  let stage = 'Round 1';
-  if (roundName.toLowerCase().includes('technical')) stage = 'Technical';
-  else if (roundName.toLowerCase().includes('hr')) stage = 'HR';
-  else if (roundName.toLowerCase().includes('round 2')) stage = 'Round 2';
-
-  const result = await updateApplicationStatus(
-    applicationId,
-    stage,
-    roundName,
-    `Interview Scheduled: ${interviewDate} (${mode || 'Online'}) ${venue ? '- ' + venue : ''}`,
-    updatedBy
-  );
-
-  return result;
-};
-
-/**
- * Upload Offer Letter PDF & Update Stage to 'Offer'
- */
-const uploadOfferLetter = async (applicationId, file, updatedBy) => {
-  const app = await getApplicationById(applicationId);
-
-  const fileExt = file.originalname.split('.').pop();
-  const fileName = `${Date.now()}_offer_letter.${fileExt}`;
-  const storagePath = `${app.drive_id}/${app.student_id}/${fileName}`;
-
-  // Upload to Supabase Storage 'offer-letters' bucket
-  const { error: uploadErr } = await supabase.storage
-    .from('offer-letters')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Offer Letter Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  const { data: publicUrlData } = supabase.storage.from('offer-letters').getPublicUrl(storagePath);
-  const offerUrl = publicUrlData.publicUrl;
-
-  // Update Application Record
-  const { data: updatedApp, error: dbErr } = await supabase
-    .from('drive_applications')
-    .update({
-      offer_letter_url: offerUrl,
-      status: 'Offer',
-      current_round: 'Offer Released',
-    })
-    .eq('id', applicationId)
-    .select('*')
-    .single();
-
-  if (dbErr) {
-    const err = new Error(dbErr.message);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  // Insert Audit History Log
-  await supabase.from('application_status_history').insert([
-    {
-      application_id: applicationId,
-      stage: 'Offer',
-      round_name: 'Offer Letter Released',
-      remarks: `Offer letter issued: ${offerUrl}`,
-      updated_by: updatedBy,
-    },
-  ]);
-
-  return updatedApp;
+const scheduleInterview = async (applicationId, roundName, interviewDate, mode, meetingUrl, venue, remarks, user) => {
+  // Kept for the legacy POST /applications/:id/interview route; the interviews module owns scheduling now.
+  const interviewService = require('./interviewService'); // lazy: interviewService depends on this module
+  await interviewService.createInterview(user, {
+    application_id: applicationId,
+    round_name: roundName,
+    scheduled_at: interviewDate,
+    mode: mode || 'Online',
+    meeting_url: meetingUrl,
+    venue,
+  });
+  return getApplicationById(applicationId);
 };
 
 /**
@@ -601,6 +522,5 @@ module.exports = {
   bulkShortlist,
   bulkReject,
   scheduleInterview,
-  uploadOfferLetter,
   getApplicationStatistics,
 };

@@ -16,7 +16,7 @@ export interface ModalProps {
   subtitle?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full' | 'screen';
 }
 
 const maxWidthMap = {
@@ -29,6 +29,8 @@ const maxWidthMap = {
   '4xl': 'sm:max-w-4xl',
   '5xl': 'sm:max-w-5xl',
   full: 'sm:max-w-6xl',
+  // Almost the whole window, for detail views that hold a lot of information.
+  screen: 'sm:max-w-[min(1360px,96vw)] max-h-[94vh]',
 };
 
 export const Modal: React.FC<ModalProps> = ({

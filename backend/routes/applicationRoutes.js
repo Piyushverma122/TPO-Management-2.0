@@ -4,7 +4,6 @@ const applicationController = require('../controllers/applicationController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 const { authorizeModule } = require('../middleware/authorize');
 const { Module, Action } = require('../config/rbac');
-const { uploadOfferLetter } = require('../config/multer');
 const {
   validateApplyDrive,
   validateUpdateStatus,
@@ -55,15 +54,6 @@ router.post(
   authorizeModule(Module.INTERVIEWS, Action.CREATE),
   validateScheduleInterview,
   applicationController.scheduleInterview
-);
-
-// Offer Letter Upload Route
-router.post(
-  '/:id/offer-letter',
-  authorizeModule(Module.OFFER_LETTERS, Action.UPLOAD),
-  validateApplicationId,
-  uploadOfferLetter.single('offer_letter'),
-  applicationController.uploadOfferLetter
 );
 
 module.exports = router;

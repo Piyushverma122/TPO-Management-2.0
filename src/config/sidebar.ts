@@ -9,6 +9,7 @@ import {
   MessagesSquare,
   Award,
   FileCheck,
+  FileUser,
   GraduationCap,
   BarChart3,
   Bell,
@@ -26,6 +27,8 @@ export interface SidebarNavItem {
   module: Module;
   badge?: string;
   roleTitles?: Partial<Record<Role, string>>;
+  /** When set, only these roles get the item (on top of the module permission). */
+  roles?: Role[];
   children?: SidebarNavItem[];
 }
 
@@ -79,6 +82,14 @@ export const MASTER_SIDEBAR_CONFIG: SidebarNavItem[] = [
       [Role.STUDENT]: 'My Applications',
       [Role.RECRUITER]: 'Applicants',
     },
+  },
+  {
+    id: 'resumes',
+    title: 'My Resumes',
+    route: '/resumes',
+    icon: FileUser,
+    module: Module.PROFILE,
+    roles: [Role.STUDENT],
   },
   {
     id: 'interviews',
@@ -187,6 +198,7 @@ export const getDynamicSidebar = (userRole?: RoleType | null): SidebarNavItem[] 
     }
 
     // 2. Check permission for single menu item using canAccessModule
+    if (item.roles && !item.roles.includes(normalizedRole)) return null;
     if (!canAccessModule(normalizedRole, item.module)) {
       return null;
     }

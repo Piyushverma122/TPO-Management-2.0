@@ -131,3 +131,56 @@ export interface PlacementMetrics {
   placementPercentage: number;
   branchWiseStats: Array<{ branch: string; placed: number; total: number }>;
 }
+
+export type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'Passed' | 'Failed';
+export type InterviewMode = 'Online' | 'Offline';
+
+export interface Interview {
+  id: string;
+  application_id: string;
+  drive_id: string;
+  student_id: string;
+  company_id: string;
+  round_name: string;
+  round_no: number;
+  scheduled_at: string;
+  end_at: string | null;
+  mode: InterviewMode;
+  meeting_url: string | null;
+  venue: string | null;
+  interviewer_name: string | null;
+  status: InterviewStatus;
+  feedback: string | null;
+  reschedule_count: number;
+  students?: {
+    id: string;
+    roll_number?: string;
+    users?: { id: string; full_name: string; email: string };
+  };
+  placement_drives?: { id: string; drive_code?: string; role_title?: string };
+  companies?: { id: string; name: string; logo_url?: string | null };
+}
+
+export type OfferStatus = 'Pending Approval' | 'Released' | 'Accepted' | 'Declined' | 'Expired' | 'Rejected';
+
+export interface Offer {
+  id: string;
+  application_id: string | null;
+  student_id: string;
+  company_id: string;
+  drive_id: string;
+  role_title: string | null;
+  package: number | string;
+  joining_date: string | null;
+  response_deadline: string | null;
+  offer_status: OfferStatus | string;
+  file_name: string | null;
+  storage_path: string | null;
+  review_remarks: string | null;
+  decline_reason: string | null;
+  responded_at: string | null;
+  created_at: string;
+  students?: { id: string; roll_number?: string; users?: { id: string; full_name: string; email: string } };
+  companies?: { id: string; name: string; logo_url?: string | null };
+  placement_drives?: { id: string; drive_code?: string; role_title?: string; ctc?: number; location?: string; job_type?: string };
+}

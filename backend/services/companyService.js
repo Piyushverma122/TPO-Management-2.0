@@ -2,6 +2,8 @@ const supabase = require('../config/supabase');
 const { supabase: supabaseAuth } = require('../config/supabase');
 const bcrypt = require('bcryptjs');
 const dataScopeService = require('./dataScopeService');
+const storage = require('./storageService');
+const env = require('../config/env');
 
 /**
  * List companies with search, filtering and pagination
@@ -236,30 +238,12 @@ const deleteCompany = async (companyId) => {
  * Upload Company Logo to "company-logos" storage bucket
  */
 const uploadCompanyLogo = async (companyId, file) => {
-  await getCompanyById(companyId);
+  const company = await getCompanyById(companyId);
 
-  const fileExt = file.originalname.split('.').pop();
-  const fileName = `${Date.now()}_logo.${fileExt}`;
-  const storagePath = `${companyId}/${fileName}`;
+  // Stored privately in R2 and served to browsers by the public logo route, so <img> links stay stable and cacheable.
+  const key = await storage.storeFile('company-logos', [companyId], file);
+  const logoUrl = `${env.publicApiUrl}/api/v1/public/company-logos/${companyId}/${key.split('/').pop()}`;
 
-  // Upload to Supabase Storage 'company-logos'
-  const { error: uploadErr } = await supabase.storage
-    .from('company-logos')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Logo Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  const { data: publicUrlData } = supabase.storage.from('company-logos').getPublicUrl(storagePath);
-  const logoUrl = publicUrlData.publicUrl;
-
-  // Update company record
   const { data: updatedCompany, error: dbErr } = await supabase
     .from('companies')
     .update({ logo_url: logoUrl })
@@ -268,10 +252,15 @@ const uploadCompanyLogo = async (companyId, file) => {
     .single();
 
   if (dbErr) {
+    await storage.removeObject(key);
     const err = new Error(dbErr.message);
     err.statusCode = 500;
     throw err;
   }
+
+  // Drop the previous logo once the new one is saved (only if it was one of ours).
+  const previous = String(company?.logo_url || '').match(/\/public\/company-logos\/([0-9a-f-]{36})\/([0-9a-f-]{36}\.[a-z0-9]+)$/i);
+  if (previous) await storage.removeObject(`company-logos/${previous[1]}/${previous[2]}`);
 
   return updatedCompany;
 };
@@ -281,26 +270,7 @@ const uploadCompanyLogo = async (companyId, file) => {
  */
 const uploadCompanyDocument = async (companyId, file, documentType = 'jd_pdf', userId) => {
   await getCompanyById(companyId);
-
-  const fileExt = file.originalname.split('.').pop();
-  const fileName = `${Date.now()}_${documentType}.${fileExt}`;
-  const storagePath = `${companyId}/${fileName}`;
-
-  // Upload to 'company-documents' bucket
-  const { error: uploadErr } = await supabase.storage
-    .from('company-documents')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Company Document Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  const { data: publicUrlData } = supabase.storage.from('company-documents').getPublicUrl(storagePath);
+  const storagePath = await storage.storeFile('company-documents', [companyId], file);
 
   const { data: newDoc, error: dbErr } = await supabase
     .from('company_documents')
@@ -308,12 +278,12 @@ const uploadCompanyDocument = async (companyId, file, documentType = 'jd_pdf', u
       {
         company_id: companyId,
         document_type: documentType,
-        bucket_name: 'company-documents',
+        bucket_name: storage.R2_TAG,
         storage_path: storagePath,
         file_name: file.originalname,
         mime_type: file.mimetype,
         file_size: file.size,
-        file_url: publicUrlData.publicUrl,
+        file_url: `r2:${storagePath}`,
         uploaded_by: userId || null,
       },
     ])
@@ -321,6 +291,7 @@ const uploadCompanyDocument = async (companyId, file, documentType = 'jd_pdf', u
     .single();
 
   if (dbErr) {
+    await storage.removeObject(storagePath);
     const err = new Error(dbErr.message);
     err.statusCode = 500;
     throw err;
@@ -364,8 +335,7 @@ const deleteCompanyDocument = async (documentId) => {
     throw err;
   }
 
-  // Remove from Storage
-  await supabase.storage.from('company-documents').remove([doc.storage_path]);
+  await storage.removeStored(doc, supabase);
 
   // Remove from DB
   const { error: dbErr } = await supabase.from('company_documents').delete().eq('id', documentId);
@@ -579,3 +549,16 @@ module.exports = {
   updateRecruiter,
   deleteRecruiter,
 };
+
+/** Signed link to a company document: admin/TPO, or a recruiter of that company. */
+const getCompanyDocumentFileUrl = async (documentId, user) => {
+  const { data: doc } = await supabase.from('company_documents').select('*').eq('id', documentId).maybeSingle();
+  if (!doc) throw Object.assign(new Error('Company document not found.'), { statusCode: 404 });
+  await dataScopeService.assertCanManageCompany(user, doc.company_id).catch((err) => {
+    if (['admin', 'tpo'].includes(user.role)) return;
+    throw err.statusCode === 403 ? Object.assign(new Error('Company document not found.'), { statusCode: 404 }) : err;
+  });
+  return storage.signedLinkFor(doc, supabase);
+};
+
+module.exports.getCompanyDocumentFileUrl = getCompanyDocumentFileUrl;

@@ -1,4 +1,9 @@
-const { supabase, supabaseAdmin } = require('../config/supabase');
+// `supabase` is the data client (service-role when SUPABASE_USE_SERVICE_ROLE=true), like in every other service;
+// the anon client must not be used for table access once RLS is on.
+const storage = require('./storageService');
+const R2_TAG = 'r2'; // resumes.bucket_name for files that live in Cloudflare R2
+const supabase = require('../config/supabase');
+const { supabaseAdmin } = supabase;
 const bcrypt = require('bcryptjs');
 const dataScopeService = require('./dataScopeService');
 const { sendStudentWelcomeEmail } = require('./emailService');
@@ -69,6 +74,20 @@ const listStudents = async (queryParams, reqUser) => {
 
   if (batch || queryParams.passing_year) {
     query = query.eq('passing_year', batch || queryParams.passing_year);
+  }
+
+  // Department is matched through its branches (a department id or its name).
+  if (department) {
+    const isId = /^[0-9a-f-]{36}$/i.test(department);
+    const { data: depts } = isId
+      ? await supabase.from('departments').select('id').eq('id', department)
+      : await supabase.from('departments').select('id').ilike('name', String(department).replace(/[%,()]/g, ' ').trim());
+    const { data: deptBranches } = (depts || []).length
+      ? await supabase.from('branches').select('id').in('department_id', depts.map((d) => d.id))
+      : { data: [] };
+    const branchIds = (deptBranches || []).map((b) => b.id);
+    // A department with no branches has no students: match nothing rather than ignoring the filter.
+    query = query.in('branch_id', branchIds.length ? branchIds : ['00000000-0000-0000-0000-000000000000']);
   }
 
   if (placement_status) {
@@ -543,6 +562,86 @@ const createStudent = async (payload, authToken) => {
 /**
  * Update Student details
  */
+/** Fields a student may change on their own profile (never marks, backlogs, branch or placement status). */
+const SELF_EDITABLE_FIELDS = [
+  'phone', 'alternate_phone', 'gender', 'date_of_birth', 'address', 'city', 'state', 'country', 'pincode',
+  'linkedin_url', 'github_url', 'portfolio_url', 'leetcode_url', 'hackerrank_url', 'resume_headline', 'bio',
+];
+
+const updateOwnProfile = async (userId, payload) => {
+  const { data: student } = await supabase.from('students').select('id').eq('user_id', userId).is('deleted_at', null).maybeSingle();
+  if (!student) {
+    const err = new Error('Your account is not linked to a student record.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const updateFields = {};
+  for (const field of SELF_EDITABLE_FIELDS) {
+    if (payload[field] !== undefined) updateFields[field] = payload[field] === '' ? null : payload[field];
+  }
+  if (Object.keys(updateFields).length === 0) {
+    const err = new Error('Nothing to update.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const { error } = await supabase.from('students').update(updateFields).eq('id', student.id);
+  if (error) {
+    const err = new Error(error.message);
+    err.statusCode = 500;
+    throw err;
+  }
+  return getStudentFullProfile(student.id);
+};
+
+/** Owner (users.id) of a resume or document, for ownership checks before deleting it. */
+const getFileOwnerUserId = async (table, fileId) => {
+  // resumes and students reference each other (active resume), so the join must name its foreign key
+  const join = table === 'resumes' ? 'students!resumes_student_id_fkey(user_id)' : 'students(user_id)';
+  const { data } = await supabase.from(table).select(`student_id, ${join}`).eq('id', fileId).maybeSingle();
+  return data ? { studentId: data.student_id, userId: data.students?.user_id } : null;
+};
+
+/**
+ * Signed link to a resume PDF. A student opens their own; admin/TPO/faculty any; a recruiter only resumes
+ * that were attached to an application for one of their company's drives.
+ */
+const getResumeFileUrl = async (resumeId, user) => {
+  const { data: resume } = await supabase.from('resumes').select('*, students!resumes_student_id_fkey(user_id)').eq('id', resumeId).maybeSingle();
+  if (!resume) throw Object.assign(new Error('Resume record not found.'), { statusCode: 404 });
+
+  const role = user.role;
+  let allowed = ['admin', 'tpo', 'faculty'].includes(role) || (role === 'student' && resume.students?.user_id === user.id);
+  if (!allowed && role === 'recruiter') {
+    const companyId = await dataScopeService.getCompanyIdForRecruiter(user.id);
+    if (companyId) {
+      const { data: apps } = await supabase.from('drive_applications').select('drive_id, placement_drives(company_id)').eq('resume_id', resumeId);
+      allowed = (apps || []).some((a) => a.placement_drives?.company_id === companyId);
+    }
+  }
+  if (!allowed) throw Object.assign(new Error('Resume record not found.'), { statusCode: 404 });
+
+  if (resume.bucket_name === R2_TAG) {
+    const url = await storage.getDownloadUrl(resume.storage_path, { fileName: resume.file_name, contentType: 'application/pdf' });
+    return { url, file_name: resume.file_name, expires_in: storage.SIGNED_URL_TTL_SECONDS };
+  }
+
+  // Resumes uploaded before the move to R2 sit in the private Supabase bucket.
+  const { data, error } = await supabase.storage.from('resumes').createSignedUrl(resume.storage_path, storage.SIGNED_URL_TTL_SECONDS);
+  if (!error && data?.signedUrl) return { url: data.signedUrl, file_name: resume.file_name, expires_in: storage.SIGNED_URL_TTL_SECONDS };
+  if (/^https?:\/\//i.test(resume.file_url || '')) return { url: resume.file_url, file_name: resume.file_name, expires_in: null };
+  throw Object.assign(new Error('This resume file is not available. Please upload it again.'), { statusCode: 404 });
+};
+
+/** Signed link to a student document: the student themselves, or staff (admin, TPO, faculty). */
+const getDocumentFileUrl = async (documentId, user) => {
+  const { data: doc } = await supabase.from('student_documents').select('*, students(user_id)').eq('id', documentId).maybeSingle();
+  const allowed = doc && (['admin', 'tpo', 'faculty'].includes(user.role) || (user.role === 'student' && doc.students?.user_id === user.id));
+  if (!allowed) throw Object.assign(new Error('Document record not found.'), { statusCode: 404 });
+  return storage.signedLinkFor(doc, supabase);
+};
+
 const updateStudent = async (studentId, payload) => {
   // Verify student exists
   await getStudentById(studentId);
@@ -685,27 +784,10 @@ const getStudentFullProfile = async (studentId) => {
 const uploadResume = async (studentId, file, versionTitle = 'Resume Version', userId) => {
   await getStudentById(studentId);
 
-  const fileExt = file.originalname.split('.').pop();
-  const fileName = `${Date.now()}_resume.${fileExt}`;
-  const storagePath = `${studentId}/${fileName}`;
-
-  // 1. Upload Buffer to Supabase Storage 'resumes' Bucket
-  const { error: uploadErr } = await supabase.storage
-    .from('resumes')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Supabase Storage Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  // Get Public File URL
-  const { data: publicUrlData } = supabase.storage.from('resumes').getPublicUrl(storagePath);
-  const fileUrl = publicUrlData.publicUrl;
+  // 1. Store the PDF in the private R2 bucket; it is only ever served through short-lived signed links.
+  const storagePath = storage.buildKey('resumes', studentId, 'pdf');
+  await storage.putObject({ key: storagePath, body: file.buffer, contentType: 'application/pdf' });
+  const fileUrl = `r2:${storagePath}`; // placeholder: the column is NOT NULL, the real link comes from /resume/:id/file
 
   // 2. Deactivate previous active resumes
   await supabase
@@ -720,10 +802,10 @@ const uploadResume = async (studentId, file, versionTitle = 'Resume Version', us
       {
         student_id: studentId,
         version_title: versionTitle,
-        bucket_name: 'resumes',
+        bucket_name: R2_TAG,
         storage_path: storagePath,
         file_name: file.originalname,
-        mime_type: file.mimetype,
+        mime_type: 'application/pdf',
         file_size: file.size,
         file_url: fileUrl,
         is_active: true,
@@ -734,6 +816,7 @@ const uploadResume = async (studentId, file, versionTitle = 'Resume Version', us
     .single();
 
   if (dbErr) {
+    await storage.removeObject(storagePath); // do not leave an orphan file behind
     const err = new Error(dbErr.message);
     err.statusCode = 500;
     throw err;
@@ -783,8 +866,9 @@ const deleteResume = async (resumeId) => {
     throw err;
   }
 
-  // Delete file from Supabase Storage
-  await supabase.storage.from('resumes').remove([resume.storage_path]);
+  // Delete the file from wherever it is stored
+  if (resume.bucket_name === R2_TAG) await storage.removeObject(resume.storage_path);
+  else await supabase.storage.from('resumes').remove([resume.storage_path]);
 
   // Delete DB record
   const { error: dbErr } = await supabase.from('resumes').delete().eq('id', resumeId);
@@ -804,25 +888,7 @@ const deleteResume = async (resumeId) => {
 const uploadDocument = async (studentId, file, documentName, documentType, userId) => {
   await getStudentById(studentId);
 
-  const fileExt = file.originalname.split('.').pop();
-  const fileName = `${Date.now()}_${documentName.replace(/\s+/g, '_')}.${fileExt}`;
-  const storagePath = `${studentId}/${fileName}`;
-
-  // Upload to Supabase Storage 'student-documents'
-  const { error: uploadErr } = await supabase.storage
-    .from('student-documents')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Supabase Storage Document Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  const { data: publicUrlData } = supabase.storage.from('student-documents').getPublicUrl(storagePath);
+  const storagePath = await storage.storeFile('student-documents', [studentId], file);
 
   const { data: newDoc, error: dbErr } = await supabase
     .from('student_documents')
@@ -831,12 +897,12 @@ const uploadDocument = async (studentId, file, documentName, documentType, userI
         student_id: studentId,
         document_name: documentName,
         document_type: documentType || 'General',
-        bucket_name: 'student-documents',
+        bucket_name: R2_TAG,
         storage_path: storagePath,
         file_name: file.originalname,
         mime_type: file.mimetype,
         file_size: file.size,
-        file_url: publicUrlData.publicUrl,
+        file_url: `r2:${storagePath}`,
         uploaded_by: userId || null,
       },
     ])
@@ -844,6 +910,7 @@ const uploadDocument = async (studentId, file, documentName, documentType, userI
     .single();
 
   if (dbErr) {
+    await storage.removeObject(storagePath);
     const err = new Error(dbErr.message);
     err.statusCode = 500;
     throw err;
@@ -887,8 +954,7 @@ const deleteDocument = async (documentId) => {
     throw err;
   }
 
-  // Delete file from Storage
-  await supabase.storage.from('student-documents').remove([doc.storage_path]);
+  await storage.removeStored(doc, supabase);
 
   // Delete DB record
   const { error: dbErr } = await supabase.from('student_documents').delete().eq('id', documentId);
@@ -903,6 +969,10 @@ const deleteDocument = async (documentId) => {
 };
 
 module.exports = {
+  getDocumentFileUrl,
+  getResumeFileUrl,
+  updateOwnProfile,
+  getFileOwnerUserId,
   listStudents,
   getStudentById,
   createStudent,

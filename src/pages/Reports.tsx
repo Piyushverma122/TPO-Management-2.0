@@ -1,411 +1,235 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import {
-  BarChart3,
-  TrendingUp,
-  Download,
-  FileText,
-  Award,
-  DollarSign,
-  Users,
-  Building2,
-  CheckCircle2,
-  PieChart as PieIcon,
-  Sparkles,
-  RefreshCw,
-  FileSpreadsheet,
-} from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Award, Briefcase, Building2, CalendarClock, Clock, Download, FileSpreadsheet, FileText, IndianRupee, Percent, RefreshCw, TrendingUp, Users } from 'lucide-react';
 import { Card } from '../components/app/Card';
 import { Button } from '../components/app/Button';
-import { Badge } from '../components/app/Badge';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/app/Table';
-import { Avatar } from '../components/app/Avatar';
-import { RadialProgress } from '../components/app/ProgressBar';
+import { Input } from '../components/app/Input';
+import { Dropdown } from '../components/app/Dropdown';
+import { Modal } from '../components/app/Modal';
+import { StatTile } from '../components/app/StatTile';
+import { Skeleton } from '../components/app/Skeleton';
+import { EmptyState } from '../components/app/EmptyState';
 import { Breadcrumb } from '../components/app/Breadcrumb';
 import { useToast } from '../components/app/Toast';
-import { getPlacementStatistics, getPlacements } from '../api/placement.api';
-import { getDashboardReport, exportPDF, exportExcel, exportCSV } from '../api/report.api';
 import { PermissionGuard } from '../components/auth/PermissionGuard';
-import { Module, Action } from '../config/rbac';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useAuth } from '../context/AuthContext';
+import { Action, Module, Role, normalizeRole } from '../config/rbac';
+import { downloadReport, getReportDashboard } from '../api/report.api';
+import type { ExportFormat, ReportDashboard, ReportFilters, ReportType } from '../api/report.api';
+import { getDriveLookups } from '../api/drive.api';
+import type { DriveLookups } from '../api/drive.api';
+import { BarsCard, CountsCard, LatestCard, RecruitersCard, SplitCard, TrainingCard, TrendCard } from '../components/reports/ReportCharts';
 
-// Analytics Dataset for Charts
-const departmentDistribution = [
-  { name: 'Computer Science', value: 42, color: 'var(--chart-1)' },
-  { name: 'Information Tech', value: 28, color: 'var(--chart-2)' },
-  { name: 'Electronics (ECE)', value: 18, color: 'var(--chart-5)' },
-  { name: 'Mechanical & Civil', value: 12, color: 'var(--chart-3)' },
+const thisYear = new Date().getFullYear();
+const BATCHES = [{ label: 'All batches', value: '' }, ...Array.from({ length: 6 }, (_, i) => String(thisYear - 1 + i)).map((y) => ({ label: `${y} batch`, value: y }))];
+
+const REPORT_TYPES: { value: ReportType; label: string; staffOnly?: boolean }[] = [
+  { value: 'summary', label: 'Summary (all charts as tables)' },
+  { value: 'placements', label: 'Placements (accepted offers)' },
+  { value: 'drives', label: 'Drives and applicants' },
+  { value: 'companies', label: 'Companies and hiring' },
+  { value: 'students', label: 'Students (contact details included)', staffOnly: true },
+  { value: 'trainings', label: 'Training enrolments', staffOnly: true },
 ];
 
-const topCompaniesData = [
-  { name: 'Google', count: 24 },
-  { name: 'Amazon', count: 18 },
-  { name: 'Microsoft', count: 15 },
-  { name: 'Deloitte', count: 12 },
-  { name: 'TCS Digital', count: 10 },
+const FORMATS: { id: ExportFormat; label: string; icon: React.ReactNode; hint: string }[] = [
+  { id: 'pdf', label: 'PDF', icon: <FileText className="w-5 h-5" />, hint: 'Print-ready' },
+  { id: 'excel', label: 'Excel', icon: <FileSpreadsheet className="w-5 h-5" />, hint: '.xlsx workbook' },
+  { id: 'csv', label: 'CSV', icon: <Download className="w-5 h-5" />, hint: 'Plain data' },
 ];
 
-const monthlyTrendData = [
-  { month: 'Jul', val: 12 },
-  { month: 'Aug', val: 28 },
-  { month: 'Sep', val: 45 },
-  { month: 'Oct', val: 68 },
-  { month: 'Nov', val: 92 },
-  { month: 'Dec', val: 115 },
-  { month: 'Jan', val: 142 },
-];
-
-const sparklinePlacementData = [{ val: 40 }, { val: 65 }, { val: 78 }, { val: 88 }];
-const sparklineAvgData = [{ val: 8 }, { val: 10 }, { val: 11.5 }, { val: 12.5 }];
-
-const chartConfig = {
-  val: { label: 'Value', color: 'var(--chart-1)' },
-  count: { label: 'Count', color: 'var(--chart-1)' },
-  value: { label: 'Share', color: 'var(--chart-2)' },
-  placed: { label: 'Placed', color: 'var(--chart-1)' },
-} satisfies ChartConfig;
+const errorText = (err: unknown, fallback: string) => (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
+const lpa = (n: number) => `₹${n} LPA`;
 
 export const Reports: React.FC = () => {
-  const { success, error: toastError, info } = useToast();
+  const { user } = useAuth();
+  const { success, error: toastError } = useToast();
+  const isRecruiter = normalizeRole(user?.role) === Role.RECRUITER;
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [exportingType, setExportingType] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ReportFilters>({});
+  const [data, setData] = useState<ReportDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [lookups, setLookups] = useState<DriveLookups | null>(null);
 
-  const [stats, setStats] = useState<{
-    totalPlacements: number;
-    highestPackage: string;
-    averagePackage: string;
-    placementPercentage: number;
-  }>({
-    totalPlacements: 142,
-    highestPackage: '₹48.0 LPA',
-    averagePackage: '₹12.5 LPA',
-    placementPercentage: 88,
-  });
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportType, setExportType] = useState<ReportType>('summary');
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
-  const [placementsList, setPlacementsList] = useState<any[]>([]);
-
-  const fetchPlacementReports = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
-      const reportRes = await getDashboardReport();
-      if (reportRes.data?.stats) {
-        setStats(reportRes.data.stats);
-      } else {
-        const statsRes = await getPlacementStatistics();
-        if (statsRes.data?.statistics) {
-          const s = statsRes.data.statistics;
-          setStats({
-            totalPlacements: s.totalPlacements || 142,
-            highestPackage: s.highestPackage ? `₹${s.highestPackage} LPA` : '₹48.0 LPA',
-            averagePackage: s.averagePackage ? `₹${s.averagePackage} LPA` : '₹12.5 LPA',
-            placementPercentage: s.placementPercentage || 88,
-          });
-        }
-      }
-
-      const placementsRes = await getPlacements({ limit: 10 });
-      if (placementsRes.data?.placements && placementsRes.data.placements.length > 0) {
-        setPlacementsList(placementsRes.data.placements);
-      } else {
-        // Mock Live Feed Fallback
-        setPlacementsList([
-          { id: 'p1', ctc: '48.0', students: { users: { full_name: 'Rahul Sharma' } }, companies: { name: 'Google India' } },
-          { id: 'p2', ctc: '24.5', students: { users: { full_name: 'Ananya Roy' } }, companies: { name: 'Amazon AWS' } },
-          { id: 'p3', ctc: '18.0', students: { users: { full_name: 'Vikas Gupta' } }, companies: { name: 'Microsoft' } },
-          { id: 'p4', ctc: '14.2', students: { users: { full_name: 'Sneha Patel' } }, companies: { name: 'Deloitte' } },
-        ]);
-      }
-    } catch (err: any) {
-      console.warn('Report statistics API warning, using dynamic datasets:', err);
+      setData(await getReportDashboard(filters));
+    } catch (err) {
+      setErrorMsg(errorText(err, 'Failed to load the report.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
-    fetchPlacementReports();
+    load();
+  }, [load]);
+
+  // Department names come from the same options endpoint the drive form uses (staff only; others just skip the filter).
+  useEffect(() => {
+    getDriveLookups().then(setLookups).catch(() => setLookups(null));
   }, []);
 
-  const handleExportFile = async (type: 'pdf' | 'excel' | 'csv') => {
-    setExportingType(type);
+  const set = (patch: Partial<ReportFilters>) => setFilters((f) => ({ ...f, ...patch }));
+  const hasFilters = Object.values(filters).some(Boolean);
+  const departments = useMemo(() => [{ label: 'All departments', value: '' }, ...(lookups?.departments ?? []).map((d) => ({ label: d.name, value: d.id }))], [lookups]);
+
+  const runExport = async (format: ExportFormat) => {
+    setExporting(format);
     try {
-      let blobData: Blob;
-      let filename = `Placement_Report_2025.${type === 'excel' ? 'xlsx' : type}`;
-
-      try {
-        if (type === 'pdf') {
-          blobData = await exportPDF();
-        } else if (type === 'excel') {
-          blobData = await exportExcel();
-        } else {
-          blobData = await exportCSV();
+      const filename = await downloadReport(format, exportType, filters);
+      success('Report downloaded', filename);
+      setExportOpen(false);
+    } catch (err) {
+      // The server answers errors as JSON even when a file was requested.
+      let message = 'Could not generate the report.';
+      const blob = (err as { response?: { data?: Blob } })?.response?.data;
+      if (blob instanceof Blob) {
+        try {
+          message = JSON.parse(await blob.text()).message || message;
+        } catch {
+          /* keep the default message */
         }
-      } catch (e) {
-        // Fallback Client-side Report Exporter
-        const csvRows = [
-          'TPO Placement Analytics Summary Report 2025',
-          'Metric Name,Value',
-          `Total Candidates Placed,${stats.totalPlacements}`,
-          `Overall Placement Percentage,${stats.placementPercentage}%`,
-          `Highest Package Offered,${stats.highestPackage}`,
-          `Average Package Offered,${stats.averagePackage}`,
-          '',
-          'Top Recruiting Partners,Offers Released',
-          'Google,24',
-          'Amazon,18',
-          'Microsoft,15',
-          'Deloitte,12',
-        ].join('\n');
-
-        blobData = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
-        filename = `TPO_Placement_Report.${type === 'pdf' ? 'pdf' : type === 'excel' ? 'xlsx' : 'csv'}`;
       }
-
-      const url = window.URL.createObjectURL(blobData);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      success('Export Complete', `Downloaded ${filename} successfully.`);
-    } catch (err: any) {
-      toastError('Export Error', 'Failed to process report download.');
+      toastError('Export failed', message);
     } finally {
-      setExportingType(null);
+      setExporting(null);
     }
   };
 
+  const k = data?.kpis;
+  const placed = k?.placedStudents ?? 0;
+
   return (
-    <div className="space-y-6 pb-16 font-sans">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="space-y-6 pb-16">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumb items={[{ label: 'Reports & Export' }]} />
-          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-3">Placement reports</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight mt-1">Placement reports</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Annual analytics 2025: performance, department split, packages and exports.
+            {isRecruiter ? 'Hiring numbers for your company only.' : 'Live numbers from accepted offers, drives, applications and interviews.'}
+            {data && ` Updated ${new Date(data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`}
           </p>
         </div>
-
         <div className="flex items-center gap-2">
-          <Button
-            variant="tertiary"
-            size="md"
-            leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
-            onClick={fetchPlacementReports}
-            disabled={loading}
-            className="text-xs"
-          >
+          <Button variant="secondary" leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />} onClick={load} disabled={loading}>
             Refresh
           </Button>
-
           <PermissionGuard module={Module.REPORTS} action={Action.EXPORT}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="primary"
-                  size="md"
-                  leftIcon={<Download className="w-4 h-4" />}
-                  isLoading={exportingType !== null}
-                  className="text-xs"
-                >
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-2xl">
-                <DropdownMenuItem onClick={() => handleExportFile('pdf')}>
-                  <FileText className="w-4 h-4" /> PDF report
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportFile('excel')}>
-                  <FileSpreadsheet className="w-4 h-4" /> Excel (.xlsx)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportFile('csv')}>
-                  <FileSpreadsheet className="w-4 h-4" /> CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button leftIcon={<Download className="w-4 h-4" />} onClick={() => setExportOpen(true)}>
+              Export
+            </Button>
           </PermissionGuard>
         </div>
       </div>
 
-      {/* KPI STRIP */}
-      <Card className="overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-3 [&>div]:border-border max-md:[&>div+div]:border-t md:[&>div+div]:border-l">
-          <div className="p-6">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-sm">Placement rate</span>
-              <Users className="w-4 h-4" />
-            </div>
-            <p className="mt-3 text-4xl font-semibold tracking-tight text-foreground">
-              {loading ? '...' : `${stats.placementPercentage}%`}
-            </p>
-            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, stats.placementPercentage)}%` }} />
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">Overall placement rate</p>
-          </div>
-
-          <div className="p-6">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-sm">Highest package</span>
-              <Award className="w-4 h-4" />
-            </div>
-            <p className="mt-3 text-4xl font-semibold tracking-tight text-foreground">
-              {loading ? '...' : stats.highestPackage}
-            </p>
-            <p className="mt-6 text-xs text-muted-foreground">Super Dream tier record</p>
-          </div>
-
-          <div className="p-6">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-sm">Average package</span>
-              <TrendingUp className="w-4 h-4" />
-            </div>
-            <p className="mt-3 text-4xl font-semibold tracking-tight text-foreground">
-              {loading ? '...' : stats.averagePackage}
-            </p>
-            <div className="mt-2 h-10">
-              <ChartContainer config={chartConfig} className="aspect-auto h-full w-full">
-                <AreaChart data={sparklineAvgData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                  <Area type="monotone" dataKey="val" stroke="var(--color-val)" fill="var(--color-val)" fillOpacity={0.15} strokeWidth={2} />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">Average across all tiers</p>
-          </div>
-        </div>
+      <Card className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+        <Dropdown label="Batch" options={BATCHES} value={filters.batch ?? ''} onChange={(v) => set({ batch: v || undefined })} />
+        {!isRecruiter && <Dropdown label="Department" options={departments} value={filters.department_id ?? ''} onChange={(v) => set({ department_id: v || undefined })} />}
+        <Input label="From" type="date" value={filters.from ?? ''} max={filters.to || undefined} onChange={(e) => set({ from: e.target.value || undefined })} />
+        <Input label="To" type="date" value={filters.to ?? ''} min={filters.from || undefined} onChange={(e) => set({ to: e.target.value || undefined })} />
+        <Button variant="ghost" onClick={() => setFilters({})} disabled={!hasFilters}>
+          Reset filters
+        </Button>
       </Card>
 
-      {/* TREND + DEPARTMENT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <Card className="lg:col-span-8 p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-foreground">Monthly placement trend</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Cumulative placements, Jul to Jan</p>
-            </div>
-            <span className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs text-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
-            </span>
-          </div>
-          <ChartContainer config={chartConfig} className="aspect-auto mt-6 h-72 w-full">
-            <AreaChart data={monthlyTrendData} margin={{ top: 10, right: 8, left: -16, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorPlacements" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-val)" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="var(--color-val)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="month" stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
-              <Area type="monotone" dataKey="val" stroke="var(--color-val)" strokeWidth={2} fillOpacity={1} fill="url(#colorPlacements)" />
-            </AreaChart>
-          </ChartContainer>
-        </Card>
-
-        <Card className="lg:col-span-4 p-6">
-          <h3 className="text-base font-semibold text-foreground">Department split</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Share of placements by department</p>
-          <div className="relative mt-4">
-            <ChartContainer config={chartConfig} className="aspect-auto mx-auto h-48 w-full">
-              <PieChart>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Pie data={departmentDistribution} innerRadius={58} outerRadius={80} paddingAngle={3} dataKey="value" nameKey="name" strokeWidth={0}>
-                  {departmentDistribution.map((entry, idx) => (
-                    <Cell key={`cell-${idx}`} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-semibold text-foreground">{stats.totalPlacements}</span>
-              <span className="text-xs text-muted-foreground">placed</span>
-            </div>
-          </div>
-          <ul className="mt-4 space-y-2">
-            {departmentDistribution.map((d) => (
-              <li key={d.name} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                  {d.name}
-                </span>
-                <span className="font-medium text-foreground">{d.value}%</span>
-              </li>
+      {errorMsg ? (
+        <EmptyState title="Could not load the report" description={errorMsg} actionText="Try again" onAction={load} />
+      ) : loading && !data ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[0, 1, 2, 3].map((n) => (
+              <Skeleton key={n} variant="rectangular" className="w-full h-24" />
             ))}
-          </ul>
-        </Card>
-      </div>
-
-      {/* COMPANIES + TRAINING + FEED */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="p-6">
-          <h3 className="text-base font-semibold text-foreground">Top recruiters</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Students placed per company</p>
-          <ChartContainer config={chartConfig} className="aspect-auto mt-4 h-56 w-full">
-            <BarChart data={topCompaniesData} layout="vertical" margin={{ left: 0, right: 12 }}>
-              <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-              <XAxis type="number" hide />
-              <YAxis dataKey="name" type="category" stroke="var(--chart-2)" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} width={80} />
-              <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} barSize={14} />
-            </BarChart>
-          </ChartContainer>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-base font-semibold text-foreground">Training completion</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Full Stack & System Design modules</p>
-          <div className="mt-4 flex flex-col items-center gap-3">
-            <RadialProgress value={88} size={150} strokeWidth={12} label="Complete" />
-            <p className="text-sm text-foreground">88% of students completed</p>
           </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-base font-semibold text-foreground">Latest placements</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Most recent offers accepted</p>
-          <ul className="mt-4 space-y-4">
-            {placementsList.length === 0 ? (
-              <li className="text-sm text-muted-foreground">No recent placement records available.</li>
+          <Skeleton variant="rectangular" className="w-full h-80" />
+        </div>
+      ) : data && k ? (
+        <div className={loading ? 'opacity-60 transition-opacity space-y-6' : 'space-y-6'}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatTile label="Students placed" value={placed} icon={<Users className="w-5 h-5" />} tone="success" hint={k.totalStudents != null ? `of ${k.totalStudents} students` : 'accepted offers'} />
+            {k.placementRate != null ? (
+              <StatTile label="Placement rate" value={`${k.placementRate}%`} icon={<Percent className="w-5 h-5" />} tone="primary" hint="placed / all students" />
             ) : (
-              placementsList.slice(0, 5).map((p: any, idx: number) => (
-                <li key={p.id || idx} className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
-                    {(p.students?.users?.full_name || p.students?.name || 'P').slice(0, 1)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {p.students?.users?.full_name || p.students?.name || 'Placed Student'}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">{p.companies?.name || 'Corporate Partner'}</p>
-                  </div>
-                  <span className="shrink-0 text-sm font-semibold text-foreground">₹{p.ctc || 12} LPA</span>
-                </li>
-              ))
+              <StatTile label="Companies hiring" value={k.companiesHiring} icon={<Building2 className="w-5 h-5" />} tone="primary" hint="with accepted offers" />
             )}
-          </ul>
-        </Card>
-      </div>
+            <StatTile label="Highest package" value={k.highestPackage ? lpa(k.highestPackage) : '-'} icon={<TrendingUp className="w-5 h-5" />} tone="info" hint="best accepted offer" />
+            <StatTile label="Average / median" value={k.averagePackage ? lpa(k.averagePackage) : '-'} icon={<IndianRupee className="w-5 h-5" />} tone="neutral" hint={k.medianPackage ? `median ${lpa(k.medianPackage)}` : 'no offers yet'} />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatTile label="Open drives" value={k.openDrives} icon={<Briefcase className="w-5 h-5" />} tone="info" hint={`${k.totalDrives} drives in total`} />
+            <StatTile label="Applications" value={k.totalApplications} icon={<Award className="w-5 h-5" />} tone="neutral" hint="across all drives" />
+            <StatTile label="Offers awaiting reply" value={k.offersAwaitingReply} icon={<Clock className="w-5 h-5" />} tone={k.offersAwaitingReply > 0 ? 'warning' : 'neutral'} hint={k.offersAwaitingApproval ? `${k.offersAwaitingApproval} awaiting approval` : 'released to students'} />
+            <StatTile label="Upcoming interviews" value={k.upcomingInterviews} icon={<CalendarClock className="w-5 h-5" />} tone="success" hint="scheduled ahead" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-8">
+              <TrendCard data={data.trend} />
+            </div>
+            <div className="lg:col-span-4">
+              <SplitCard title="Department split" subtitle="Share of placements by department" data={data.byDepartment} total={placed} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <BarsCard title="Package distribution" subtitle="How many accepted offers fall in each range" rows={data.packageDistribution.map((x) => ({ label: x.name, value: x.count }))} unit="Students" emptyText="No accepted offers yet." />
+            <BarsCard title="Recruitment funnel" subtitle="Applications that reached each stage" rows={data.funnel.map((x) => ({ label: x.stage, value: x.count }))} unit="Applications" emptyText="No applications yet." />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-8">
+              <RecruitersCard rows={data.topRecruiters} />
+            </div>
+            <div className="lg:col-span-4 space-y-4">
+              <CountsCard title="Interview outcomes" subtitle="All scheduled interviews" rows={data.interviewOutcomes} emptyText="No interviews yet." />
+              {data.training && <TrainingCard data={data.training} />}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-8">
+              <LatestCard rows={data.latestPlacements} />
+            </div>
+            <div className="lg:col-span-4 space-y-4">
+              <SplitCard title="By batch" subtitle="Placements by passing-out year" data={data.byBatch} total={placed} />
+              <CountsCard title="Drives by status" subtitle="Published drives" rows={data.drivesByStatus} emptyText="No published drives." />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <Modal isOpen={exportOpen} onClose={() => !exporting && setExportOpen(false)} title="Export report" subtitle={hasFilters ? 'Your current filters are applied.' : 'All records.'} maxWidth="md">
+        <div className="space-y-5">
+          <Dropdown
+            label="What to export"
+            options={REPORT_TYPES.filter((t) => !(isRecruiter && t.staffOnly)).map((t) => ({ label: t.label, value: t.value }))}
+            value={exportType}
+            onChange={(v) => setExportType(v as ReportType)}
+          />
+          <div className="grid grid-cols-3 gap-3">
+            {FORMATS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                disabled={Boolean(exporting)}
+                onClick={() => runExport(f.id)}
+                className="rounded-2xl border border-border bg-card p-4 text-center hover:border-primary/60 transition-colors disabled:opacity-60"
+              >
+                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">{exporting === f.id ? <RefreshCw className="w-5 h-5 animate-spin" /> : f.icon}</div>
+                <div className="text-sm font-semibold text-foreground">{f.label}</div>
+                <div className="text-[11px] text-muted-foreground">{f.hint}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const storage = require('./storageService');
 
 /**
  * Helper to verify user is participant in conversation
@@ -383,43 +384,26 @@ const uploadChatAttachment = async (messageId, file, userId) => {
 
   await checkParticipant(msg.conversation_id, userId);
 
-  const fileExt = file.originalname.split('.').pop();
-  const fileName = `${Date.now()}_attachment.${fileExt}`;
-  const storagePath = `${msg.conversation_id}/${fileName}`;
-
-  // Upload to Supabase Storage 'chat-files'
-  const { error: uploadErr } = await supabase.storage
-    .from('chat-files')
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    const err = new Error(`Attachment Upload Error: ${uploadErr.message}`);
-    err.statusCode = 500;
-    throw err;
-  }
-
-  const { data: publicUrlData } = supabase.storage.from('chat-files').getPublicUrl(storagePath);
+  const storagePath = await storage.storeFile('chat-files', [msg.conversation_id], file);
 
   const { data: attachment, error: dbErr } = await supabase
     .from('chat_attachments')
     .insert([
       {
         message_id: messageId,
-        bucket_name: 'chat-files',
+        bucket_name: storage.R2_TAG,
         storage_path: storagePath,
         file_name: file.originalname,
         mime_type: file.mimetype,
         file_size: file.size,
-        file_url: publicUrlData.publicUrl,
+        file_url: `r2:${storagePath}`,
       },
     ])
     .select('*')
     .single();
 
   if (dbErr) {
+    await storage.removeObject(storagePath);
     const err = new Error(dbErr.message);
     err.statusCode = 500;
     throw err;
@@ -480,3 +464,13 @@ module.exports = {
   uploadChatAttachment,
   getUnreadCount,
 };
+
+/** Signed link to a chat attachment, for participants of its conversation only. */
+const getAttachmentFileUrl = async (attachmentId, userId) => {
+  const { data: att } = await supabase.from('chat_attachments').select('*, chat_messages(conversation_id)').eq('id', attachmentId).maybeSingle();
+  if (!att) throw Object.assign(new Error('Attachment not found.'), { statusCode: 404 });
+  await checkParticipant(att.chat_messages?.conversation_id, userId);
+  return storage.signedLinkFor(att, supabase);
+};
+
+module.exports.getAttachmentFileUrl = getAttachmentFileUrl;
